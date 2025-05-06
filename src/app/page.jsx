@@ -99,8 +99,8 @@ export default function Page() {
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="text-xl md:text-2xl mb-8 text-slate-300"
               >
-                I am Mikaeel – <span className="text-blue-400">data scientist</span> with a passion for 
-                creating intelligent solutions using machine learning and AI.
+                I am Mikaeel – <span className="text-blue-400">data scientist</span> with a unique blend of technical expertise and 
+                <span className="text-purple-400"> digital marketing experience</span>, creating data-driven solutions that deliver real business impact.
               </motion.p>
               
               <motion.div
@@ -128,13 +128,7 @@ export default function Page() {
                     </svg>
                   </motion.div>
                 </div>
-                <Image
-                  src="/headshot.jpg"
-                  alt="Mikaeel Faraz"
-                  width={200}
-                  height={200}
-                  className="rounded-full"
-                />
+                <div className="text-7xl font-bold text-white">MF</div>
               </div>
             </div>
           </div>
@@ -153,7 +147,7 @@ export default function Page() {
             MY SERVICES
           </motion.h2>
           
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
             <div className="relative bg-slate-900/50 rounded-xl p-8 border border-slate-800 hover:border-blue-500/30 transition-all group">
               <div className="text-blue-500 mb-4">
                 <Database size={32} />
@@ -183,10 +177,100 @@ export default function Page() {
                 I specialize in analyzing time-based data to predict future values, helping businesses anticipate demand, optimize resources, and plan effectively.
               </p>
             </div>
+            
+            <div className="relative bg-slate-900/50 rounded-xl p-8 border border-slate-800 hover:border-purple-500/30 transition-all group">
+              <div className="text-purple-500 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-megaphone"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+              </div>
+              <h3 className="text-2xl font-bold mb-4">Digital Marketing</h3>
+              <p className="text-slate-400">
+                I leverage my experience as a Marketing Manager to create data-driven marketing strategies, optimize online presence, and deliver engaging content that drives measurable business growth.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
+      {/* Experience Section Preview */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <motion.h2 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-4xl md:text-6xl font-bold mb-16 bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text"
+          >
+            MARKETING EXPERIENCE
+          </motion.h2>
+          
+          <div className="bg-slate-900/50 rounded-xl overflow-hidden border border-slate-800">
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-800">
+              <div className="p-8">
+                <div className="flex items-start mb-6">
+                  <div className="text-purple-500 mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-briefcase"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold mb-1">Marketing Manager</h3>
+                    <p className="text-slate-400">Asian Street by Thai</p>
+                    <p className="text-sm text-slate-500">Sep 2022 - Sep 2024</p>
+                  </div>
+                </div>
+                <ul className="text-slate-300 space-y-2 text-sm pl-4">
+                  <li>Built and scaled the restaurant's full online presence</li>
+                  <li>Produced high-impact visual content and managed ad campaigns</li>
+                  <li>Leveraged analytics to track performance and optimize strategies</li>
+                </ul>
+              </div>
+              
+              <div className="p-8">
+                <div className="flex items-start mb-6">
+                  <div className="text-purple-500 mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-briefcase"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold mb-1">Marketing Intern</h3>
+                    <p className="text-slate-400">Impression Spa</p>
+                    <p className="text-sm text-slate-500">May 2024 - Jun 2024</p>
+                  </div>
+                </div>
+                <ul className="text-slate-300 space-y-2 text-sm pl-4">
+                  <li>Developed and executed digital marketing strategy</li>
+                  <li>Created and managed engaging content across social platforms</li>
+                  <li>Leveraged analytics to enhance brand reputation</li>
+                </ul>
+              </div>
+              
+              <div className="p-8">
+                <div className="flex items-start mb-6">
+                  <div className="text-purple-500 mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-briefcase"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold mb-1">Marketing Intern</h3>
+                    <p className="text-slate-400">Resivation Hotel</p>
+                    <p className="text-sm text-slate-500">Oct 2023 - Dec 2023</p>
+                  </div>
+                </div>
+                <ul className="text-slate-300 space-y-2 text-sm pl-4">
+                  <li>Produced and edited engaging social media content</li>
+                  <li>Executed campaigns across key platforms</li>
+                  <li>Assisted in SEO and Google My Business optimization</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-slate-900/80 text-center">
+              <Link href="#experience">
+                <Button variant="outline" className="rounded-full border-purple-500/30 text-purple-400 hover:bg-purple-950/30 hover:text-purple-300">
+                  View Full Experience <ChevronRight size={16} className="ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       {/* Skills Section */}
       <section id="skills" className="py-20 bg-slate-950">
         <div className="container mx-auto px-4">
@@ -199,173 +283,231 @@ export default function Page() {
             SKILLS
           </motion.h2>
           
-          <div className="mb-10">
+          <div className="mb-16">
             <h3 className="text-2xl text-center mb-12 text-slate-300">
               The skills, tools and technologies I use:
             </h3>
             
-            <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-8 justify-items-center">
-              {/* Skill Icons Row 1 */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/python.svg" alt="Python" className="h-12" />
-              </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+              <div className="bg-slate-900/50 rounded-xl p-8 border border-slate-800">
+                <h4 className="text-xl font-bold mb-6 text-blue-400">Technical Skills</h4>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-6 justify-items-center">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/python.svg" alt="Python" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/pandas.svg" alt="Pandas" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/sklearn.svg" alt="Scikit-Learn" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.4 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/tensorflow.svg" alt="TensorFlow" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.5 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/jupyter.svg" alt="Jupyter" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.6 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/azure.svg" alt="Azure" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.7 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/java.svg" alt="Java" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.8 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/cpp.svg" alt="C++" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.9 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/pyspark.svg" alt="PySpark" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 1.0 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/powerbi.svg" alt="Power BI" className="h-10" />
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 1.1 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <img src="/icons/git.svg" alt="Git" className="h-10" />
+                  </motion.div>
+                </div>
+              </div>
               
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/pandas.svg" alt="Pandas" className="h-12" />
-              </motion.div>
+              <div className="bg-slate-900/50 rounded-xl p-8 border border-slate-800">
+                <h4 className="text-xl font-bold mb-6 text-purple-400">Marketing Skills</h4>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-6 justify-items-center">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    <p className="text-xs text-center absolute mt-16">Analytics</p>
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    <p className="text-xs text-center absolute mt-16">Ads</p>
+                  </motion.div>
+                  
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3 }}
+                    className="w-16 h-16 flex items-center justify-center"
+                  >
+                    {/* Add content or remove this div if not needed */}
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* World Records Section Preview */}
+      <section className="py-20 bg-slate-900 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-yellow-500/20 to-transparent"></div>
+          <div className="grid grid-cols-12 gap-4 opacity-20">
+            {[...Array(48)].map((_, i) => (
+              <div key={i} className="aspect-square bg-yellow-500/10 rounded-full"></div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-12">
+            <div className="md:w-1/2">
+              <div className="inline-block mb-4 px-3 py-1 bg-yellow-900/30 border border-yellow-500/30 rounded-full">
+                <span className="text-yellow-400 text-sm font-medium">GUINNESS WORLD RECORDS</span>
+              </div>
               
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.3 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/sklearn.svg" alt="Scikit-Learn" className="h-12" />
-              </motion.div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+                Achievements Beyond <br />
+                <span className="bg-gradient-to-r from-yellow-400 to-amber-500 text-transparent bg-clip-text">Ordinary Limits</span>
+              </h2>
               
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/tensorflow.svg" alt="TensorFlow" className="h-12" />
-              </motion.div>
+              <p className="text-slate-300 mb-8">
+                Not just a data scientist, I'm also a proud holder of three official Guinness World Records, showcasing my dedication to excellence in everything I pursue.
+              </p>
               
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.5 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/jupyter.svg" alt="Jupyter" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.6 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/azure.svg" alt="Azure" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.7 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/java.svg" alt="Java" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.8 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/cpp.svg" alt="C++" className="h-12" />
-              </motion.div>
-              
-              {/* Skill Icons Row 2 */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.9 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/javascript.png" alt="JavaScript" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.0 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/react.svg" alt="React" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.1 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/node.svg" alt="Node.js" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.2 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/git.svg" alt="Git" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.3 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/powerbi.svg" alt="Power BI" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.4 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/pyspark.svg" alt="PySpark" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.5 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/html5.svg" alt="HTML5" className="h-12" />
-              </motion.div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 1.6 }}
-                className="w-16 h-16 flex items-center justify-center"
-              >
-                <img src="/icons/css3.svg" alt="CSS3" className="h-12" />
-              </motion.div>
+              <Link href="#achievements">
+                <Button variant="outline" className="rounded-full border-yellow-500/30 text-yellow-400 hover:bg-yellow-950/30 hover:text-yellow-300">
+                  View All Records <ChevronRight size={16} className="ml-1" />
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="md:w-1/2">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 hover:border-yellow-500/30 transition-all">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="min-w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8c-2.8 0-5 2.2-5 5 0 2.8 2.2 5 5 5 2.8 0 5-2.2 5-5 0-2.8-2.2-5-5-5z"/><path d="M12 2v6"/><path d="M12 22v-6"/><path d="m17 20.66-2.5-4.33"/><path d="m7 20.66 2.5-4.33"/><path d="m7 3.34 2.5 4.33"/><path d="m17 3.34-2.5 4.33"/></svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white">Fastest time to type the alphabet on a touchscreen mobile phone</h3>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 hover:border-yellow-500/30 transition-all">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="min-w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8c-2.8 0-5 2.2-5 5 0 2.8 2.2 5 5 5 2.8 0 5-2.2 5-5 0-2.8-2.2-5-5-5z"/><path d="M12 2v6"/><path d="M12 22v-6"/><path d="m17 20.66-2.5-4.33"/><path d="m7 20.66 2.5-4.33"/><path d="m7 3.34 2.5 4.33"/><path d="m17 3.34-2.5 4.33"/></svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white">Fastest time to type the alphabet on a touchscreen mobile phone (single hand)</h3>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 hover:border-yellow-500/30 transition-all">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="min-w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8c-2.8 0-5 2.2-5 5 0 2.8 2.2 5 5 5 2.8 0 5-2.2 5-5 0-2.8-2.2-5-5-5z"/><path d="M12 2v6"/><path d="M12 22v-6"/><path d="m17 20.66-2.5-4.33"/><path d="m7 20.66 2.5-4.33"/><path d="m7 3.34 2.5 4.33"/><path d="m17 3.34-2.5 4.33"/></svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white">Fastest Game of five cup tilt-a-cup</h3>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
