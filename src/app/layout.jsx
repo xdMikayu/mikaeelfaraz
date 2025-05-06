@@ -10,21 +10,21 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "Asian Street by Thai",
-  description: "Experience authentic Thai street food in the heart of JLT, Dubai. Award-nominated restaurant serving fresh, homemade Thai cuisine including signature dishes like Thai Green Curry and Pad Thai. Available for dine-in, delivery, and catering services.",
+  title: "Mikaeel Faraz",
+  description: "Portfolio of Mikaeel Faraz – Data Scientist, Machine Learning Engineer, and AI Enthusiast.",
   icons: {
     icon: '/favicon.ico',
   },
-  keywords: "Thai restaurant Dubai, JLT Thai food, authentic Thai cuisine, Thai catering Dubai, Pad Thai JLT, Thai Green Curry Dubai",
+  keywords: "Mikaeel Faraz, Data Scientist, Machine Learning, AI, Portfolio, Python, React, Next.js",
   openGraph: {
-    title: 'Asian Street by Thai',
-    description: 'Experience authentic Thai street food in the heart of JLT, Dubai. Award-nominated restaurant serving fresh, homemade Thai cuisine.',
+    title: 'Mikaeel Faraz',
+    description: 'Portfolio of Mikaeel Faraz – Data Scientist, Machine Learning Engineer, and AI Enthusiast.',
     images: [
       {
-        url: '/your-restaurant-image.jpg', // You'll need to add this image to your public folder
+        url: '/your-portfolio-image.jpg', // Update this image as needed
         width: 1200,
         height: 630,
-        alt: 'Asian Street by Thai Restaurant',
+        alt: 'Mikaeel Faraz Portfolio',
       },
     ],
     locale: 'en_AE',

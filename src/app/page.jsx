@@ -129,7 +129,7 @@ export default function Page() {
                   </motion.div>
                 </div>
                 <Image
-                  src="/headshot.png"
+                  src="/headshot.jpg"
                   alt="Mikaeel Faraz"
                   width={200}
                   height={200}
@@ -294,7 +294,7 @@ export default function Page() {
                 transition={{ delay: 0.9 }}
                 className="w-16 h-16 flex items-center justify-center"
               >
-                <img src="/icons/javascript.svg" alt="JavaScript" className="h-12" />
+                <img src="/icons/javascript.png" alt="JavaScript" className="h-12" />
               </motion.div>
               
               <motion.div 
