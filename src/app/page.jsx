@@ -165,10 +165,14 @@ export default function Page() {
                 {darkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
               
-              <Button variant="outline" className="hidden md:flex items-center gap-2">
+              <a
+                href="/resume.pdf"
+                download
+                className="hidden md:flex items-center gap-2 px-4 py-2 border rounded-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              >
                 <Download size={16} />
                 Resume
-              </Button>
+              </a>
               
               <button className="md:hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
