@@ -288,13 +288,26 @@ export default function Page() {
                     Connect
                   </h3>
                   <div className="flex gap-4">
-                    <a href="#" className={`${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors`}>
+                    <a 
+                      href="https://github.com/xdMikayu" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className={`${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors`}
+                    >
                       <Github size={20} />
                     </a>
-                    <a href="#" className={`${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors`}>
+                    <a 
+                      href="https://www.linkedin.com/in/mikaeelf/" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className={`${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors`}
+                    >
                       <Linkedin size={20} />
                     </a>
-                    <a href="#" className={`${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors`}>
+                    <a 
+                      href="mailto:mikaeel2013@gmail.com" 
+                      className={`${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'} transition-colors`}
+                    >
                       <Mail size={20} />
                     </a>
                   </div>
