@@ -809,9 +809,13 @@ export default function Page() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-12">
             <div className="md:w-1/2">
-              <div className="inline-block mb-4 px-3 py-1 bg-yellow-900/30 border border-yellow-500/30 rounded-full">
-                <span className="text-yellow-400 text-sm font-medium">GUINNESS WORLD RECORDS</span>
-              </div>
+
+
+            <img
+              src="/guinness.svg"
+              alt="Guinness World Records Logo"
+              className="h-48 w-auto md:h-64 mb-6"
+            />
               
               <motion.h2 
                 initial={{ opacity: 0, y: 20 }}
