@@ -261,9 +261,13 @@ export default function ProjectsPage() {
                     className={`bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl overflow-hidden shadow-xl border border-slate-800 hover:border-${project.color}-500/50 transition-all group`}
                   >
                     <div className="relative">
-                      <div className={`aspect-video bg-gradient-to-r from-${project.color}-500/20 to-${project.color}-700/20 flex items-center justify-center`}>
-                        {project.icon}
-                      </div>
+                    <div className="aspect-video overflow-hidden rounded-t-xl">
+                        <img 
+                            src={project.image} 
+                            alt={project.title}
+                            className="w-full h-full object-contain bg-slate-900"
+                        />
+                        </div>
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
                       <div className="absolute bottom-0 left-0 p-6">
                         <span className={`px-2 py-1 text-xs rounded-full bg-${project.color}-500/20 text-${project.color}-300 mb-2 inline-block`}>
@@ -471,11 +475,13 @@ export default function ProjectsPage() {
         
         <div className="space-y-6">
           {/* Project image or icon */}
-          <div className={`rounded-xl overflow-hidden bg-gradient-to-r from-${project.color}-500/20 to-${project.color}-700/10 h-64 flex items-center justify-center mb-6`}>
-            <div className="transform scale-150 opacity-60">
-              {project.icon}
+          <div className="rounded-xl overflow-hidden bg-slate-800 h-64 mb-6">
+            <img 
+                src={project.image} 
+                alt={project.title}
+                className="w-full h-full object-contain bg-slate-900"
+            />
             </div>
-          </div>
           
           {/* Project details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -662,7 +668,7 @@ const projects = [
     category: 'Data Science',
     tags: ['Python', 'Pandas', 'Scikit-Learn', 'Prophet', 'Time Series', 'API Integration'],
     featured: true,
-    image: '/projects/demand-forecast.jpg',
+    image: '/projects/demand-forecast.png',
     icon: <LineChart size={48} className="text-blue-500" />,
     color: 'blue',
     objectives: [
