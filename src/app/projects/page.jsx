@@ -411,8 +411,12 @@ export default function ProjectsPage() {
         className={`bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl overflow-hidden shadow-xl border border-slate-800 hover:border-${project.color}-500/30 transition-all group`}
       >
         <div className="relative">
-          <div className={`aspect-video bg-gradient-to-r from-${project.color}-500/20 to-${project.color}-700/10 flex items-center justify-center`}>
-            {project.icon}
+          <div className="aspect-video overflow-hidden rounded-t-xl">
+            <img 
+              src={project.image} 
+              alt={project.title}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
           <div className="absolute bottom-0 left-0 p-6">
@@ -619,16 +623,16 @@ export default function ProjectsPage() {
             </TabsContent>
           </Tabs>
           
-          {/* Code snippet */}
-          {project.codeSnippet && (
+          {/* Code snippet or dashboard preview */}
+          {project.id === 'dunkin-donuts' && (
             <div className="mt-8">
-              <h3 className="text-xl font-bold mb-4">Code Highlight</h3>
-              <div className="bg-slate-950 rounded-lg p-4 overflow-x-auto">
-                <pre className="text-sm font-mono">
-                  <code className="text-slate-300">
-                    {project.codeSnippet}
-                  </code>
-                </pre>
+              <h3 className="text-xl font-bold mb-4">Forecast Dashboard Preview</h3>
+              <div className="rounded-lg overflow-hidden">
+                <img 
+                  src="/projects/demand-forecast.png" 
+                  alt="Dunkin Forecast Dashboard"
+                  className="w-full h-auto object-cover"
+                />
               </div>
             </div>
           )}
@@ -662,41 +666,40 @@ const projects = [
   {
     id: 'dunkin-donuts',
     title: 'Dunkin\' Donuts Time Series Demand Forecast',
-    shortDescription: 'Predictive model for demand forecasting with weather factor integration',
-    description: 'Developed a sophisticated time series forecasting model to predict demand trends using Dunkin\' Donuts sales data. The model integrates weather APIs to account for external factors that influence consumer behavior, allowing for more accurate prediction of future demand patterns.',
+    shortDescription: 'Predictive model for demand forecasting using Dunkin’ UAE sales data',
+    description: 'Developed a sophisticated time series forecasting model to predict demand trends using Dunkin\' Donuts sales data. The model was trained on over 12 months of store-level transaction data, cleaned and structured for temporal analysis, and optimized to support operations across 80+ Dunkin\' UAE branches.',
     duration: 'October 2024 - April 2025',
     category: 'Data Science',
     tags: ['Python', 'Pandas', 'Scikit-Learn', 'Prophet', 'Time Series', 'API Integration'],
     featured: true,
-    image: '/projects/demand-forecast.png',
+    image: '/projects/dunkin.png',
     icon: <LineChart size={48} className="text-blue-500" />,
     color: 'blue',
     objectives: [
       'Develop a forecasting model with over 80% accuracy for short-term demand prediction',
-      'Integrate external weather data to improve prediction reliability',
+      'Enable store-specific forecasting to improve accuracy and relevance across multiple UAE locations',
       'Create a flexible model that can adapt to seasonal trends and special events',
       'Provide actionable insights for inventory management and staff scheduling'
     ],
     approach: [
       'Collected and preprocessed 2 years of historical sales data for pattern recognition',
       'Performed extensive feature engineering to extract temporal features and patterns',
-      'Developed and compared multiple forecasting methods (ARIMA, Prophet, LSTM)',
-      'Integrated real-time weather API data to account for environmental factors',
+      'Developed and compared multiple forecasting methods (XGBoost, Prophet, NBeats)',
+      'Mapped regional demand patterns by segmenting stores into clusters based on sales volume and location characteristics',
       'Implemented cross-validation techniques to ensure model robustness'
     ],
     outcomes: [
       'Achieved 93% accuracy in demand prediction for 7-day forecasts',
-      'Reduced inventory waste by 27% through more precise ordering',
-      'Improved staffing efficiency by 18% by anticipating peak demand periods',
-      'Created an automated dashboard for daily forecast visualization'
+      'Enabled inventory insights by identifying top-selling categories and low-demand periods across 80+ stores',
+      'Enabled forecasting of sales fluctuations aligned with historical promotions and seasonality trends',
+      'Developed a frontend dashboard with interactive charts and dynamic filtering to aid store managers in inventory decisions'
     ],
     technologies: [
       { name: 'Python', icon: '/icons/python.svg' },
       { name: 'Pandas', icon: '/icons/pandas.svg' },
       { name: 'Scikit-Learn', icon: '/icons/sklearn.svg' },
       { name: 'Prophet', icon: '/icons/prophet.svg' },
-      { name: 'Matplotlib', icon: '/icons/matplotlib.svg' },
-      { name: 'Weather API', icon: '/icons/api.svg' }
+      { name: 'Matplotlib', icon: '/icons/matplotlib.svg' }
     ],
     codeSnippet: `
 # Time series forecasting with Prophet
@@ -715,16 +718,10 @@ model = Prophet(
     daily_seasonality=True
 )
 
-# Add weather as a regressor
-model.add_regressor('temperature')
-model.add_regressor('precipitation')
-
 model.fit(df)
 
 # Make future predictions
 future = model.make_future_dataframe(periods=30)
-# Add weather forecast data
-future = add_weather_forecast(future)
 
 forecast = model.predict(future)
 `,
@@ -742,7 +739,7 @@ forecast = model.predict(future)
     category: 'Machine Learning',
     tags: ['PySpark', 'XGBoost', 'Ensemble Learning', 'Machine Learning', 'Regression'],
     featured: true,
-    image: '/projects/real-estate.jpg',
+    image: '/projects/skyline.png',
     icon: <BarChart size={48} className="text-green-500" />,
     color: 'green',
     objectives: [
@@ -812,7 +809,7 @@ mape = mean_absolute_percentage_error(y_test, y_pred)
 print(f"Test MAPE: {mape:.4f}")
 `,
     links: {
-      github: 'https://github.com/mikaeel-faraz/real-estate-valuation',
+      github: 'https://github.com/xdMikayu/CSCI316-XGBoost-Real-Estate-Prediction',
       live: 'https://property-valuation-model.example.com'
     }
   },
@@ -825,7 +822,7 @@ print(f"Test MAPE: {mape:.4f}")
     category: 'Data Engineering',
     tags: ['Azure', 'Data Factory', 'Power BI', 'Data Lake', 'Financial Data'],
     featured: true,
-    image: '/projects/data-lake.jpg',
+    image: '/projects/reem-finance.png',
     icon: <Database size={48} className="text-purple-500" />,
     color: 'purple',
     objectives: [
@@ -902,7 +899,7 @@ print(f"Test MAPE: {mape:.4f}")
 }
 `,
     links: {
-      github: 'https://github.com/mikaeel-faraz/reem-finance-data-lake',
+      github: 'https://github.com/xdMikayu/ReemFinance-Onboarding-Data-Lake',
       live: null
     }
   },
@@ -915,7 +912,7 @@ print(f"Test MAPE: {mape:.4f}")
     category: 'Artificial Intelligence',
     tags: ['NEAT', 'Neural Networks', 'Python', 'Pygame', 'Evolutionary Algorithms'],
     featured: false,
-    image: '/projects/flappy-bird-ai.jpg',
+    image: '/projects/flappy-bird.jpg',
     icon: <Cpu size={48} className="text-yellow-500" />,
     color: 'yellow',
     objectives: [
@@ -1002,7 +999,7 @@ with open('winner.pkl', 'wb') as f:
     pickle.dump(winner, f)
 `,
     links: {
-      github: 'https://github.com/mikaeel-faraz/flappy-bird-neat',
+      github: 'https://github.com/xdMikayu/CSCI218-NEAT-AI-FlappyBird',
       live: 'https://flappy-bird-ai-demo.example.com'
     }
   },
@@ -1015,7 +1012,7 @@ with open('winner.pkl', 'wb') as f:
     category: 'Software Development',
     tags: ['C++', 'OOP', 'JSON', 'Algorithm Design', 'User Interface'],
     featured: false,
-    image: '/projects/seating-plan.jpg',
+    image: '/projects/seating.jpeg',
     icon: <Layers size={48} className="text-red-500" />,
     color: 'red',
     objectives: [
@@ -1135,7 +1132,7 @@ public:
     category: 'Software Development',
     tags: ['Java', 'Swing', 'GUI', 'OOP', 'Database', 'Authentication'],
     featured: false,
-    image: '/projects/automobile-sales.jpg',
+    image: '/projects/uml.png',
     icon: <Monitor size={48} className="text-cyan-500" />,
     color: 'cyan',
     objectives: [
@@ -1255,8 +1252,67 @@ public class Car extends Vehicle {
 }
 `,
     links: {
-      github: 'https://github.com/mikaeel-faraz/automobile-sales-system',
+      github: 'https://github.com/xdMikayu/CSIT121-Automobile-Sales-System',
       live: null
+    }
+  },
+  {
+    id: 'face-mask-detection',
+    title: 'Face Mask Detection using Transfer Learning',
+    shortDescription: 'Classifies mask usage using InceptionV3 and real-time image augmentation',
+    description: 'Developed a deep learning model using transfer learning (InceptionV3) to classify face mask usage into three categories: mask, no mask, and incorrect mask. The project involved image preprocessing, augmentation using OpenCV and Keras, model training with TensorFlow, and evaluation using classification metrics. Data was sourced from Kaggle and refined through annotation parsing and normalization.',
+    duration: 'February 2025 - April 2025',
+    category: 'Machine Learning',
+    tags: ['TensorFlow', 'Keras', 'OpenCV', 'InceptionV3', 'Transfer Learning', 'Image Classification'],
+    featured: false,
+    image: '/projects/mask.png',
+    icon: <Monitor size={48} className="text-pink-500" />,
+    color: 'pink',
+    objectives: [
+      'Develop a CNN model using transfer learning to classify mask usage',
+      'Implement data cleaning and XML-based annotation processing',
+      'Apply image normalization and augmentation for model generalization',
+      'Evaluate model with accuracy, precision, recall, and confusion matrix'
+    ],
+    approach: [
+      'Parsed and labeled image dataset using XML annotations',
+      'Applied OpenCV and PIL for cleaning, resizing, and format standardization',
+      'Used ImageDataGenerator for real-time data augmentation in training loop',
+      'Fine-tuned the InceptionV3 model with custom classification layers',
+      'Evaluated and deployed the final model for inference with `.h5` export'
+    ],
+    outcomes: [
+      'Achieved 85% accuracy in classifying face mask usage',
+      'Reduced model overfitting with real-time augmentation and dropout',
+      'Enabled scalable deployment with saved model format',
+      'Demonstrated model performance in a final presentation and video demo'
+    ],
+    technologies: [
+      { name: 'TensorFlow', icon: '/icons/tensorflow.svg' },
+      { name: 'Keras', icon: '/icons/keras.svg' },
+      { name: 'OpenCV', icon: '/icons/opencv.svg' },
+      { name: 'Python', icon: '/icons/python.svg' },
+      { name: 'Pillow', icon: '/icons/pillow.svg' }
+    ],
+    codeSnippet: `
+# Load and evaluate trained InceptionV3 model
+from tensorflow.keras.models import load_model
+model = load_model('face_mask_detector.h5')
+
+# Predict on a sample image
+from tensorflow.keras.preprocessing import image
+import numpy as np
+
+img = image.load_img('sample.jpg', target_size=(128, 128))
+img_array = image.img_to_array(img) / 255.0
+img_array = np.expand_dims(img_array, axis=0)
+
+prediction = model.predict(img_array)
+print("Predicted Class:", prediction.argmax())
+`,
+    links: {
+      github: 'https://github.com/xdMikayu/CSCI316-Mask-Detection-Transferlearning',
+      live: 'https://youtu.be/qn3jjj9sXQY'
     }
   }
 ];
