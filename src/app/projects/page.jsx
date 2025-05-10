@@ -298,7 +298,7 @@ export default function ProjectsPage() {
                         onClick={() => handleProjectSelect(project)}
                         className={`w-full rounded-lg bg-${project.color}-600 hover:bg-${project.color}-700 group-hover:bg-${project.color}-500 transition-colors`}
                       >
-                        View Details <ChevronRight size={16} className="ml-1" />
+                        View Details 
                       </Button>
                     </div>
                   </motion.div>
@@ -448,7 +448,7 @@ export default function ProjectsPage() {
             onClick={onClick}
             className={`w-full rounded-lg bg-${project.color}-600 hover:bg-${project.color}-700 group-hover:bg-${project.color}-500 transition-colors`}
           >
-            View Details <ChevronRight size={16} className="ml-1" />
+            View Details
           </Button>
         </div>
       </motion.div>

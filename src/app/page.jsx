@@ -1239,9 +1239,7 @@ export default function Page() {
               className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl overflow-hidden shadow-xl group"
             >
               <div className="relative">
-                <div className="aspect-video bg-gradient-to-r from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-                  <LineChart size={48} className="text-blue-500 opacity-70" />
-                </div>
+                <img src="/projects/dunkin.png" alt="Dunkin Project" className="w-full h-80 object-contain" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 p-6">
                   <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-300 mb-2 inline-block">
@@ -1254,7 +1252,7 @@ export default function Page() {
               <div className="p-6 pt-0">
                 <Link href="/projects/dunkin-donuts">
                   <Button className="w-full rounded-full bg-blue-600 hover:bg-blue-700 group-hover:bg-blue-500 transition-colors">
-                    View Details <ChevronRight size={16} className="ml-1" />
+                    View Details
                   </Button>
                 </Link>
               </div>
@@ -1268,12 +1266,7 @@ export default function Page() {
               className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl overflow-hidden shadow-xl group"
             >
               <div className="relative">
-                <div className="aspect-video bg-gradient-to-r from-green-500/20 to-teal-500/20 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500 opacity-70">
-                    <path d="m2 16 6-6 4 2 6-6"/>
-                    <path d="M22 6h-6v6"/>
-                  </svg>
-                </div>
+                <img src="/projects/skyline.png" alt="Real Estate Project" className="w-full h-80 object-contain" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 p-6">
                   <span className="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-300 mb-2 inline-block">
@@ -1286,7 +1279,7 @@ export default function Page() {
               <div className="p-6 pt-0">
                 <Link href="/projects/real-estate">
                   <Button className="w-full rounded-full bg-green-600 hover:bg-green-700 group-hover:bg-green-500 transition-colors">
-                    View Details <ChevronRight size={16} className="ml-1" />
+                    View Details
                   </Button>
                 </Link>
               </div>
@@ -1300,9 +1293,7 @@ export default function Page() {
               className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl overflow-hidden shadow-xl group"
             >
               <div className="relative">
-                <div className="aspect-video bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                  <Database size={48} className="text-purple-500 opacity-70" />
-                </div>
+                <img src="/projects/reem-finance.png" alt="Reem Finance Project" className="w-full h-80 object-contain" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 p-6">
                   <span className="px-2 py-1 text-xs rounded-full bg-purple-500/20 text-purple-300 mb-2 inline-block">
@@ -1315,7 +1306,7 @@ export default function Page() {
               <div className="p-6 pt-0">
                 <Link href="/projects/data-lake">
                   <Button className="w-full rounded-full bg-purple-600 hover:bg-purple-700 group-hover:bg-purple-500 transition-colors">
-                    View Details <ChevronRight size={16} className="ml-1" />
+                    View Details
                   </Button>
                 </Link>
               </div>
