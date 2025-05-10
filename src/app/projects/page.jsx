@@ -697,9 +697,7 @@ const projects = [
     technologies: [
       { name: 'Python', icon: '/icons/python.svg' },
       { name: 'Pandas', icon: '/icons/pandas.svg' },
-      { name: 'Scikit-Learn', icon: '/icons/sklearn.svg' },
-      { name: 'Prophet', icon: '/icons/prophet.svg' },
-      { name: 'Matplotlib', icon: '/icons/matplotlib.svg' }
+      { name: 'Scikit-Learn', icon: '/icons/sklearn.svg' }
     ],
     codeSnippet: `
 # Time series forecasting with Prophet
@@ -765,9 +763,7 @@ forecast = model.predict(future)
       { name: 'PySpark', icon: '/icons/pyspark.svg' },
       { name: 'XGBoost', icon: '/icons/xgboost.svg' },
       { name: 'Scikit-Learn', icon: '/icons/sklearn.svg' },
-      { name: 'Pandas', icon: '/icons/pandas.svg' },
-      { name: 'SHAP', icon: '/icons/shap.svg' },
-      { name: 'Plotly', icon: '/icons/plotly.svg' }
+      { name: 'Pandas', icon: '/icons/pandas.svg' }
     ],
     codeSnippet: `
 # Ensemble model with XGBoost
@@ -848,8 +844,7 @@ print(f"Test MAPE: {mape:.4f}")
       { name: 'Azure', icon: '/icons/azure.svg' },
       { name: 'Data Factory', icon: '/icons/data-factory.svg' },
       { name: 'Power BI', icon: '/icons/powerbi.svg' },
-      { name: 'Azure Data Lake', icon: '/icons/data-lake.svg' },
-      { name: 'Azure Synapse', icon: '/icons/synapse.svg' },
+      { name: 'Azure Synapse', icon: '/icons/synapse.png' },
       { name: 'SQL', icon: '/icons/sql.svg' }
     ],
     codeSnippet: `
@@ -938,8 +933,7 @@ print(f"Test MAPE: {mape:.4f}")
       { name: 'Python', icon: '/icons/python.svg' },
       { name: 'NEAT', icon: '/icons/neat.svg' },
       { name: 'Pygame', icon: '/icons/pygame.svg' },
-      { name: 'NumPy', icon: '/icons/numpy.svg' },
-      { name: 'Matplotlib', icon: '/icons/matplotlib.svg' }
+      { name: 'NumPy', icon: '/icons/numpy.svg' }
     ],
     codeSnippet: `
 # NEAT implementation for Flappy Bird
@@ -1037,8 +1031,7 @@ with open('winner.pkl', 'wb') as f:
     technologies: [
       { name: 'C++', icon: '/icons/cpp.svg' },
       { name: 'JSON', icon: '/icons/json.svg' },
-      { name: 'Git', icon: '/icons/git.svg' },
-      { name: 'CMake', icon: '/icons/cmake.svg' }
+      { name: 'Git', icon: '/icons/git.svg' }
     ],
     codeSnippet: `
 // C++ Object-Oriented Implementation
@@ -1156,10 +1149,7 @@ public:
     ],
     technologies: [
       { name: 'Java', icon: '/icons/java.svg' },
-      { name: 'Swing', icon: '/icons/swing.svg' },
-      { name: 'MySQL', icon: '/icons/mysql.svg' },
-      { name: 'JDBC', icon: '/icons/jdbc.svg' },
-      { name: 'Maven', icon: '/icons/maven.svg' }
+      { name: 'MySQL', icon: '/icons/mysql.svg' }
     ],
     codeSnippet: `
 // Java class hierarchy for vehicle management
@@ -1291,8 +1281,7 @@ public class Car extends Vehicle {
       { name: 'TensorFlow', icon: '/icons/tensorflow.svg' },
       { name: 'Keras', icon: '/icons/keras.svg' },
       { name: 'OpenCV', icon: '/icons/opencv.svg' },
-      { name: 'Python', icon: '/icons/python.svg' },
-      { name: 'Pillow', icon: '/icons/pillow.svg' }
+      { name: 'Python', icon: '/icons/python.svg' }
     ],
     codeSnippet: `
 # Load and evaluate trained InceptionV3 model
