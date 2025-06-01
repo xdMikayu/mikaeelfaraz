@@ -319,7 +319,7 @@ export default function Page() {
                   </h3>
                   <div className="flex gap-2 flex-wrap">
                     <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-blue-950 text-blue-400' : 'bg-blue-100 text-blue-700'}`}>
-                      Python
+                      Web Development
                     </span>
                     <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-purple-950 text-purple-400' : 'bg-purple-100 text-purple-700'}`}>
                       Marketing

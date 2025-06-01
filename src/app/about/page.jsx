@@ -299,7 +299,7 @@ export default function AboutPage() {
                   <CardContent className="p-6">
                     <Target className="w-12 h-12 text-blue-500 mb-4" />
                     <h3 className="text-xl font-bold mb-2">My Mission</h3>
-                    <p className="text-slate-400">
+                    <p className="text-white">
                       To leverage data science and AI to solve real-world business problems, creating solutions that are both technically sound and commercially viable.
                     </p>
                   </CardContent>
@@ -309,7 +309,7 @@ export default function AboutPage() {
                   <CardContent className="p-6">
                     <Zap className="w-12 h-12 text-purple-500 mb-4" />
                     <h3 className="text-xl font-bold mb-2">My Approach</h3>
-                    <p className="text-slate-400">
+                    <p className="text-white">
                       I combine analytical rigor with creative problem-solving, ensuring that every solution is optimized for both technical performance and business impact.
                     </p>
                   </CardContent>
@@ -319,7 +319,7 @@ export default function AboutPage() {
                   <CardContent className="p-6">
                     <Heart className="w-12 h-12 text-red-500 mb-4" />
                     <h3 className="text-xl font-bold mb-2">My Values</h3>
-                    <p className="text-slate-400">
+                    <p className="text-white">
                       Integrity, continuous learning, and excellence guide everything I do. I believe in creating value through innovation and ethical practices.
                     </p>
                   </CardContent>
@@ -832,11 +832,11 @@ export default function AboutPage() {
                 </p>
                 <div className="flex items-center">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold mr-3">
-                    AC
+                    JC
                   </div>
                   <div>
-                    <p className="font-bold">Ahmad Chaudhry</p>
-                    <p className="text-sm text-slate-500">Marketing Director, Asian Street by Thai</p>
+                    <p className="font-bold">Juthathip Chaiyasit</p>
+                    <p className="text-sm text-slate-500">Owner, Asian Street by Thai</p>
                   </div>
                 </div>
               </CardContent>
@@ -851,10 +851,10 @@ export default function AboutPage() {
                 </p>
                 <div className="flex items-center">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center text-white font-bold mr-3">
-                    PS
+                    PM
                   </div>
                   <div>
-                    <p className="font-bold">Prof. Sarah Johnson</p>
+                    <p className="font-bold">Dr. Patrick Mukala</p>
                     <p className="text-sm text-slate-500">University of Wollongong in Dubai</p>
                   </div>
                 </div>
