@@ -168,3 +168,9 @@ test('Tabby notification sent as separate title/body fields', () => {
   assert.equal(r.amount, 5);
   assert.equal(r.availableBalance, 900);
 });
+
+test('Notification sent as a whole object field', () => {
+  const r = parseEvent({ source: 'alert', text: '', title: '', body: '', notification: 'Transaction of AED 3.00 At Noon was successful. Your available Tabby Card limit is AED 800.00.' }, NOW);
+  assert.equal(r.ok, true);
+  assert.equal(r.amount, 3);
+});
