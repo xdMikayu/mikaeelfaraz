@@ -37,8 +37,8 @@ const KEYWORD_RULES = [
   ['Personal Care & Fitness', ['salon', 'barber', 'spa', 'gym', 'fitness', 'crossfit', 'padel', 'grooming']],
   ['Education', ['udemy', 'coursera', 'university', 'school', 'academy', 'books', 'kinokuniya', 'magrudy']],
   ['Dining & Cafés', ['starbucks', 'tim hortons', 'costa', 'mcdonald', 'kfc', 'burger', 'pizza', 'cafe', 'coffee', 'restaurant', 'shake shack', 'subway', 'dunkin', 'pret', 'bakery', 'grill', 'kitchen', 'eatery', 'shawarma', 'karak', 'chai', 'hardee', 'popeyes', 'nando', 'five guys', 'krispy kreme', 'baskin', 'bistro', 'diner', 'sushi']],
-  ['Shopping', ['noon', 'amazon', 'namshi', 'shein', 'ikea', 'h m', 'zara', 'centrepoint', 'max fashion', 'sharaf dg', 'jumbo', 'apple store', 'mall', 'trendyol', 'temu', 'aliexpress', 'ace', 'dragon mart', 'decathlon', 'nike', 'adidas', 'sephora', 'faces', 'home centre', 'daiso', 'dubai duty free']],
-  ['Transfers & Fees', ['tabby', 'tamara', 'postpay', 'annual fee', 'late fee', 'finance charge', 'cash advance', 'transfer']],
+  ['Shopping', ['noon', 'amazon', 'namshi', 'shein', 'ikea', 'h m', 'zara', 'centrepoint', 'max fashion', 'sharaf dg', 'jumbo', 'apple store', 'mall', 'trendyol', 'temu', 'aliexpress', 'ace', 'dragon mart', 'decathlon', 'nike', 'adidas', 'sephora', 'faces', 'home centre', 'daiso', 'dubai duty free', 'tamara', 'postpay', 'cashew', 'spotii']],
+  ['Transfers & Fees', ['tabby', 'annual fee', 'late fee', 'finance charge', 'cash advance', 'transfer']],
 ];
 
 // Precompile each keyword as a whole-word regex over the normalized key, so
@@ -88,10 +88,10 @@ export function ruleCategory(merchant, rules = []) {
   return kw ? { category: kw, source: 'keyword' } : null;
 }
 
-// Buy-now-pay-later providers. When SIB or Mashreq is charged by one of these,
-// it is an instalment of a purchase already counted on the Tabby card, so it
-// must not be counted as spending a second time.
-const BNPL = /(^| )(tabby|tamara|postpay|cashew|spotii)( |$)/;
+// When SIB or Mashreq is charged by Tabby, it is a repayment of purchases already
+// counted on the Tabby card, so it must not be counted as spending a second time.
+// Tamara, Postpay etc. aren't tracked as cards, so their charges are the spending.
+const BNPL = /(^| )tabby( |$)/;
 
 export function isBnplRepayment(merchant, accountSlug) {
   if (accountSlug === 'tabby') return false;

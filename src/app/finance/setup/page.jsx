@@ -141,7 +141,7 @@ function ConnectionStatus() {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {f.accounts.map((a) => {
-        const last = f.transactions.find((t) => t.account_id === a.id && t.source !== 'manual');
+        const last = f.transactions.find((t) => t.account_id === a.id && !['manual', 'statement'].includes(t.source));
         const fresh = last && Date.now() - new Date(last.created_at || last.occurred_at).getTime() < 30 * 86400000;
         return (
           <div key={a.id} className="fin-card flex items-center gap-3 p-4">

@@ -135,7 +135,7 @@ test('periods', () => {
 
 test('BNPL instalments on bank cards are recognised', () => {
   assert.equal(isBnplRepayment('TABBY FZ LLC DUBAI', 'mashreq'), true);
-  assert.equal(isBnplRepayment('Tamara', 'sib'), true);
+  assert.equal(isBnplRepayment('Tamara', 'sib'), false); // not tracked as a card, so it is real spending
   assert.equal(isBnplRepayment('DU', 'mashreq'), false);
   assert.equal(isBnplRepayment('Tabby', 'tabby'), false);
 });
@@ -179,4 +179,19 @@ test('Non-purchase app notifications are skipped, not flagged', () => {
   const r = parseEvent({ source: 'alert', title: 'Tabby Support', body: 'Are you having any trouble receiving OTP?' }, NOW);
   assert.equal(r.status, 'ignored');
   assert.equal(parseEvent({ source: 'alert', title: '', body: '' }, NOW).status, 'unparsed');
+});
+
+test('statement rows keep their own source, date and category', () => {
+  const r = parseEvent({ source: 'statement', account: 'mashreq', merchant: 'Pelita Air', merchant_raw: 'PELITA AIR-IPG JAKARTA 360', amount: 4839960, currency: 'IDR', occurred_at: '2026-09-15T12:00:00+04:00', category: 'Travel' });
+  assert.equal(r.ok, true);
+  assert.equal(r.source, 'statement');
+  assert.equal(r.account, 'mashreq');
+  assert.equal(r.merchant, 'Pelita Air');
+  assert.equal(r.merchantRaw, 'PELITA AIR-IPG JAKARTA 360');
+  assert.equal(r.category, 'Travel');
+  assert.equal(r.fxEstimated, true);
+  assert.ok(r.amountAed > 1000 && r.amountAed < 1200);
+  assert.equal(r.occurredAt, '2026-09-15T08:00:00.000Z');
+  assert.equal(parseEvent({ source: 'statement', account: 'mashreq', amount: 5 }).ok, false); // no date
+  assert.equal(keywordCategory('Tamara'), 'Shopping');
 });

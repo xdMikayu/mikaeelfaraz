@@ -4,7 +4,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { timingSafeEqual } from 'node:crypto';
 import { parseEvent } from './parse.mjs';
-import { ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
+import { CATEGORIES, ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
 import { DEFAULT_ACCOUNTS } from './accounts.mjs';
 import { aiEnabled, categorizeMerchants } from './ai.mjs';
 
@@ -169,7 +169,7 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
   }
 
   // 4. New transaction.
-  const cat = ruleCategory(parsed.merchant, rules);
+  const cat = CATEGORIES.includes(parsed.category) ? { category: parsed.category, source: 'user' } : ruleCategory(parsed.merchant, rules);
   const instalment = isBnplRepayment(`${parsed.merchant} ${parsed.merchantRaw}`, parsed.account);
   const row = {
     user_id: userId,
@@ -185,7 +185,7 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
     category: cat?.category ?? null,
     category_source: cat?.source ?? null,
     available_balance: parsed.availableBalance,
-    ...(instalment && { excluded: true, category: 'Transfers & Fees', category_source: 'keyword', notes: 'BNPL instalment, purchase already counted on Tabby' }),
+    ...(instalment && { excluded: true, category: 'Transfers & Fees', category_source: 'keyword', notes: 'Tabby repayment, purchase already counted on the Tabby card' }),
     source: parsed.source,
     sources: [parsed.source],
     dedupe_key: dedupeKey(parsed.account, parsed),
