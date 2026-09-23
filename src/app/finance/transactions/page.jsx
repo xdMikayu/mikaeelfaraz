@@ -176,6 +176,9 @@ function ImportPanel({ onDone }) {
 function UnreadInbox() {
   const f = useFinance();
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(null); // raw event being turned into a transaction
+  const tabby = f.accounts.find((a) => a.slug === 'tabby');
+  const isBlankAlert = (r) => r.source === 'alert' && !['text', 'title', 'subtitle', 'body'].some((k) => String(r.payload?.[k] ?? '').trim());
   const dismiss = async (id) => {
     if (!f.demo) await f.supabase.from('fin_raw_events').update({ status: 'dismissed' }).eq('id', id);
     f.setData((d) => ({ ...d, rawEvents: d.rawEvents.filter((r) => r.id !== id) }));
@@ -192,12 +195,25 @@ function UnreadInbox() {
             <li key={r.id} className="rounded-lg p-3" style={{ background: 'var(--fin-surface-2)' }}>
               <div className="mb-1 flex justify-between gap-2 text-xs fin-muted">
                 <span>{dateTime(r.received_at)} · {r.source} · {r.reason}</span>
-                <button className="underline" onClick={() => dismiss(r.id)}>Dismiss</button>
+                <span className="flex gap-3">
+                  {isBlankAlert(r) && tabby && <button className="underline" onClick={() => setAdding(r)}>Add details</button>}
+                  <button className="underline" onClick={() => dismiss(r.id)}>Dismiss</button>
+                </span>
               </div>
-              <p className="whitespace-pre-wrap break-words text-sm">{r.payload?.text || JSON.stringify(r.payload)}</p>
+              <p className="whitespace-pre-wrap break-words text-sm">
+                {isBlankAlert(r) ? 'A Tabby notification arrived but iOS didn’t pass its text. If it was a purchase, tap “Add details”.' : r.payload?.text || JSON.stringify(r.payload)}
+              </p>
             </li>
           ))}
         </ul>
+      )}
+      {adding && (
+        <TransactionEditor
+          tx={null}
+          preset={{ account_id: tabby.id, occurred_at: adding.received_at, notes: 'From a blank Tabby notification' }}
+          onSaved={() => dismiss(adding.id)}
+          onClose={() => setAdding(null)}
+        />
       )}
       {open && <p className="mt-2 text-xs fin-muted">If a real purchase is here, add it with “Add” and send the message format to Claude to extend the parser.</p>}
     </div>

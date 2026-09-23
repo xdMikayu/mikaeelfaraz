@@ -174,3 +174,9 @@ test('Notification sent as a whole object field', () => {
   assert.equal(r.ok, true);
   assert.equal(r.amount, 3);
 });
+
+test('Non-purchase app notifications are skipped, not flagged', () => {
+  const r = parseEvent({ source: 'alert', title: 'Tabby Support', body: 'Are you having any trouble receiving OTP?' }, NOW);
+  assert.equal(r.status, 'ignored');
+  assert.equal(parseEvent({ source: 'alert', title: '', body: '' }, NOW).status, 'unparsed');
+});
