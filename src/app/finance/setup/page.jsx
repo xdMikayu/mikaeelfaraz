@@ -140,7 +140,7 @@ function ConnectionStatus() {
   const CHANNEL = { sib: 'SMS', mashreq: 'Gmail', tabby: 'Notification / Wallet' };
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      {f.accounts.map((a) => {
+      {f.accounts.filter((a) => !a.closed_at).map((a) => {
         const last = f.transactions.find((t) => t.account_id === a.id && !['manual', 'statement'].includes(t.source));
         const fresh = last && Date.now() - new Date(last.created_at || last.occurred_at).getTime() < 30 * 86400000;
         return (
@@ -205,7 +205,8 @@ function AccountsEditor() {
           <div key={r.id} className="grid grid-cols-[1fr_76px_112px] items-center gap-2">
             <div className="relative">
               <span className="fin-dot absolute left-3.5 top-1/2 -translate-y-1/2" style={{ background: accountColorVar(r.slug, f.accounts) }} />
-              <input className="fin-input" style={{ paddingLeft: 30 }} value={r.name || ''} onChange={set(r.id, 'name')} aria-label="Card name" />
+              <input className="fin-input" style={{ paddingLeft: 30, paddingRight: r.closed_at ? 72 : undefined }} value={r.name || ''} onChange={set(r.id, 'name')} aria-label="Card name" />
+              {r.closed_at && <span className="fin-pill fin-pill-neutral absolute right-2 top-1/2 -translate-y-1/2">Closed</span>}
             </div>
             <input className="fin-input fin-num" value={r.last4 || ''} onChange={set(r.id, 'last4')} placeholder="1234" maxLength={4} aria-label="Last 4 digits" />
             <input className="fin-input fin-num" type="number" value={r.credit_limit || ''} onChange={set(r.id, 'credit_limit')} placeholder="Limit" aria-label="Credit limit" />
