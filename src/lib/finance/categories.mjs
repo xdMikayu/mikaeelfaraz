@@ -56,7 +56,7 @@ export function merchantKey(merchant) {
   return String(merchant || '')
     .toLowerCase()
     .replace(/&/g, ' & ')
-    .replace(/[^a-z0-9&؀-ۿ]+/g, ' ')
+    .replace(/[^a-z0-9&\u0600-\u06ff]+/g, ' ')
     .trim()
     .replace(/\s+/g, ' ');
 }
@@ -86,4 +86,14 @@ export function ruleCategory(merchant, rules = []) {
   if (partial) return { category: partial.category, source: partial.source === 'ai' ? 'ai' : 'rule' };
   const kw = keywordCategory(merchant);
   return kw ? { category: kw, source: 'keyword' } : null;
+}
+
+// Buy-now-pay-later providers. When SIB or Mashreq is charged by one of these,
+// it is an instalment of a purchase already counted on the Tabby card, so it
+// must not be counted as spending a second time.
+const BNPL = /(^| )(tabby|tamara|postpay|cashew|spotii)( |$)/;
+
+export function isBnplRepayment(merchant, accountSlug) {
+  if (accountSlug === 'tabby') return false;
+  return BNPL.test(merchantKey(merchant));
 }

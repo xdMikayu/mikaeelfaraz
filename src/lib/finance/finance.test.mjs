@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseEvent, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
-import { keywordCategory, ruleCategory, merchantKey } from './categories.mjs';
+import { keywordCategory, ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
 import { getPeriod } from './periods.mjs';
 
 const NOW = new Date('2026-09-23T10:00:00Z'); // 14:00 in Dubai
@@ -131,4 +131,11 @@ test('periods', () => {
   assert.ok(p.prevEnd < p.start);
   const l = getPeriod('last_month', NOW);
   assert.equal(l.label, 'Aug 2026');
+});
+
+test('BNPL instalments on bank cards are recognised', () => {
+  assert.equal(isBnplRepayment('TABBY FZ LLC DUBAI', 'mashreq'), true);
+  assert.equal(isBnplRepayment('Tamara', 'sib'), true);
+  assert.equal(isBnplRepayment('DU', 'mashreq'), false);
+  assert.equal(isBnplRepayment('Tabby', 'tabby'), false);
 });
