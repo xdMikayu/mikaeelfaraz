@@ -48,15 +48,20 @@ export default function TransactionEditor({ tx, preset, onSaved, onClose }) {
       const amount = Math.abs(Number(form.amount));
       if (!(amount > 0)) throw new Error('Enter an amount');
       const merchant = form.merchant.trim() || 'Manual';
-      const { amountAed, fxEstimated } = toAed(amount, form.currency.toUpperCase());
+      const currency = form.currency.toUpperCase();
+      // Keep the stored AED (e.g. what the bank billed) unless the amount or currency changed.
+      const same = tx && Number(tx.amount) === amount && tx.currency === currency;
+      const { amountAed, fxEstimated } = same ? { amountAed: Number(tx.amount_aed), fxEstimated: tx.fx_estimated } : toAed(amount, currency);
+      // Toggling "exclude" yourself also marks the row as yours, so automatic matching leaves it alone.
+      const excludedChanged = !isNew && form.excluded !== !!tx.excluded;
       const auto = form.category ? null : ruleCategory(merchant, rules);
       const row = {
         account_id: form.account_id,
         occurred_at: fromLocalInput(form.occurred_at),
-        amount, currency: form.currency.toUpperCase(), amount_aed: amountAed, fx_estimated: fxEstimated,
+        amount, currency, amount_aed: amountAed, fx_estimated: fxEstimated,
         merchant, direction: form.direction, notes: form.notes || null, excluded: form.excluded,
         category: form.category || auto?.category || null,
-        category_source: form.category ? (categoryChanged || isNew ? 'user' : tx.category_source) : auto?.source || null,
+        category_source: form.category ? (categoryChanged || isNew || excludedChanged ? 'user' : tx.category_source) : auto?.source || null,
       };
       if (isNew) {
         const { error } = await supabase.from('fin_transactions').insert({ ...row, merchant_raw: merchant, source: 'manual', sources: ['manual'] });

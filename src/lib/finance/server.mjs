@@ -4,7 +4,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { timingSafeEqual } from 'node:crypto';
 import { parseEvent, dubaiDate, dubaiParts } from './parse.mjs';
-import { CATEGORIES, ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
+import { CATEGORIES, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES, MANAGED_TABBY_NOTES } from './categories.mjs';
 import { DEFAULT_ACCOUNTS } from './accounts.mjs';
 import { aiEnabled, categorizeMerchants } from './ai.mjs';
 
@@ -104,7 +104,35 @@ export async function ingestEvents(db, userId, events, { now = new Date() } = {}
       results.push({ status: 'error', reason: err.message || String(err) });
     }
   }
+  if (results.some((r) => r.status === 'parsed')) await reconcileTabby(db, userId, accounts);
   return results;
+}
+
+/**
+ * Hide the bank-card Tabby charges that paid off the Tabby card and count the rest
+ * as instalments. Runs after each ingest batch and on the schedule, so it doesn't
+ * matter whether the bank charge or the Tabby repayment arrives first. Rows whose
+ * category or exclusion you changed yourself are left alone.
+ */
+export async function reconcileTabby(db, userId, accounts) {
+  accounts = accounts || (await ensureAccounts(db, userId));
+  const tabby = accounts.get('tabby');
+  if (!tabby) return { updated: 0 };
+  const cols = 'id, amount_aed, occurred_at, excluded, category, notes';
+  const [charges, repayments] = await Promise.all([
+    db.from('fin_transactions').select(cols).eq('user_id', userId).neq('account_id', tabby.id).eq('direction', 'debit')
+      .in('notes', MANAGED_TABBY_NOTES).or('category_source.is.null,category_source.neq.user'),
+    db.from('fin_transactions').select(cols).eq('user_id', userId).eq('account_id', tabby.id).eq('direction', 'credit')
+      .eq('notes', TABBY_NOTES.repayment),
+  ]);
+  if (charges.error) throw charges.error;
+  if (repayments.error) throw repayments.error;
+  const updates = planTabbyReconcile(charges.data, repayments.data);
+  for (const { id, ...patch } of updates) {
+    const { error } = await db.from('fin_transactions').update({ ...patch, category_source: 'keyword' }).eq('id', id);
+    if (error) throw error;
+  }
+  return { updated: updates.length };
 }
 
 async function ingestOne(db, userId, event, { accounts, rules, now }) {
@@ -179,7 +207,9 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
 
   // 4. New transaction.
   const cat = CATEGORIES.includes(parsed.category) ? { category: parsed.category, source: 'user' } : ruleCategory(parsed.merchant, rules);
-  const instalment = isBnplRepayment(`${parsed.merchant} ${parsed.merchantRaw}`, parsed.account);
+  const both = `${parsed.merchant} ${parsed.merchantRaw}`;
+  const tabbyCharge = isTabbyCharge(both, parsed.account);
+  const tabbyRepayment = isTabbyCardRepayment(both, parsed.account, parsed.direction);
   const row = {
     user_id: userId,
     account_id: account.id,
@@ -194,7 +224,9 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
     category: cat?.category ?? null,
     category_source: cat?.source ?? null,
     available_balance: parsed.availableBalance,
-    ...(instalment && { excluded: true, category: 'Transfers & Fees', category_source: 'keyword', notes: 'Tabby repayment, purchase already counted on the Tabby card' }),
+    // Counted until reconcileTabby pairs it with a Tabby card repayment.
+    ...(tabbyCharge && { category: 'Shopping', category_source: 'keyword', notes: TABBY_NOTES.instalment }),
+    ...(tabbyRepayment && { excluded: true, category: 'Transfers & Fees', category_source: 'keyword', notes: TABBY_NOTES.repayment }),
     source: parsed.source,
     sources: [parsed.source],
     dedupe_key: dedupeKey(parsed.account, parsed),

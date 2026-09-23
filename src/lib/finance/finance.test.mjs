@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
-import { keywordCategory, ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
+import { keywordCategory, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES } from './categories.mjs';
 import { getPeriod } from './periods.mjs';
 
 const NOW = new Date('2026-09-23T10:00:00Z'); // 14:00 in Dubai
@@ -133,11 +133,30 @@ test('periods', () => {
   assert.equal(l.label, 'Aug 2026');
 });
 
-test('BNPL instalments on bank cards are recognised', () => {
-  assert.equal(isBnplRepayment('TABBY FZ LLC DUBAI', 'mashreq'), true);
-  assert.equal(isBnplRepayment('Tamara', 'sib'), false); // not tracked as a card, so it is real spending
-  assert.equal(isBnplRepayment('DU', 'mashreq'), false);
-  assert.equal(isBnplRepayment('Tabby', 'tabby'), false);
+test('Tabby charges on bank cards: card payoffs hidden, instalments counted', () => {
+  assert.equal(isTabbyCharge('TABBY FZ LLC DUBAI', 'mashreq'), true);
+  assert.equal(isTabbyCharge('GEIDEA*TABBY FZ LLC dubai ARE', 'sib'), true);
+  assert.equal(isTabbyCharge('Tamara', 'sib'), false); // not tracked as a card, so it is real spending
+  assert.equal(isTabbyCharge('DU', 'mashreq'), false);
+  assert.equal(isTabbyCharge('Tabby', 'tabby'), false);
+  assert.equal(isTabbyCardRepayment('Card repayment', 'tabby', 'credit'), true);
+  assert.equal(isTabbyCardRepayment('Card repayment', 'tabby', 'debit'), false);
+  assert.equal(isTabbyCardRepayment('Noon', 'tabby', 'credit'), false); // a refund
+  const charges = [
+    { id: 'a', amount_aed: 457.94, occurred_at: '2026-09-17T08:00:00Z', excluded: true, category: 'Transfers & Fees', notes: 'Tabby repayment, purchase already counted on the Tabby card' },
+    { id: 'b', amount_aed: 52.5, occurred_at: '2026-09-16T08:00:00Z', excluded: true, category: 'Transfers & Fees', notes: 'Tabby repayment, purchase already counted on the Tabby card' },
+    { id: 'c', amount_aed: 55, occurred_at: '2026-09-19T08:00:00Z', excluded: false, category: 'Shopping', notes: TABBY_NOTES.instalment },
+  ];
+  const repayments = [{ id: 'r', amount_aed: 457.94, occurred_at: '2026-09-17T12:00:00Z' }];
+  const plan = Object.fromEntries(planTabbyReconcile(charges, repayments).map((u) => [u.id, u]));
+  assert.equal(plan.a.excluded, true);
+  assert.equal(plan.a.notes, TABBY_NOTES.cardPayoff);
+  assert.equal(plan.b.excluded, false); // an instalment: now counted
+  assert.equal(plan.b.category, 'Shopping');
+  assert.equal(plan.c, undefined); // already right
+  // A repayment pairs with only one charge, and not one 5 days away.
+  const far = [{ id: 'x', amount_aed: 10, occurred_at: '2026-09-01T00:00:00Z', excluded: false, category: 'Shopping', notes: TABBY_NOTES.instalment }];
+  assert.equal(planTabbyReconcile(far, [{ id: 'r2', amount_aed: 10, occurred_at: '2026-09-06T00:00:00Z' }]).length, 0);
 });
 
 test('Tabby app alert', () => {
