@@ -14,7 +14,7 @@
  * No secrets live in this file — keep the token in Script Properties.
  */
 var SENDER = 'MashreqAlerts@mashreq.com';
-var BATCH = 25;
+var BATCH = 5; // small batches: the site's functions stop after ~10 seconds
 
 function setup() {
   ScriptApp.getProjectTriggers().forEach(function (t) {

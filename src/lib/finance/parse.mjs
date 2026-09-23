@@ -224,7 +224,7 @@ export function parseWalletEvent(input, now = new Date()) {
 
 /**
  * A row read off a card statement or app history: { source: 'statement', account,
- * merchant, amount, occurred_at, currency?, merchant_raw?, category? }. Statements have
+ * merchant, amount, occurred_at, currency?, amount_aed?, direction?, merchant_raw?, category? }. Statements have
  * no live channel, so the row keeps its own source instead of posing as a Wallet tap.
  */
 export function parseStatementRow(input) {
@@ -245,8 +245,16 @@ export function parseStatementRow(input) {
     availableBalance: null,
     source: 'statement',
   });
-  if (parsed.ok && input.merchant) parsed.merchant = String(input.merchant).trim();
-  if (parsed.ok && input.category) parsed.category = String(input.category);
+  if (!parsed.ok) return parsed;
+  if (input.merchant) parsed.merchant = String(input.merchant).trim();
+  if (input.category) parsed.category = String(input.category);
+  if (input.direction === 'credit') parsed.direction = 'credit'; // refund
+  // Statements print what the bank actually charged in AED, so no FX estimate is needed.
+  const billed = input.amount_aed != null ? parseAmount(input.amount_aed) : null;
+  if (billed) {
+    parsed.amountAed = billed.amount;
+    parsed.fxEstimated = false;
+  }
   return parsed;
 }
 

@@ -195,3 +195,12 @@ test('statement rows keep their own source, date and category', () => {
   assert.equal(parseEvent({ source: 'statement', account: 'mashreq', amount: 5 }).ok, false); // no date
   assert.equal(keywordCategory('Tamara'), 'Shopping');
 });
+
+test('statement refunds and billed AED amounts', () => {
+  const refund = parseEvent({ source: 'statement', account: 'sib', merchant: 'Mynted', amount: 122.9, direction: 'credit', occurred_at: '2026-07-17T12:00:00+04:00' });
+  assert.equal(refund.direction, 'credit');
+  const fx = parseEvent({ source: 'statement', account: 'sib', merchant: 'Days Inn', amount: 390.12, currency: 'EUR', amount_aed: 1756.2, occurred_at: '2026-04-26T12:00:00+04:00' });
+  assert.equal(fx.amountAed, 1756.2);
+  assert.equal(fx.fxEstimated, false);
+  assert.equal(fx.direction, 'debit');
+});
