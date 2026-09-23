@@ -160,3 +160,11 @@ test('Tabby alert with title and body joined without a space', () => {
   assert.equal(r.amount, 12.5);
   assert.equal(r.merchant, 'Careem');
 });
+
+test('Tabby notification sent as separate title/body fields', () => {
+  const r = parseEvent({ source: 'alert', text: ' ', title: 'Transaction of AED 5.00', body: 'At Careem Apple Pay was successful. Your available Tabby Card limit is AED 900.00.' }, NOW);
+  assert.equal(r.ok, true);
+  assert.equal(r.account, 'tabby');
+  assert.equal(r.amount, 5);
+  assert.equal(r.availableBalance, 900);
+});

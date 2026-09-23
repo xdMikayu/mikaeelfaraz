@@ -244,8 +244,10 @@ export function parseEvent(event, now = new Date()) {
   if (!event || typeof event !== 'object') return { ok: false, status: 'unparsed', reason: 'Empty event' };
   const isWallet = event.source === 'wallet' || (event.amount != null && (event.card != null || event.merchant != null) && !event.text);
   if (isWallet) return parseWalletEvent(event, now);
-  const text = event.text || event.body || '';
-  if (!String(text).trim()) return { ok: false, status: 'unparsed', reason: 'No text in event' };
+  // Notification automations may send the pieces separately (title / subtitle / body).
+  const pieces = [event.title, event.subtitle, event.body].map((x) => String(x ?? '').trim()).filter(Boolean).join(' ');
+  const text = String(event.text ?? '').trim() || pieces || String(event.notification ?? '').trim();
+  if (!text) return { ok: false, status: 'unparsed', reason: 'No text in event (notification arrived empty)' };
   return (
     parseSibSms(text, now) ||
     parseMashreqEmail(text) ||
