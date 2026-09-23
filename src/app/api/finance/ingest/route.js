@@ -6,6 +6,8 @@
 // Body: one event, { events: [...] }, or plain text (treated as one message).
 //   SMS/email: { "source": "sms", "text": "A txn on your Card ..." }
 //   Wallet:    { "source": "wallet", "card": "Tabby Card", "merchant": "du", "amount": "AED 1.00" }
+//   Statement: { "source": "statement", "account": "mashreq", "merchant": "Noon", "amount": 8.9,
+//                "occurred_at": "2026-09-09T12:00:00+04:00", "external_id": "mashreq:1664390705" }
 import { authenticate, getAdmin, ingestEvents, jsonError, HttpError } from '@/lib/finance/server.mjs';
 
 export const runtime = 'nodejs';

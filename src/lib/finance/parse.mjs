@@ -16,7 +16,7 @@ const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7,
 const FX_TO_AED = {
   AED: 1, USD: 3.6725, SAR: 0.9793, QAR: 1.0089, OMR: 9.5388, BHD: 9.7686,
   KWD: 12.0, EUR: 4.1, GBP: 4.8, INR: 0.043, PKR: 0.013, EGP: 0.075,
-  TRY: 0.1, JPY: 0.025, CHF: 4.4, CAD: 2.7, AUD: 2.4, SGD: 2.8, THB: 0.1,
+  TRY: 0.1, JPY: 0.025, CHF: 4.4, CAD: 2.7, AUD: 2.4, SGD: 2.8, THB: 0.1, IDR: 0.000225,
 };
 const PEGGED = new Set(['AED', 'USD', 'SAR', 'QAR', 'OMR', 'BHD']);
 
@@ -222,6 +222,34 @@ export function parseWalletEvent(input, now = new Date()) {
   });
 }
 
+/**
+ * A row read off a card statement or app history: { source: 'statement', account,
+ * merchant, amount, occurred_at, currency?, merchant_raw?, category? }. Statements have
+ * no live channel, so the row keeps its own source instead of posing as a Wallet tap.
+ */
+export function parseStatementRow(input) {
+  const account = input.account ? String(input.account).toLowerCase() : accountFromCardName(input.card);
+  if (!account) return { ok: false, status: 'unparsed', reason: 'Statement row has no account' };
+  const amt = parseAmount(input.amount);
+  if (!amt) return { ok: false, status: 'unparsed', reason: 'Statement row has no amount' };
+  const when = new Date(input.occurred_at);
+  if (!input.occurred_at || Number.isNaN(when.getTime())) return { ok: false, status: 'unparsed', reason: 'Statement row has no date' };
+  const currency = input.currency ? String(input.currency).toUpperCase() : amt.currency;
+  const parsed = finish({
+    account,
+    last4: null,
+    amount: amt.amount,
+    currency,
+    merchantRaw: String(input.merchant_raw || input.merchant || 'Unknown').trim(),
+    occurredAt: when,
+    availableBalance: null,
+    source: 'statement',
+  });
+  if (parsed.ok && input.merchant) parsed.merchant = String(input.merchant).trim();
+  if (parsed.ok && input.category) parsed.category = String(input.category);
+  return parsed;
+}
+
 function finish(tx) {
   if (tx.amount == null || !(tx.amount > 0)) return { ok: false, status: 'unparsed', reason: 'Could not read the amount' };
   const { amountAed, fxEstimated } = toAed(tx.amount, tx.currency);
@@ -242,6 +270,7 @@ function finish(tx) {
  */
 export function parseEvent(event, now = new Date()) {
   if (!event || typeof event !== 'object') return { ok: false, status: 'unparsed', reason: 'Empty event' };
+  if (event.source === 'statement') return parseStatementRow(event);
   const isWallet = event.source === 'wallet' || (event.amount != null && (event.card != null || event.merchant != null) && !event.text);
   if (isWallet) return parseWalletEvent(event, now);
   // Notification automations may send the pieces separately (title / subtitle / body).
