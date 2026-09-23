@@ -7,7 +7,8 @@ let client;
 
 // Accept both our names and the ones Netlify's Supabase extension creates.
 // (Each must be a literal process.env.NEXT_PUBLIC_* reference so Next inlines it.)
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_DATABASE_URL;
+// Tolerate the Data API URL (…/rest/v1/) being pasted instead of the project URL.
+const URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_DATABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export function supabaseConfigured() {
