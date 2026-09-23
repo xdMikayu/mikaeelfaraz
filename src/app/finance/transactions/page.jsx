@@ -224,8 +224,9 @@ function ImportPanel({ onDone, onClose }) {
     setResult(null);
     const totals = { parsed: 0, merged: 0, duplicate: 0, ignored: 0, unparsed: 0, errors: 0 };
     try {
-      for (let i = 0; i < messages.length; i += 25) {
-        const r = await f.api('ingest', { events: messages.slice(i, i + 25).map((m) => ({ source: 'import', text: m })) });
+      // Small batches: each message takes a few DB round-trips and Netlify stops a function after ~10s.
+      for (let i = 0; i < messages.length; i += 5) {
+        const r = await f.api('ingest', { events: messages.slice(i, i + 5).map((m) => ({ source: 'import', text: m })) });
         for (const k of Object.keys(totals)) totals[k] += r[k] || 0;
       }
       setResult(totals);
