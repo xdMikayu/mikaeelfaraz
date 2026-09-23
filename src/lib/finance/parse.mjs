@@ -4,6 +4,7 @@
 // Supported inputs:
 //   - SIB SMS:        "A txn on your Card XXXX1234 at <merchant> for AED 6.30 on 21-Sep at 19:24 is approved. Your available balance is 8,000.00"
 //   - Mashreq email:  "Your Mashreq Cashback Card ending with 1234 was used for a purchase of AED 1.00 at <merchant> on 23-SEP-2026 12:39 PM. Available limit is AED 11,000.00"
+//   - Tabby alert:    "Transaction of AED 1.00 At DU Apple Pay was successful. Your available Tabby Card limit is AED 1,900.00"
 //   - Apple Wallet:   iOS Shortcuts "Transaction" automation → { card, merchant, amount }
 
 const DUBAI_OFFSET_MS = 4 * 60 * 60 * 1000; // UAE is UTC+4 all year (no DST)
@@ -165,6 +166,34 @@ export function parseMashreqEmail(text) {
   });
 }
 
+/**
+ * Tabby Card alert, e.g. "Transaction of AED 1.00 At DU Apple Pay was successful.
+ * Your available Tabby Card limit is AED 1,974.76." No timestamp in the text, so
+ * it uses when the alert was received.
+ */
+export function parseTabbyAlert(text, now = new Date(), channel = 'alert') {
+  const s = collapse(text);
+  if (!/tabby/i.test(s) || !/transaction of/i.test(s)) return null;
+  if (/declined|failed|unsuccessful|reversed|refund/i.test(s)) {
+    return { ok: false, status: 'ignored', reason: 'Tabby alert is not a successful purchase' };
+  }
+  const m = s.match(/transaction of\s+([A-Z]{3})\s*([\d,]+(?:\.\d+)?)\s+at\s+(.+?)\s+(?:was|is|has been)\s+(?:successful|approved|completed)/i);
+  if (!m) return { ok: false, status: 'unparsed', reason: 'Looks like Tabby but the format was not recognised' };
+  const [, cur, amt, merchantRaw] = m;
+  const bal = s.match(/available tabby card limit is\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
+  return finish({
+    account: 'tabby',
+    last4: null,
+    amount: toNumber(amt),
+    currency: cur.toUpperCase(),
+    merchantRaw: merchantRaw.trim(),
+    occurredAt: now,
+    availableBalance: bal ? toNumber(bal[2]) : null,
+    source: ['sms', 'email'].includes(channel) ? channel : 'alert',
+    wallet: /apple\s*pay/i.test(merchantRaw),
+  });
+}
+
 /** Work out which of our accounts a Wallet card name refers to. */
 export function accountFromCardName(card) {
   const c = String(card || '').toLowerCase();
@@ -219,7 +248,8 @@ export function parseEvent(event, now = new Date()) {
   if (!String(text).trim()) return { ok: false, status: 'unparsed', reason: 'No text in event' };
   return (
     parseSibSms(text, now) ||
-    parseMashreqEmail(text) || { ok: false, status: 'unparsed', reason: 'Not a recognised card alert' }
+    parseMashreqEmail(text) ||
+    parseTabbyAlert(text, now, event.source) || { ok: false, status: 'unparsed', reason: 'Not a recognised card alert' }
   );
 }
 
@@ -229,9 +259,9 @@ export function splitPastedMessages(blob) {
   if (!s) return [];
   const count = (re) => (s.match(re) || []).length;
   const nSib = count(/txn on your card/gi);
-  const nMashreq = count(/was used for a purchase/gi);
+  const nMashreq = count(/was used for a purchase/gi) + count(/transaction of [A-Z]{3}/gi);
   const parts = (re) => s.split(re).map((x) => x.trim()).filter(Boolean);
   if (nSib + nMashreq <= 1) return nSib + nMashreq === 1 ? [s] : parts(/\n\s*\n+/);
   // Cut right before each alert's opening phrase so multi-paragraph emails stay whole.
-  return parts(/(?=A txn on your Card)|(?=Dear Customer)/i).filter((x) => /txn on your card|was used for a purchase/i.test(x));
+  return parts(/(?=A txn on your Card)|(?=Dear Customer)|(?=Transaction of [A-Z]{3})/i).filter((x) => /txn on your card|was used for a purchase|transaction of [a-z]{3}/i.test(x));
 }

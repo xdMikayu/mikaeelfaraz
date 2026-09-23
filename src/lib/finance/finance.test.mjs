@@ -2,7 +2,7 @@
 // Card numbers and balances below are made up — never commit real ones (public repo).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseEvent, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
+import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
 import { keywordCategory, ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
 import { getPeriod } from './periods.mjs';
 
@@ -138,4 +138,18 @@ test('BNPL instalments on bank cards are recognised', () => {
   assert.equal(isBnplRepayment('Tamara', 'sib'), true);
   assert.equal(isBnplRepayment('DU', 'mashreq'), false);
   assert.equal(isBnplRepayment('Tabby', 'tabby'), false);
+});
+
+test('Tabby app alert', () => {
+  const TABBY = 'Transaction of AED 1.00 At DU Apple Pay was successful. Your available Tabby Card limit is AED 1,234.56.';
+  const r = parseTabbyAlert(TABBY, NOW, 'sms');
+  assert.equal(r.ok, true);
+  assert.equal(r.account, 'tabby');
+  assert.equal(r.amount, 1);
+  assert.equal(r.merchant, 'DU');
+  assert.equal(r.availableBalance, 1234.56);
+  assert.equal(r.source, 'sms');
+  assert.equal(r.occurredAt, NOW.toISOString());
+  assert.equal(parseEvent({ source: 'sms', text: TABBY }, NOW).account, 'tabby');
+  assert.equal(splitPastedMessages(`${TABBY}\n${TABBY.replace('1.00', '2.00')}`).length, 2);
 });
