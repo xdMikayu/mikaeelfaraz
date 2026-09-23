@@ -3,7 +3,7 @@
 // from a client component.
 import { createClient } from '@supabase/supabase-js';
 import { timingSafeEqual } from 'node:crypto';
-import { parseEvent } from './parse.mjs';
+import { parseEvent, dubaiDate, dubaiParts } from './parse.mjs';
 import { CATEGORIES, ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
 import { DEFAULT_ACCOUNTS } from './accounts.mjs';
 import { aiEnabled, categorizeMerchants } from './ai.mjs';
@@ -143,23 +143,32 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
   }
 
   // 3. Same purchase already reported by another channel? Merge into it.
+  //    Statements only carry a date, so they match anything on the same Dubai day.
   const t = new Date(parsed.occurredAt).getTime();
+  let from = new Date(t - MERGE_WINDOW_MS);
+  let to = new Date(t + MERGE_WINDOW_MS);
+  if (parsed.source === 'statement') {
+    const { y, m, d } = dubaiParts(parsed.occurredAt);
+    from = dubaiDate(y, m, d);
+    to = new Date(from.getTime() + 24 * 60 * 60 * 1000 - 1);
+  }
   const { data: near, error: nearErr } = await db
     .from('fin_transactions')
     .select('id, source, sources, occurred_at, available_balance, merchant, merchant_raw')
     .eq('user_id', userId)
     .eq('account_id', account.id)
     .eq('amount', parsed.amount)
-    .gte('occurred_at', new Date(t - MERGE_WINDOW_MS).toISOString())
-    .lte('occurred_at', new Date(t + MERGE_WINDOW_MS).toISOString())
-    .limit(5);
+    .eq('direction', parsed.direction)
+    .gte('occurred_at', from.toISOString())
+    .lte('occurred_at', to.toISOString())
+    .limit(10);
   if (nearErr) throw nearErr;
   const twin = (near || []).find((n) => !(n.sources || [n.source]).includes(parsed.source));
   if (twin) {
     const patch = { sources: Array.from(new Set([...(twin.sources || [twin.source]), parsed.source])) };
     if (twin.available_balance == null && parsed.availableBalance != null) patch.available_balance = parsed.availableBalance;
     // Bank alerts carry the real timestamp and descriptor; Wallet only has "now".
-    if (twin.source === 'wallet' && parsed.source !== 'wallet') {
+    if (twin.source === 'wallet' && !['wallet', 'statement'].includes(parsed.source)) {
       patch.occurred_at = parsed.occurredAt;
       patch.merchant_raw = parsed.merchantRaw;
     }
