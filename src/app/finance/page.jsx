@@ -63,6 +63,8 @@ export default function Overview() {
   const recent = f.transactions.slice(0, 6);
   const catMax = Math.max(1, ...s.categories.map((c) => Math.max(c.total, c.budget || 0)));
   const accountById = new Map(f.accounts.map((a) => [a.id, a]));
+  // Closed cards only get a tile for periods they were used in.
+  const tiles = s.byAccount.filter((b) => !b.account.closed_at || b.total || b.prevTotal);
   const totalUncategorized = f.transactions.filter((t) => !t.category).length;
   const avgMonth = months.reduce((t, m) => t + m.total, 0) / 12;
 
@@ -169,8 +171,8 @@ export default function Overview() {
           </div>
         </section>
 
-        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-          {s.byAccount.map((b) => <CardTile key={b.account.id} b={b} accounts={f.accounts} />)}
+        <div className={`grid gap-4 lg:grid-cols-1 ${tiles.length > 3 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+          {tiles.map((b) => <CardTile key={b.account.id} b={b} accounts={f.accounts} />)}
         </div>
       </div>
 
@@ -302,7 +304,9 @@ function CardTile({ b, accounts }) {
         {change != null && <> · <span style={{ color: change > 0.005 ? 'var(--fin-bad)' : change < -0.005 ? 'var(--fin-good)' : undefined }}>{pct(change)}</span></>}
       </p>
       <div className="mt-4">
-        {b.available != null ? (
+        {b.account.closed_at ? (
+          <span className="fin-pill fin-pill-neutral">Closed</span>
+        ) : b.available != null ? (
           <>
             <div className="flex justify-between text-xs">
               <span className="fin-ink-2">Available</span>

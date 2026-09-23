@@ -159,7 +159,7 @@ export default function TransactionEditor({ tx, preset, onSaved, onClose }) {
           <div>
             <label className="fin-label">Card</label>
             <select className="fin-select" value={form.account_id} onChange={set('account_id')}>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {accounts.filter((a) => !a.closed_at || a.id === form.account_id).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
           <div>

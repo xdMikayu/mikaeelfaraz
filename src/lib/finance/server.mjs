@@ -77,6 +77,16 @@ export async function ensureAccounts(db, userId) {
   return new Map(data.map((a) => [a.slug, a]));
 }
 
+async function addAccount(db, userId, accounts, slug, event) {
+  const sort = Math.max(0, ...[...accounts.values()].map((a) => a.sort || 0)) + 1;
+  const row = { user_id: userId, slug, name: String(event.account_name).slice(0, 60), kind: ['credit', 'debit', 'bnpl'].includes(event.account_kind) ? event.account_kind : 'credit', sort };
+  if (event.account_closed_at) row.closed_at = event.account_closed_at;
+  const { data, error } = await db.from('fin_accounts').upsert(row, { onConflict: 'user_id,slug' }).select().single();
+  if (error) throw error;
+  accounts.set(slug, data);
+  return data;
+}
+
 async function loadRules(db, userId) {
   const { data, error } = await db.from('fin_merchant_rules').select('match, category, source').eq('user_id', userId);
   if (error) throw error;
@@ -160,7 +170,9 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
     return { status: parsed.status, reason: parsed.reason };
   }
 
-  const account = accounts.get(parsed.account);
+  let account = accounts.get(parsed.account);
+  // A statement can bring in a card you don't track live (e.g. one you've closed).
+  if (!account && parsed.source === 'statement' && event.account_name) account = await addAccount(db, userId, accounts, parsed.account, event);
   if (!account) {
     await finishRaw({ status: 'unparsed', reason: `No account "${parsed.account}"` });
     return { status: 'unparsed', reason: `No account "${parsed.account}"` };
