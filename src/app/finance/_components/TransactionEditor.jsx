@@ -8,18 +8,18 @@ import { useFinance } from './FinanceShell';
 import { aed, fromLocalInput, toLocalInput } from './format';
 
 /** Modal for editing an existing transaction or adding a manual one (tx = null). */
-export default function TransactionEditor({ tx, onClose }) {
+export default function TransactionEditor({ tx, preset, onSaved, onClose }) {
   const { accounts, transactions, rules, supabase, demo, reload, setData } = useFinance();
   const isNew = !tx;
   const [form, setForm] = useState(() => ({
-    account_id: tx?.account_id || accounts[0]?.id || '',
-    occurred_at: toLocalInput(tx?.occurred_at),
+    account_id: tx?.account_id || preset?.account_id || accounts[0]?.id || '',
+    occurred_at: toLocalInput(tx?.occurred_at || preset?.occurred_at),
     amount: tx?.amount ?? '',
     currency: tx?.currency || 'AED',
     merchant: tx?.merchant || '',
     category: tx?.category || '',
     direction: tx?.direction || 'debit',
-    notes: tx?.notes || '',
+    notes: tx?.notes || preset?.notes || '',
     excluded: tx?.excluded || false,
   }));
   const [applyAll, setApplyAll] = useState(true);
@@ -73,6 +73,7 @@ export default function TransactionEditor({ tx, onClose }) {
         }
       }
       await reload();
+      onSaved?.();
       onClose();
     } catch (e2) {
       setErr(e2.message || String(e2));

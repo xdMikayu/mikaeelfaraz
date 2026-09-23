@@ -246,13 +246,15 @@ export function parseEvent(event, now = new Date()) {
   if (isWallet) return parseWalletEvent(event, now);
   // Notification automations may send the pieces separately (title / subtitle / body).
   const pieces = [event.title, event.subtitle, event.body].map((x) => String(x ?? '').trim()).filter(Boolean).join(' ');
-  const text = String(event.text ?? '').trim() || pieces || String(event.notification ?? '').trim();
+  // Last resort: whole-object fields (e.g. the Notification variable itself, Shortcut Input).
+  const extras = [event.notification, event.input, event.extra, event.name].map((x) => String(x ?? '').trim()).filter(Boolean).join(' ');
+  const text = String(event.text ?? '').trim() || pieces || extras;
   if (!text) return { ok: false, status: 'unparsed', reason: 'No text in event (notification arrived empty)' };
-  return (
-    parseSibSms(text, now) ||
-    parseMashreqEmail(text) ||
-    parseTabbyAlert(text, now, event.source) || { ok: false, status: 'unparsed', reason: 'Not a recognised card alert' }
-  );
+  const parsed = parseSibSms(text, now) || parseMashreqEmail(text) || parseTabbyAlert(text, now, event.source);
+  if (parsed) return parsed;
+  // App-notification automations also forward chats, promos and reminders; those aren't purchases.
+  if (event.source === 'alert') return { ok: false, status: 'ignored', reason: 'Not a purchase notification' };
+  return { ok: false, status: 'unparsed', reason: 'Not a recognised card alert' };
 }
 
 /** Split a pasted blob of many messages into individual messages. */
