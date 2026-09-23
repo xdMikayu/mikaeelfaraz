@@ -153,3 +153,10 @@ test('Tabby app alert', () => {
   assert.equal(parseEvent({ source: 'sms', text: TABBY }, NOW).account, 'tabby');
   assert.equal(splitPastedMessages(`${TABBY}\n${TABBY.replace('1.00', '2.00')}`).length, 2);
 });
+
+test('Tabby alert with title and body joined without a space', () => {
+  const r = parseTabbyAlert('Transaction of AED 12.50At Careem Apple Pay was successful. Your available Tabby Card limit is AED 1,234.56.', NOW);
+  assert.equal(r.ok, true);
+  assert.equal(r.amount, 12.5);
+  assert.equal(r.merchant, 'Careem');
+});

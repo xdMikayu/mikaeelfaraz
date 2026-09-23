@@ -177,7 +177,7 @@ export function parseTabbyAlert(text, now = new Date(), channel = 'alert') {
   if (/declined|failed|unsuccessful|reversed|refund/i.test(s)) {
     return { ok: false, status: 'ignored', reason: 'Tabby alert is not a successful purchase' };
   }
-  const m = s.match(/transaction of\s+([A-Z]{3})\s*([\d,]+(?:\.\d+)?)\s+at\s+(.+?)\s+(?:was|is|has been)\s+(?:successful|approved|completed)/i);
+  const m = s.match(/transaction of\s+([A-Z]{3})\s*([\d,]*\d(?:\.\d{1,2})?)\s*at\s+(.+?)\s+(?:was|is|has been)\s+(?:successful|approved|completed)/i);
   if (!m) return { ok: false, status: 'unparsed', reason: 'Looks like Tabby but the format was not recognised' };
   const [, cur, amt, merchantRaw] = m;
   const bal = s.match(/available tabby card limit is\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
