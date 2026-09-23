@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Moon, Sun, LogOut, Wallet } from 'lucide-react';
+import { Moon, Sun, LogOut, LayoutDashboard, ReceiptText, Settings2, TrendingUp, Lock } from 'lucide-react';
 import { getSupabase, supabaseConfigured } from '@/lib/finance/supabase-browser';
 import { DEFAULT_ACCOUNTS } from '@/lib/finance/accounts.mjs';
 import { demoData } from './demo';
@@ -14,10 +14,10 @@ const HISTORY_MONTHS = 24;
 const PAGE = 1000;
 
 const NAV = [
-  { href: '/finance', label: 'Overview' },
-  { href: '/finance/transactions', label: 'Transactions' },
-  { href: '/finance/setup', label: 'Setup' },
-  { href: '/finance/portfolio', label: 'Portfolio' },
+  { href: '/finance', label: 'Overview', icon: LayoutDashboard },
+  { href: '/finance/transactions', label: 'Activity', icon: ReceiptText },
+  { href: '/finance/portfolio', label: 'Portfolio', icon: TrendingUp },
+  { href: '/finance/setup', label: 'Setup', icon: Settings2 },
 ];
 
 function useTheme() {
@@ -50,12 +50,23 @@ async function fetchAll(query) {
   }
 }
 
+function Logo() {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span className="grid h-8 w-8 place-items-center rounded-[10px] text-[15px] font-bold" style={{ background: 'linear-gradient(135deg, var(--fin-s1), var(--fin-s7))', color: '#fff' }}>M</span>
+      <span className="text-[15px] font-semibold tracking-tight">Money</span>
+    </span>
+  );
+}
+
 export default function FinanceShell({ children }) {
   const [dark, toggleTheme] = useTheme();
   const pathname = usePathname();
   const params = useSearchParams();
   const demo = params.get('demo') === '1' || !supabaseConfigured();
   const supabase = demo ? null : getSupabase();
+  const keepDemo = demo && supabaseConfigured();
+  const href = useCallback((path) => `${path}${keepDemo ? (path.includes('?') ? '&' : '?') + 'demo=1' : ''}`, [keepDemo]);
 
   const [session, setSession] = useState(undefined); // undefined = loading
   const [data, setData] = useState({ accounts: [], transactions: [], rules: [], budgets: [], rawEvents: [], activity: [] });
@@ -147,53 +158,97 @@ export default function FinanceShell({ children }) {
   );
 
   const value = useMemo(
-    () => ({ ...data, loading, error, reload: load, supabase, session, demo, api, setData }),
-    [data, loading, error, load, supabase, session, demo, api]
+    () => ({ ...data, loading, error, reload: load, supabase, session, demo, api, setData, href }),
+    [data, loading, error, load, supabase, session, demo, api, href]
   );
+
+  const signedIn = Boolean(session);
+  const isActive = (h) => (h === '/finance' ? pathname === h : pathname.startsWith(h));
 
   return (
     <div className="fin-root">
-      <header className="sticky top-0 z-20 border-b" style={{ borderColor: 'var(--fin-border)', background: 'var(--fin-page)' }}>
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <Link href="/finance" className="flex items-center gap-2 font-semibold">
-            <Wallet size={18} /> <span className="hidden sm:inline">Money</span>
-          </Link>
-          <nav className="fin-nav flex flex-1 gap-1 overflow-x-auto">
-            {NAV.map((n) => (
-              <Link key={n.href} href={`${n.href}${demo && supabaseConfigured() ? '?demo=1' : ''}`} aria-current={pathname === n.href ? 'page' : undefined}>
-                {n.label}
+      {signedIn && (
+        <aside className="fin-side">
+          <Link href={href('/finance')} className="mb-8 px-2"><Logo /></Link>
+          <nav className="flex flex-col gap-1">
+            {NAV.map(({ href: h, label, icon: Icon }) => (
+              <Link key={h} href={href(h)} className="fin-nav-item" aria-current={isActive(h) ? 'page' : undefined}>
+                <Icon size={18} strokeWidth={1.9} /> {label}
               </Link>
             ))}
           </nav>
-          <button className="fin-btn" onClick={toggleTheme} aria-label="Toggle dark mode" style={{ padding: 7 }}>
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          {session && !demo && (
-            <button className="fin-btn" onClick={() => supabase.auth.signOut()} aria-label="Sign out" style={{ padding: 7 }}>
-              <LogOut size={16} />
-            </button>
+          <div className="mt-auto flex flex-col gap-1">
+            {demo && <p className="fin-inset mb-2 px-3 py-2 text-xs fin-ink-2">Demo data</p>}
+            <button className="fin-nav-item" onClick={toggleTheme}>{dark ? <Sun size={18} /> : <Moon size={18} />} {dark ? 'Light mode' : 'Dark mode'}</button>
+            {!demo && <button className="fin-nav-item" onClick={() => supabase.auth.signOut()}><LogOut size={18} /> Sign out</button>}
+          </div>
+        </aside>
+      )}
+
+      <div className={signedIn ? 'lg:pl-[248px]' : ''}>
+        <header className="fin-topbar">
+          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+            <Link href={href('/finance')}><Logo /></Link>
+            <div className="flex items-center gap-1">
+              <button className="fin-btn fin-btn-ghost fin-icon-btn" onClick={toggleTheme} aria-label="Toggle dark mode">{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
+              {signedIn && !demo && (
+                <button className="fin-btn fin-btn-ghost fin-icon-btn" onClick={() => supabase.auth.signOut()} aria-label="Sign out"><LogOut size={18} /></button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-6xl px-4 pb-32 pt-5 sm:px-6 lg:px-10 lg:pb-16 lg:pt-10">
+          {demo && (
+            <div className="fin-card mb-5 flex items-start gap-3 px-4 py-3 text-sm fin-ink-2">
+              <span className="fin-pill fin-pill-accent shrink-0">Demo</span>
+              <span>
+                {supabaseConfigured()
+                  ? 'You’re looking at made-up data.'
+                  : 'This build has no Supabase URL / anon key, so this is made-up data. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Netlify, then redeploy.'}
+              </span>
+            </div>
           )}
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        {demo && (
-          <p className="fin-card mb-4 px-4 py-2 text-sm fin-ink-2">
-            {supabaseConfigured()
-              ? 'Demo mode — showing made-up data.'
-              : 'Demo mode — this build has no Supabase URL / anon key, so this is made-up data. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Netlify, then redeploy.'}
-          </p>
-        )}
-        {session === undefined ? (
-          <p className="fin-muted">Loading…</p>
-        ) : !session ? (
-          <SignIn supabase={supabase} />
-        ) : (
-          <FinanceContext.Provider value={value}>
-            {error && <p className="fin-card mb-4 px-4 py-3 text-sm" style={{ color: 'var(--fin-bad)' }}>Couldn’t load data: {error}. Did you run the SQL migration?</p>}
-            {children}
-          </FinanceContext.Provider>
-        )}
-      </main>
+          {session === undefined ? (
+            <LoadingState />
+          ) : !session ? (
+            <SignIn supabase={supabase} />
+          ) : (
+            <FinanceContext.Provider value={value}>
+              {error && (
+                <div className="fin-card mb-5 px-4 py-3 text-sm" style={{ color: 'var(--fin-bad)' }}>
+                  Couldn’t load data: {error}. Did you run the SQL migration?
+                </div>
+              )}
+              {children}
+            </FinanceContext.Provider>
+          )}
+        </main>
+      </div>
+
+      {signedIn && (
+        <nav className="fin-tabbar" aria-label="Sections">
+          {NAV.map(({ href: h, label, icon: Icon }) => (
+            <Link key={h} href={href(h)} aria-current={isActive(h) ? 'page' : undefined}>
+              <Icon size={20} strokeWidth={isActive(h) ? 2.2 : 1.8} />
+              {label}
+            </Link>
+          ))}
+        </nav>
+      )}
+    </div>
+  );
+}
+
+export function LoadingState() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Loading">
+      <div className="fin-skeleton h-9 w-56" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="fin-skeleton h-44 lg:col-span-2" />
+        <div className="fin-skeleton h-44" />
+      </div>
+      <div className="fin-skeleton h-72" />
     </div>
   );
 }
@@ -212,19 +267,27 @@ function SignIn({ supabase }) {
     setBusy(false);
   };
   return (
-    <form onSubmit={submit} className="fin-card mx-auto mt-10 max-w-sm space-y-3 p-6">
-      <h1 className="text-lg font-semibold">Sign in</h1>
-      <p className="text-sm fin-ink-2">Private dashboard. Use the account you created in Supabase → Authentication → Users.</p>
-      <div>
-        <label className="fin-label" htmlFor="email">Email</label>
-        <input id="email" className="fin-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      </div>
-      <div>
-        <label className="fin-label" htmlFor="pw">Password</label>
-        <input id="pw" className="fin-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-      </div>
-      {msg && <p className="text-sm" style={{ color: 'var(--fin-bad)' }}>{msg}</p>}
-      <button className="fin-btn fin-btn-primary w-full justify-center" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-    </form>
+    <div className="grid min-h-[70vh] place-items-center">
+      <form onSubmit={submit} className="fin-card fin-card-hero fin-fade-in w-full max-w-sm space-y-4 p-7">
+        <div className="mb-2 flex flex-col items-start gap-4">
+          <Logo />
+          <div>
+            <h1 className="fin-h1">Welcome back</h1>
+            <p className="mt-1 text-sm fin-ink-2">Your private spending dashboard.</p>
+          </div>
+        </div>
+        <div>
+          <label className="fin-label" htmlFor="email">Email</label>
+          <input id="email" className="fin-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+        <div>
+          <label className="fin-label" htmlFor="pw">Password</label>
+          <input id="pw" className="fin-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        {msg && <p className="text-sm" style={{ color: 'var(--fin-bad)' }}>{msg}</p>}
+        <button className="fin-btn fin-btn-primary h-11 w-full" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+        <p className="flex items-center gap-1.5 text-xs fin-muted"><Lock size={12} /> Data is private to your account.</p>
+      </form>
+    </div>
   );
 }
