@@ -58,7 +58,7 @@ export default function FinanceShell({ children }) {
   const supabase = demo ? null : getSupabase();
 
   const [session, setSession] = useState(undefined); // undefined = loading
-  const [data, setData] = useState({ accounts: [], transactions: [], rules: [], budgets: [], rawEvents: [] });
+  const [data, setData] = useState({ accounts: [], transactions: [], rules: [], budgets: [], rawEvents: [], activity: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const reloadTimer = useRef(null);
@@ -90,14 +90,17 @@ export default function FinanceShell({ children }) {
         if (cErr) throw cErr;
         accounts = created;
       }
-      const [transactions, rules, budgets, raw] = await Promise.all([
+      const [transactions, rules, budgets, raw, activity] = await Promise.all([
         fetchAll(() => supabase.from('fin_transactions').select('*').gte('occurred_at', since.toISOString()).order('occurred_at', { ascending: false })),
         supabase.from('fin_merchant_rules').select('*').then((r) => (r.error ? Promise.reject(r.error) : r.data)),
         supabase.from('fin_budgets').select('*').then((r) => (r.error ? Promise.reject(r.error) : r.data)),
         supabase.from('fin_raw_events').select('*').eq('status', 'unparsed').order('received_at', { ascending: false }).limit(50)
           .then((r) => (r.error ? Promise.reject(r.error) : r.data)),
+        // Everything that reached the ingest endpoint, whatever happened to it.
+        supabase.from('fin_raw_events').select('id, received_at, source, status, reason, payload').order('received_at', { ascending: false }).limit(25)
+          .then((r) => (r.error ? Promise.reject(r.error) : r.data)),
       ]);
-      setData({ accounts, transactions, rules, budgets, rawEvents: raw });
+      setData({ accounts, transactions, rules, budgets, rawEvents: raw, activity });
       setError(null);
     } catch (e) {
       setError(e.message || String(e));

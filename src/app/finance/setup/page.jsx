@@ -4,7 +4,7 @@ import { Copy, Check, Trash2 } from 'lucide-react';
 import { useFinance } from '../_components/FinanceShell';
 import { CATEGORIES } from '@/lib/finance/categories.mjs';
 import { parseEvent } from '@/lib/finance/parse.mjs';
-import { aed } from '../_components/format';
+import { aed, dateTime } from '../_components/format';
 
 const REPO_SCRIPT = 'https://github.com/xdMikayu/mikaeelfaraz/blob/main/integrations/mashreq-gmail.gs';
 
@@ -54,9 +54,9 @@ export default function Setup() {
       <Section title="How it works">
         <p>
           <b style={{ color: 'var(--fin-ink)' }}>SIB</b> texts you → an iPhone Shortcuts automation forwards the SMS here.{' '}
-          <b style={{ color: 'var(--fin-ink)' }}>Tabby</b> only shows an Apple Wallet notification → a Wallet “Transaction” automation sends the merchant and amount.{' '}
+          <b style={{ color: 'var(--fin-ink)' }}>Tabby</b> sends an app notification → a notification automation forwards it.{' '}
           <b style={{ color: 'var(--fin-ink)' }}>Mashreq</b> emails you → a small Google Apps Script in your Gmail forwards each alert.
-          Everything goes to one private endpoint protected by your ingest token, gets parsed, de-duplicated (a Wallet tap and a bank alert for the same purchase merge into one), and categorized.
+          Everything goes to one private endpoint protected by your ingest token, gets parsed, de-duplicated, and categorized.
         </p>
         <p>Your user ID (for <code className="fin-code">FINANCE_OWNER_USER_ID</code> in Netlify): {f.session?.user?.id ? <CopyText value={f.session.user.id} /> : '—'}</p>
         <p>Endpoint: <CopyText value={endpoint} /></p>
@@ -73,16 +73,16 @@ export default function Setup() {
         </ol>
       </Section>
 
-      <Section title="2 · Tabby — Apple Wallet taps (iPhone Shortcuts)" id="tabby">
+      <Section title="2 · Tabby — app notifications (iOS 27 Shortcuts)" id="tabby">
         <ol className="fin-steps">
-          <li>Shortcuts → <b>Automation</b> → <b>+</b> → <b>Transaction</b> (Wallet). Select only your <b>Tabby</b> card. <b>Run Immediately</b>, then New Blank Automation.</li>
-          <li>Add <b>Get Contents of URL</b> → your endpoint, Method <b>POST</b>, same <code className="fin-code">Authorization</code> header.</li>
-          <li>Request Body <b>JSON</b> with Text fields: <code className="fin-code">source</code> = <code className="fin-code">wallet</code>; <code className="fin-code">card</code> = Shortcut Input → <b>Card or Pass</b>; <code className="fin-code">merchant</code> = Shortcut Input → <b>Merchant</b>; <code className="fin-code">amount</code> = Shortcut Input → <b>Amount</b>.</li>
-          <li>Optional: add the Mashreq card to the same automation too — if both the Wallet tap and the Mashreq email arrive, they merge into one transaction and you see it instantly instead of waiting for the email.</li>
+          <li>New shortcut → trigger <b>When I receive a notification from</b> <b>Tabby</b>. Optional filter: <b>Title</b> contains <CopyText value="Transaction of" />. Automation on, Notify off.</li>
+          <li>Add a <b>Text</b> action containing the notification’s <b>Title</b>, a space, then its <b>Body</b> (tap each bubble to pick the property).</li>
+          <li>Add <b>Get Contents of URL</b> → your endpoint, Method <b>POST</b>, header <code className="fin-code">Authorization</code> = <code className="fin-code">Bearer YOUR_FINANCE_INGEST_TOKEN</code>.</li>
+          <li>Request Body <b>JSON</b>: <code className="fin-code">source</code> = <code className="fin-code">alert</code>, <code className="fin-code">text</code> = the Text action’s output.</li>
         </ol>
         <p className="text-xs fin-muted">
-          Wallet automations fire for Apple Pay taps. Online Tabby purchases that don’t go through Apple Pay won’t trigger it — add those with “Add” on the Transactions page.
-          If the card name in Wallet doesn’t contain “Tabby”, also add a Text field <code className="fin-code">account</code> = <code className="fin-code">tabby</code>.
+          This catches every Tabby Card purchase Tabby notifies you about — in store, online and automatic — and records your remaining Tabby limit.
+          Check “Recent activity” below to confirm each notification arrived.
         </p>
       </Section>
 
@@ -96,6 +96,7 @@ export default function Setup() {
         </ol>
       </Section>
 
+      <ActivityLog />
       <ParserTester />
       <AccountsEditor />
       <BudgetsEditor />
@@ -207,6 +208,51 @@ function RulesList() {
             <button className="fin-btn" style={{ padding: 5 }} onClick={() => remove(r.id)} aria-label="Delete rule"><Trash2 size={13} /></button>
           </li>
         ))}
+      </ul>
+    </Section>
+  );
+}
+
+const STATUS_STYLE = {
+  parsed: { label: 'Logged', color: 'var(--fin-good)' },
+  merged: { label: 'Merged', color: 'var(--fin-good)' },
+  duplicate: { label: 'Duplicate', color: 'var(--fin-ink-2)' },
+  ignored: { label: 'Skipped', color: 'var(--fin-ink-2)' },
+  dismissed: { label: 'Dismissed', color: 'var(--fin-muted)' },
+  unparsed: { label: 'Unreadable', color: 'var(--fin-bad)' },
+  pending: { label: 'Error', color: 'var(--fin-bad)' },
+};
+
+/** The last messages the endpoint received, so you can see a Shortcut actually delivered. */
+function ActivityLog() {
+  const f = useFinance();
+  const [busy, setBusy] = useState(false);
+  const refresh = async () => {
+    setBusy(true);
+    await f.reload();
+    setBusy(false);
+  };
+  return (
+    <Section title="Recent activity">
+      <div className="flex items-center justify-between gap-3">
+        <p>Every message your iPhone or Gmail sent, newest first — proof that an automation ran.</p>
+        <button className="fin-btn shrink-0" onClick={refresh} disabled={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
+      {!f.activity?.length && <p className="fin-muted">Nothing received yet.</p>}
+      <ul className="space-y-2">
+        {(f.activity || []).map((e) => {
+          const st = STATUS_STYLE[e.status] || { label: e.status, color: 'var(--fin-ink-2)' };
+          const text = e.payload?.text ?? (e.payload?.merchant ? `${e.payload.card || ''} · ${e.payload.merchant} · ${e.payload.amount}` : JSON.stringify(e.payload));
+          return (
+            <li key={e.id} className="rounded-lg p-3" style={{ background: 'var(--fin-surface-2)' }}>
+              <div className="mb-1 flex flex-wrap justify-between gap-2 text-xs">
+                <span className="fin-muted">{dateTime(e.received_at)} · {e.source}</span>
+                <span style={{ color: st.color }} className="font-medium">{st.label}{e.reason ? ` — ${e.reason}` : ''}</span>
+              </div>
+              <p className="whitespace-pre-wrap break-words text-sm" style={{ color: 'var(--fin-ink)' }}>{String(text || '(empty)').slice(0, 300)}</p>
+            </li>
+          );
+        })}
       </ul>
     </Section>
   );
