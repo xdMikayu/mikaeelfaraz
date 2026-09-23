@@ -242,14 +242,16 @@ function ActivityLog() {
       <ul className="space-y-2">
         {(f.activity || []).map((e) => {
           const st = STATUS_STYLE[e.status] || { label: e.status, color: 'var(--fin-ink-2)' };
-          const text = e.payload?.text ?? (e.payload?.merchant ? `${e.payload.card || ''} · ${e.payload.merchant} · ${e.payload.amount}` : JSON.stringify(e.payload));
+          const p = e.payload || {};
+          const parts = [p.text, p.title, p.subtitle, p.body].map((x) => String(x ?? '').trim()).filter(Boolean);
+          const text = parts.length ? parts.join(' | ') : p.merchant ? `${p.card || ''} · ${p.merchant} · ${p.amount}` : `(empty) ${JSON.stringify(p)}`;
           return (
             <li key={e.id} className="rounded-lg p-3" style={{ background: 'var(--fin-surface-2)' }}>
               <div className="mb-1 flex flex-wrap justify-between gap-2 text-xs">
                 <span className="fin-muted">{dateTime(e.received_at)} · {e.source}</span>
                 <span style={{ color: st.color }} className="font-medium">{st.label}{e.reason ? ` — ${e.reason}` : ''}</span>
               </div>
-              <p className="whitespace-pre-wrap break-words text-sm" style={{ color: 'var(--fin-ink)' }}>{String(text || '(empty)').slice(0, 300)}</p>
+              <p className="whitespace-pre-wrap break-words text-sm" style={{ color: 'var(--fin-ink)' }}>{text.slice(0, 300)}</p>
             </li>
           );
         })}
