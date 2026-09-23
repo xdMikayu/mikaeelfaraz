@@ -67,6 +67,7 @@ export function demoData(now = new Date()) {
   return {
     accounts, transactions,
     rules: [], budgets: [{ category: 'Food Delivery', monthly_amount: 700 }, { category: 'Dining & Cafés', monthly_amount: 400 }],
+    activity: [],
     rawEvents: [{ id: 'demo-raw', received_at: now.toISOString(), source: 'sms', status: 'unparsed', reason: 'Not a recognised card alert', payload: { text: 'Dear customer, your statement is ready.' } }],
   };
 }
