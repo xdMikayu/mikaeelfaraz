@@ -56,50 +56,58 @@ export function Legend({ items }) {
   );
 }
 
-/** This month's running total vs last month's, by day of month. */
-export function CumulativeChart({ current, previous, daysInMonth, currentLabel, previousLabel, height = 220 }) {
+/** Running total through the selected period vs the comparison period, aligned by day. */
+export function CumulativeChart({ current, previous: prevAll, length, ticks, currentLabel, previousLabel, height = 220 }) {
   const [ref, width] = useWidth();
+  // No spend at all in the comparison window: drop the line rather than draw it along the axis.
+  const previous = prevAll.some((p) => p.value !== 0) ? prevAll : [];
   const [hover, setHover] = useState(null);
-  const days = Math.max(daysInMonth, previous.length);
+  const n = Math.max(2, length);
   const max = Math.max(1, ...current.map((p) => p.value), ...previous.map((p) => p.value));
-  const ticks = niceTicks(max);
-  const top = ticks[ticks.length - 1];
+  const yTicks = niceTicks(max);
+  const top = yTicks[yTicks.length - 1];
   const iw = Math.max(10, width - PAD.left - PAD.right);
   const ih = height - PAD.top - PAD.bottom;
-  const x = (day) => PAD.left + ((day - 1) / Math.max(1, days - 1)) * iw;
+  const x = (i) => PAD.left + (i / (n - 1)) * iw;
   const y = (v) => PAD.top + ih - (v / top) * ih;
-  const line = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
+  const line = (pts) => pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
   const last = current[current.length - 1];
   const gid = `fin-area-${useId().replace(/:/g, '')}`;
+  // Keep axis labels at least 34px apart (month names on a 12-month axis, phones).
+  const shown = [];
+  for (const t of ticks) {
+    if (t.i < 0 || t.i > n - 1 || shown.some((s) => s.i === t.i)) continue;
+    if (shown.length && x(t.i) - x(shown[shown.length - 1].i) < 34) continue;
+    shown.push(t);
+  }
 
   const onMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const day = Math.min(days, Math.max(1, Math.round(((px - PAD.left) / iw) * (days - 1)) + 1));
-    setHover(day);
+    const i = Math.round(((e.clientX - rect.left - PAD.left) / iw) * (n - 1));
+    setHover(Math.min(n - 1, Math.max(0, i)));
   };
-  const hc = hover ? current[hover - 1] : null;
-  const hp = hover ? previous[hover - 1] : null;
+  const hc = hover != null ? current[hover] : null;
+  const hp = hover != null ? previous[hover] : null;
 
   return (
     <div>
       <div className="mb-2">
-        <Legend items={[{ label: currentLabel, color: 'var(--fin-s1)', line: true }, { label: previousLabel, color: 'var(--fin-compare)', line: true }]} />
+        <Legend items={[{ label: currentLabel, color: 'var(--fin-s1)', line: true }, ...(previous.length ? [{ label: previousLabel, color: 'var(--fin-compare)', line: true }] : [])]} />
       </div>
       <div ref={ref} className="relative" style={{ height }}>
         {width > 0 && (
           <svg width={width} height={height} onMouseMove={onMove} onMouseLeave={() => setHover(null)} role="img"
-            aria-label={`Cumulative spend: ${currentLabel} ${aed(last?.value || 0, { decimals: 0 })} so far`}>
-            {ticks.map((t) => (
+            aria-label={`Running total: ${currentLabel} ${aed(last?.value || 0, { decimals: 0 })}`}>
+            {yTicks.map((t) => (
               <g key={t}>
                 <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? 'var(--fin-axis)' : 'var(--fin-grid)'} strokeWidth="1" />
                 <text x={PAD.left - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--fin-muted)" className="fin-num">{compact(t)}</text>
               </g>
             ))}
-            {[1, 8, 15, 22, days].filter((d, i, a) => a.indexOf(d) === i && d <= days).map((d) => (
-              <text key={d} x={x(d)} y={height - 8} textAnchor="middle" fontSize="11" fill="var(--fin-muted)">{d}</text>
+            {shown.map((t) => (
+              <text key={t.i} x={x(t.i)} y={height - 8} textAnchor="middle" fontSize="11" fill="var(--fin-muted)">{t.label}</text>
             ))}
-            <path d={line(previous)} fill="none" stroke="var(--fin-compare)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            {previous.length > 0 && <path d={line(previous)} fill="none" stroke="var(--fin-compare)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />}
             {current.length > 0 && (
               <>
                 <defs>
@@ -108,23 +116,23 @@ export function CumulativeChart({ current, previous, daysInMonth, currentLabel, 
                     <stop offset="100%" stopColor="var(--fin-s1)" stopOpacity="0" />
                   </linearGradient>
                 </defs>
-                <path d={`${line(current)}L${x(last.day)},${y(0)}L${x(1)},${y(0)}Z`} fill={`url(#${gid})`} />
+                <path d={`${line(current)}L${x(last.i)},${y(0)}L${x(0)},${y(0)}Z`} fill={`url(#${gid})`} />
                 <path d={line(current)} fill="none" stroke="var(--fin-s1)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-                <circle cx={x(last.day)} cy={y(last.value)} r="5" fill="var(--fin-s1)" stroke="var(--fin-surface)" strokeWidth="2" />
+                <circle cx={x(last.i)} cy={y(last.value)} r="5" fill="var(--fin-s1)" stroke="var(--fin-surface)" strokeWidth="2" />
               </>
             )}
-            {hover && (
+            {hover != null && (
               <line x1={x(hover)} x2={x(hover)} y1={PAD.top} y2={PAD.top + ih} stroke="var(--fin-axis)" strokeWidth="1" />
             )}
             {hc && <circle cx={x(hover)} cy={y(hc.value)} r="4" fill="var(--fin-s1)" stroke="var(--fin-surface)" strokeWidth="2" />}
             {hp && <circle cx={x(hover)} cy={y(hp.value)} r="4" fill="var(--fin-compare)" stroke="var(--fin-surface)" strokeWidth="2" />}
           </svg>
         )}
-        {hover && width > 0 && (
-          <div className="fin-tooltip" style={{ left: Math.min(x(hover) + 12, width - 170), top: 8 }}>
-            <div className="mb-1 font-semibold">Day {hover}</div>
+        {hover != null && width > 0 && (hc || hp) && (
+          <div className="fin-tooltip" style={{ left: Math.min(x(hover) + 12, width - 190), top: 8 }}>
+            <div className="mb-1 font-semibold">{(hc || hp).label}</div>
             {hc && <Row color="var(--fin-s1)" label={currentLabel} value={aed(hc.value, { decimals: 0 })} sub={hc.daily ? `${aed(hc.daily, { decimals: 0 })} that day` : null} />}
-            {hp && <Row color="var(--fin-compare)" label={previousLabel} value={aed(hp.value, { decimals: 0 })} />}
+            {hp && <Row color="var(--fin-compare)" label={previousLabel} value={aed(hp.value, { decimals: 0 })} sub={hc ? `by ${hp.label}` : null} />}
           </div>
         )}
       </div>
@@ -137,44 +145,51 @@ function Row({ color, label, value, sub }) {
     <div className="flex items-start justify-between gap-3 py-0.5">
       <span className="fin-chip"><span className="fin-dot" style={{ background: color }} />{label}</span>
       <span className="text-right">
-        <span className="fin-num font-medium">{value}</span>
+        <span className="fin-num whitespace-nowrap font-medium">{value}</span>
         {sub && <span className="block fin-muted">{sub}</span>}
       </span>
     </div>
   );
 }
 
-/** Monthly totals, stacked by card. */
-export function MonthlyBars({ months, accounts, height = 220 }) {
+/** Spend per week or month, stacked by card. `highlight` marks the selected month. */
+export function SpendBars({ buckets, accounts, highlight = null, height = 220, label = 'Spend by card' }) {
   const [ref, width] = useWidth();
   const [hover, setHover] = useState(null);
-  const max = Math.max(1, ...months.map((m) => m.total));
+  // Legend lists the cards in view; colour still follows each card's fixed slot.
+  const present = accounts.filter((a) => buckets.some((b) => (b.parts[a.id] || 0) > 0));
+  const max = Math.max(1, ...buckets.map((m) => m.total));
   const ticks = niceTicks(max);
   const top = ticks[ticks.length - 1];
   const iw = Math.max(10, width - PAD.left - PAD.right);
   const ih = height - PAD.top - PAD.bottom;
-  const band = iw / months.length;
+  const band = iw / buckets.length;
   const bw = Math.min(24, band * 0.6);
   const y = (v) => PAD.top + ih - (v / top) * ih;
   const GAP = 2;
+  const labelled = highlight ?? buckets.length - 1;
+  // Show every k-th axis label so they never touch (~6.5px per character at 11px, plus a gap).
+  const longest = Math.max(...buckets.map((b) => b.label.length));
+  const step = Math.max(1, Math.ceil((longest * 6.5 + 12) / band));
+  const dim = (i) => (hover != null ? hover !== i : highlight != null && highlight !== i);
 
   return (
     <div>
-      <div className="mb-2"><Legend items={accounts.map((a) => ({ label: a.name, color: accountColorVar(a.slug, accounts) }))} /></div>
+      <div className="mb-2"><Legend items={present.map((a) => ({ label: a.name, color: accountColorVar(a.slug, accounts) }))} /></div>
       <div ref={ref} className="relative" style={{ height }}>
         {width > 0 && (
-          <svg width={width} height={height} role="img" aria-label="Monthly spend by card">
+          <svg width={width} height={height} role="img" aria-label={label}>
             {ticks.map((t) => (
               <g key={t}>
                 <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? 'var(--fin-axis)' : 'var(--fin-grid)'} strokeWidth="1" />
                 <text x={PAD.left - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--fin-muted)" className="fin-num">{compact(t)}</text>
               </g>
             ))}
-            {months.map((mo, i) => {
+            {buckets.map((mo, i) => {
               const cx = PAD.left + band * i + band / 2;
               const x0 = cx - bw / 2;
               let acc = 0;
-              const segs = accounts
+              const segs = present
                 .map((a) => ({ a, v: Math.max(0, mo.parts[a.id] || 0) }))
                 .filter((s) => s.v > 0);
               return (
@@ -187,16 +202,17 @@ export function MonthlyBars({ months, accounts, height = 220 }) {
                     const isTop = j === segs.length - 1;
                     const h = Math.max(0, y0 - y1 - (j > 0 ? GAP : 0));
                     const color = accountColorVar(s.a.slug, accounts);
+                    const opacity = dim(i) ? 0.4 : 1;
                     return isTop ? (
-                      <path key={s.a.id} d={columnPath(x0, y1, bw, h, 4)} fill={color} opacity={hover == null || hover === i ? 1 : 0.55} />
+                      <path key={s.a.id} d={columnPath(x0, y1, bw, h, 4)} fill={color} opacity={opacity} />
                     ) : (
-                      <rect key={s.a.id} x={x0} y={y1} width={bw} height={h} fill={color} opacity={hover == null || hover === i ? 1 : 0.55} />
+                      <rect key={s.a.id} x={x0} y={y1} width={bw} height={h} fill={color} opacity={opacity} />
                     );
                   })}
-                  {(band >= 30 || (months.length - 1 - i) % 2 === 0 || hover === i) && (
-                    <text x={cx} y={height - 8} textAnchor="middle" fontSize="11" fill={hover === i ? 'var(--fin-ink)' : 'var(--fin-muted)'}>{mo.label}</text>
+                  {((buckets.length - 1 - i) % step === 0 || highlight === i) && (
+                    <text x={cx} y={height - 8} textAnchor="middle" fontSize="11" fill={hover === i || highlight === i ? 'var(--fin-ink)' : 'var(--fin-muted)'} fontWeight={highlight === i ? 600 : 400}>{mo.label}</text>
                   )}
-                  {i === months.length - 1 && mo.total > 0 && (
+                  {i === labelled && mo.total > 0 && (
                     <text x={cx} y={y(mo.total) - 6} textAnchor="middle" fontSize="11" fill="var(--fin-ink-2)" className="fin-num">{compact(mo.total)}</text>
                   )}
                 </g>
@@ -207,11 +223,11 @@ export function MonthlyBars({ months, accounts, height = 220 }) {
         {hover != null && width > 0 && (
           <div className="fin-tooltip" style={{ left: Math.min(PAD.left + band * hover + band / 2 + 14, width - 190), top: 8 }}>
             <div className="mb-1 flex justify-between gap-4 font-semibold">
-              <span>{months[hover].fullLabel}</span>
-              <span className="fin-num">{aed(months[hover].total, { decimals: 0 })}</span>
+              <span>{buckets[hover].fullLabel}</span>
+              <span className="fin-num">{aed(buckets[hover].total, { decimals: 0 })}</span>
             </div>
-            {accounts.map((a) => (
-              <Row key={a.id} color={accountColorVar(a.slug, accounts)} label={a.name} value={aed(months[hover].parts[a.id] || 0, { decimals: 0 })} />
+            {present.map((a) => (
+              <Row key={a.id} color={accountColorVar(a.slug, accounts)} label={a.name} value={aed(buckets[hover].parts[a.id] || 0, { decimals: 0 })} />
             ))}
           </div>
         )}

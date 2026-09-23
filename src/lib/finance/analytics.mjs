@@ -1,6 +1,6 @@
 // Pure aggregation over transaction rows (as loaded from Supabase) for the dashboard.
-import { dubaiParts } from './parse.mjs';
-import { lastMonths, daysInMonth } from './periods.mjs';
+import { dubaiDate, dubaiParts } from './parse.mjs';
+import { lastMonths, daysInMonth, monthLabel } from './periods.mjs';
 import { UNCATEGORIZED } from './categories.mjs';
 
 /** Signed AED spend of a row: purchases count, refunds subtract, excluded rows are ignored. */
@@ -99,25 +99,109 @@ export function monthlySeries(transactions, n, now = new Date()) {
   });
 }
 
-/** Cumulative spend by day-of-month for this month and last month. */
-export function cumulativeByDay(transactions, now = new Date()) {
-  const { y, m, d } = dubaiParts(now);
-  const [prevMo, curMo] = lastMonths(2, now);
-  const build = (mo, upToDay) => {
-    const len = daysInMonth(mo.y, mo.m);
-    const daily = new Array(len).fill(0);
+const DAY = 24 * 60 * 60 * 1000;
+const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Dubai midnight of the day an instant falls on. */
+function dubaiDay(date) {
+  const { y, m, d } = dubaiParts(date);
+  return dubaiDate(y, m, d);
+}
+const dayLabel = (date) => {
+  const { m, d } = dubaiParts(date);
+  return `${d} ${SHORT[m]}`;
+};
+const isSingleMonth = (period) => period.key === 'this_month' || period.key === 'last_month';
+
+/** Running total per day over [from, to), with a point for every Dubai calendar day. */
+function runningTotal(transactions, from, to) {
+  const first = dubaiDay(from);
+  const n = Math.max(1, Math.round((dubaiDay(new Date(to.getTime() - 1)) - first) / DAY) + 1);
+  const daily = new Array(n).fill(0);
+  for (const t of transactions) {
+    if (!inRange(t, from, to)) continue;
+    const i = Math.round((dubaiDay(t.occurred_at) - first) / DAY);
+    if (i >= 0 && i < n) daily[i] += spendOf(t);
+  }
+  let run = 0;
+  return daily.map((v, i) => {
+    const date = new Date(first.getTime() + i * DAY);
+    return { i, value: (run += v), daily: v, label: dayLabel(date), date };
+  });
+}
+
+/**
+ * The selected period's running total against its comparison period, aligned by
+ * day offset. This month is drawn against the whole of last month; other periods
+ * against a window of the same length. Ticks are day numbers for a single month,
+ * month names otherwise.
+ */
+export function cumulativeForPeriod(transactions, period, now = new Date()) {
+  const single = isSingleMonth(period);
+  const curEnd = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
+  const current = runningTotal(transactions, period.start, curEnd);
+  const previous = runningTotal(transactions, period.prevStart, period.key === 'this_month' ? period.start : period.prevEnd);
+  const { y, m } = dubaiParts(period.start);
+  const length = Math.max(single ? daysInMonth(y, m) : current.length, previous.length);
+  const ticks = single
+    ? [1, 8, 15, 22, length].map((d) => ({ i: d - 1, label: String(d) }))
+    : current.filter((p) => dubaiParts(p.date).d === 1).map((p) => ({ i: p.i, label: SHORT[dubaiParts(p.date).m] }));
+  const prevMonth = dubaiParts(period.prevStart).m;
+  const labels = single
+    ? [SHORT[m], SHORT[prevMonth]]
+    : period.key === 'ytd'
+      ? [String(y), String(y - 1)]
+      : [period.label, `Previous ${period.months} months`];
+  return { current, previous, length, ticks, currentLabel: labels[0], previousLabel: labels[1] };
+}
+
+/**
+ * Stacked-bar buckets that follow the period: weeks for 3 months, months for longer
+ * periods (both clipped to the window, so they add up to the headline), and the six
+ * months up to the selected one for a single month, with that month highlighted.
+ * Returns { unit, buckets: [{ label, fullLabel, total, parts }], highlight, average }.
+ */
+export function spendSeries(transactions, period, now = new Date()) {
+  const sum = (from, to) => {
+    const parts = {};
+    let total = 0;
     for (const t of transactions) {
-      if (!inRange(t, mo.start, mo.end)) continue;
-      daily[dubaiParts(t.occurred_at).d - 1] += spendOf(t);
+      if (!inRange(t, from, to)) continue;
+      const v = spendOf(t);
+      parts[t.account_id] = (parts[t.account_id] || 0) + v;
+      total += v;
     }
-    let run = 0;
-    return daily.slice(0, upToDay ?? len).map((v, i) => ({ day: i + 1, value: (run += v), daily: v }));
+    return { total, parts };
   };
-  return {
-    current: build(curMo, d),
-    previous: build(prevMo),
-    currentLabel: curMo.label,
-    previousLabel: prevMo.label,
-    daysInMonth: daysInMonth(y, m),
-  };
+  if (isSingleMonth(period)) {
+    const months = lastMonths(6, new Date(period.start.getTime() + DAY));
+    const buckets = months.map((mo) => ({ label: mo.label, fullLabel: mo.fullLabel, ...sum(mo.start, mo.end) }));
+    return { unit: 'month', buckets, highlight: buckets.length - 1, average: buckets.reduce((a, b) => a + b.total, 0) / buckets.length };
+  }
+  const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
+  const unit = period.key === '3m' ? 'week' : 'month';
+  const edges = [period.start];
+  let cursor = dubaiDay(period.start);
+  while (true) {
+    const { y, m, dow } = dubaiParts(cursor);
+    cursor = unit === 'week'
+      ? new Date(cursor.getTime() + (((8 - dow) % 7) || 7) * DAY) // next Monday
+      : dubaiDate(y, m + 1, 1);
+    if (cursor >= end) break;
+    edges.push(cursor);
+  }
+  edges.push(end);
+  const buckets = edges.slice(0, -1).map((from, k) => {
+    const to = edges[k + 1];
+    const a = dubaiParts(from);
+    const b = dubaiParts(new Date(to.getTime() - 1));
+    const wholeMonth = unit === 'month' && a.d === 1 && b.d === daysInMonth(b.y, b.m);
+    const fullLabel = unit === 'week'
+      ? (a.m === b.m ? `${a.d}–${b.d} ${SHORT[b.m]}` : `${a.d} ${SHORT[a.m]} – ${b.d} ${SHORT[b.m]}`)
+      : wholeMonth ? monthLabel(a.y, a.m) : `${a.d}–${b.d} ${SHORT[a.m]} ${a.y}`;
+    return { label: unit === 'week' ? `${a.d} ${SHORT[a.m]}` : SHORT[a.m], fullLabel, ...sum(from, to) };
+  });
+  const total = buckets.reduce((s, x) => s + x.total, 0);
+  const units = unit === 'week' ? (end - period.start) / (7 * DAY) : period.months;
+  return { unit, buckets, highlight: null, average: total / Math.max(1, units) };
 }
