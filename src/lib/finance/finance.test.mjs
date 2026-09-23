@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
 import { keywordCategory, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES } from './categories.mjs';
 import { getPeriod } from './periods.mjs';
+import { summarize, cumulativeForPeriod, spendSeries } from './analytics.mjs';
 
 const NOW = new Date('2026-09-23T10:00:00Z'); // 14:00 in Dubai
 
@@ -222,4 +223,31 @@ test('statement refunds and billed AED amounts', () => {
   assert.equal(fx.amountAed, 1756.2);
   assert.equal(fx.fxEstimated, false);
   assert.equal(fx.direction, 'debit');
+});
+
+test('charts follow the selected period and add up to the headline', () => {
+  const now = new Date('2026-09-23T14:00:00+04:00');
+  const txs = [];
+  for (let k = 0; k < 420; k++) {
+    const at = new Date(now.getTime() - k * 22 * 3600 * 1000); // every 22h, so times of day vary
+    txs.push({ id: `t${k}`, account_id: k % 3 ? 'a' : 'b', amount_aed: 10 + (k % 7), direction: k % 29 ? 'debit' : 'credit', excluded: k % 31 === 0, occurred_at: at.toISOString() });
+  }
+  for (const key of ['this_month', 'last_month', '3m', '6m', 'ytd', '12m']) {
+    const period = getPeriod(key, now);
+    const s = summarize(txs, period);
+    const cum = cumulativeForPeriod(txs, period, now);
+    assert.ok(Math.abs(cum.current.at(-1).value - s.total) < 1e-6, `${key}: running total ends at the headline`);
+    assert.ok(cum.length >= cum.current.length && cum.length >= cum.previous.length);
+    const series = spendSeries(txs, period, now);
+    if (key === 'this_month' || key === 'last_month') {
+      assert.equal(series.buckets.length, 6);
+      assert.ok(Math.abs(series.buckets[series.highlight].total - s.total) < 1e-6, `${key}: highlighted month is the headline`);
+    } else {
+      const sum = series.buckets.reduce((a, b) => a + b.total, 0);
+      assert.ok(Math.abs(sum - s.total) < 1e-6, `${key}: buckets add up to the headline`);
+    }
+  }
+  assert.equal(spendSeries(txs, getPeriod('3m', now), now).unit, 'week');
+  assert.equal(spendSeries(txs, getPeriod('6m', now), now).buckets.length, 7); // 23 Mar–23 Sep: 7 calendar months, ends clipped
+  assert.deepEqual(cumulativeForPeriod(txs, getPeriod('6m', now), now).ticks.map((t) => t.label), ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
 });
