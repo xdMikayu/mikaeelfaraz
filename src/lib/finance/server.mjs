@@ -4,7 +4,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { timingSafeEqual } from 'node:crypto';
 import { parseEvent } from './parse.mjs';
-import { ruleCategory, merchantKey } from './categories.mjs';
+import { ruleCategory, merchantKey, isBnplRepayment } from './categories.mjs';
 import { DEFAULT_ACCOUNTS } from './accounts.mjs';
 import { aiEnabled, categorizeMerchants } from './ai.mjs';
 
@@ -23,7 +23,10 @@ export class HttpError extends Error {
 
 let admin;
 export function getAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const url = (
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_DATABASE_URL ||
+    process.env.SUPABASE_URL || process.env.SUPABASE_DATABASE_URL || ''
+  ).replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new HttpError(500, 'Supabase is not configured (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)');
   if (!admin) admin = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -54,6 +57,10 @@ export async function authenticate(request) {
   }
   const { data, error } = await getAdmin().auth.getUser(token);
   if (error || !data?.user) throw new HttpError(401, 'Invalid token');
+  // The Supabase project is shared with other apps whose users can sign in, so
+  // only the owner may use these endpoints (they can spend Anthropic credit).
+  const owner = process.env.FINANCE_OWNER_USER_ID;
+  if (owner && data.user.id !== owner) throw new HttpError(403, 'This dashboard is private');
   return { userId: data.user.id, via: 'session' };
 }
 
@@ -163,6 +170,7 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
 
   // 4. New transaction.
   const cat = ruleCategory(parsed.merchant, rules);
+  const instalment = isBnplRepayment(`${parsed.merchant} ${parsed.merchantRaw}`, parsed.account);
   const row = {
     user_id: userId,
     account_id: account.id,
@@ -177,6 +185,7 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
     category: cat?.category ?? null,
     category_source: cat?.source ?? null,
     available_balance: parsed.availableBalance,
+    ...(instalment && { excluded: true, category: 'Transfers & Fees', category_source: 'keyword', notes: 'BNPL instalment, purchase already counted on Tabby' }),
     source: parsed.source,
     sources: [parsed.source],
     dedupe_key: dedupeKey(parsed.account, parsed),

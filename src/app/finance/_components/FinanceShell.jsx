@@ -177,7 +177,7 @@ export default function FinanceShell({ children }) {
           <p className="fin-card mb-4 px-4 py-2 text-sm fin-ink-2">
             {supabaseConfigured()
               ? 'Demo mode — showing made-up data.'
-              : 'Demo mode — Supabase is not connected yet, so this is made-up data. Follow the Setup tab to go live.'}
+              : 'Demo mode — this build has no Supabase URL / anon key, so this is made-up data. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Netlify, then redeploy.'}
           </p>
         )}
         {session === undefined ? (

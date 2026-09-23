@@ -11,7 +11,7 @@ import { inRange, spendOf } from '@/lib/finance/analytics.mjs';
 import { accountColorVar } from '@/lib/finance/accounts.mjs';
 import { splitPastedMessages } from '@/lib/finance/parse.mjs';
 
-const SOURCE_LABEL = { sms: 'SMS', email: 'Email', wallet: 'Wallet', manual: 'Manual', import: 'Import', text: 'Text' };
+const SOURCE_LABEL = { sms: 'SMS', email: 'Email', wallet: 'Wallet', alert: 'Tabby alert', manual: 'Manual', import: 'Import', text: 'Text' };
 
 export default function Transactions() {
   const f = useFinance();
