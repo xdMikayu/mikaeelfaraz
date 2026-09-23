@@ -5,6 +5,7 @@ import { CATEGORIES } from '@/lib/finance/categories.mjs';
 import { merchantKey, ruleCategory } from '@/lib/finance/categories.mjs';
 import { normalizeMerchant, toAed } from '@/lib/finance/parse.mjs';
 import { useFinance } from './FinanceShell';
+import { CategoryAvatar } from './icons';
 import { aed, fromLocalInput, toLocalInput } from './format';
 
 /** Modal for editing an existing transaction or adding a manual one (tx = null). */
@@ -96,28 +97,59 @@ export default function TransactionEditor({ tx, preset, onSaved, onClose }) {
     onClose();
   };
 
+  const card = accounts.find((a) => a.id === form.account_id);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: 'rgba(0,0,0,0.45)' }} onClick={onClose}>
-      <form onSubmit={save} onClick={(e) => e.stopPropagation()} className="fin-card max-h-[92vh] w-full max-w-md overflow-y-auto p-5" style={{ borderRadius: 16 }}>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">{isNew ? 'Add transaction' : 'Edit transaction'}</h2>
-          <button type="button" className="fin-btn" style={{ padding: 6 }} onClick={onClose} aria-label="Close"><X size={16} /></button>
+    <div className="fin-sheet-backdrop fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" onClick={onClose}>
+      <form
+        onSubmit={save}
+        onClick={(e) => e.stopPropagation()}
+        className="fin-card fin-sheet max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-b-none p-5 pb-[calc(20px+env(safe-area-inset-bottom))] sm:rounded-b-[20px] sm:p-7"
+      >
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full sm:hidden" style={{ background: 'var(--fin-surface-3)' }} />
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CategoryAvatar category={form.category || (isNew ? null : tx?.category)} />
+            <div>
+              <h2 className="fin-h2">{isNew ? 'New transaction' : form.merchant || 'Transaction'}</h2>
+              <p className="text-xs fin-muted">{isNew ? 'Added manually' : `${card?.name || ''} · ${(tx.sources || [tx.source]).join(' + ')}`}</p>
+            </div>
+          </div>
+          <button type="button" className="fin-btn fin-btn-ghost fin-icon-btn" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </div>
+
+        {/* Amount */}
+        <div className="fin-inset mb-4 px-4 py-4">
+          <label className="fin-label" htmlFor="tx-amount">Amount</label>
+          <div className="flex items-baseline gap-2">
+            <input
+              className="w-20 bg-transparent text-lg font-semibold uppercase fin-muted outline-none"
+              value={form.currency}
+              onChange={set('currency')}
+              maxLength={3}
+              aria-label="Currency"
+            />
+            <input
+              id="tx-amount"
+              className="fin-num min-w-0 flex-1 bg-transparent text-4xl font-semibold tracking-tight outline-none"
+              type="number" inputMode="decimal" step="0.01" min="0" placeholder="0.00"
+              value={form.amount}
+              onChange={set('amount')}
+              required
+            />
+          </div>
+          <div className="fin-seg mt-3" role="group" aria-label="Type">
+            <button type="button" aria-pressed={form.direction === 'debit'} onClick={() => setForm((f) => ({ ...f, direction: 'debit' }))}>Purchase</button>
+            <button type="button" aria-pressed={form.direction === 'credit'} onClick={() => setForm((f) => ({ ...f, direction: 'credit' }))}>Refund</button>
+          </div>
+        </div>
+
         {tx?.merchant_raw && tx.merchant_raw !== tx.merchant && (
-          <p className="mb-3 text-xs fin-muted">Original descriptor: {tx.merchant_raw}</p>
+          <p className="mb-3 text-xs fin-muted">Bank descriptor: {tx.merchant_raw}</p>
         )}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <label className="fin-label">Merchant</label>
             <input className="fin-input" value={form.merchant} onChange={set('merchant')} onBlur={(e) => isNew && setForm((f) => ({ ...f, merchant: normalizeMerchant(e.target.value) }))} placeholder="e.g. Carrefour" />
-          </div>
-          <div>
-            <label className="fin-label">Amount</label>
-            <input className="fin-input fin-num" type="number" step="0.01" min="0" value={form.amount} onChange={set('amount')} required />
-          </div>
-          <div>
-            <label className="fin-label">Currency</label>
-            <input className="fin-input" value={form.currency} onChange={set('currency')} maxLength={3} />
           </div>
           <div>
             <label className="fin-label">Card</label>
@@ -126,50 +158,46 @@ export default function TransactionEditor({ tx, preset, onSaved, onClose }) {
             </select>
           </div>
           <div>
-            <label className="fin-label">Type</label>
-            <select className="fin-select" value={form.direction} onChange={set('direction')}>
-              <option value="debit">Purchase</option>
-              <option value="credit">Refund / credit</option>
-            </select>
-          </div>
-          <div className="col-span-2">
-            <label className="fin-label">Date & time (Dubai)</label>
+            <label className="fin-label">Date & time</label>
             <input className="fin-input" type="datetime-local" value={form.occurred_at} onChange={set('occurred_at')} required />
           </div>
           <div className="col-span-2">
             <label className="fin-label">Category</label>
             <select className="fin-select" value={form.category} onChange={set('category')}>
-              <option value="">{isNew ? 'Auto' : 'Uncategorized'}</option>
+              <option value="">{isNew ? 'Auto-detect' : 'Uncategorized'}</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             {!isNew && categoryChanged && (
-              <label className="mt-2 flex items-center gap-2 text-sm fin-ink-2">
-                <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} />
-                Always use this for “{form.merchant}”{sameMerchant ? ` (updates ${sameMerchant} other)` : ''}
+              <label className="mt-2.5 flex items-center gap-2 text-sm fin-ink-2">
+                <input type="checkbox" className="h-4 w-4 accent-[var(--fin-accent)]" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} />
+                Always use this for “{form.merchant}”{sameMerchant ? ` (updates ${sameMerchant} more)` : ''}
               </label>
             )}
             {tx?.category_source && !categoryChanged && (
-              <p className="mt-1 text-xs fin-muted">Set by {({ keyword: 'built-in rules', rule: 'your merchant rule', ai: 'Claude', user: 'you' })[tx.category_source]}</p>
+              <p className="mt-1.5 text-xs fin-muted">Set by {({ keyword: 'built-in rules', rule: 'your merchant rule', ai: 'Claude', user: 'you' })[tx.category_source]}</p>
             )}
           </div>
           <div className="col-span-2">
             <label className="fin-label">Notes</label>
-            <input className="fin-input" value={form.notes} onChange={set('notes')} />
+            <input className="fin-input" value={form.notes} onChange={set('notes')} placeholder="Optional" />
           </div>
-          <label className="col-span-2 flex items-center gap-2 text-sm fin-ink-2">
-            <input type="checkbox" checked={form.excluded} onChange={set('excluded')} />
-            Exclude from spending totals (reimbursable, transfer…)
+          <label className="fin-inset col-span-2 flex items-center justify-between gap-3 px-4 py-3 text-sm">
+            <span>
+              <span className="block font-medium">Exclude from totals</span>
+              <span className="block text-xs fin-muted">Reimbursable, transfer, or not really spending</span>
+            </span>
+            <input type="checkbox" className="h-5 w-5 accent-[var(--fin-accent)]" checked={form.excluded} onChange={set('excluded')} />
           </label>
         </div>
         {tx?.available_balance != null && (
-          <p className="mt-3 text-xs fin-muted">Available after this purchase: {aed(tx.available_balance)} · via {(tx.sources || [tx.source]).join(' + ')}</p>
+          <p className="mt-3 text-xs fin-muted">Available on the card after this: {aed(tx.available_balance)}</p>
         )}
         {err && <p className="mt-3 text-sm" style={{ color: 'var(--fin-bad)' }}>{err}</p>}
-        <div className="mt-5 flex items-center justify-between gap-2">
-          {!isNew ? <button type="button" className="fin-btn fin-btn-danger" onClick={remove} disabled={busy}>Delete</button> : <span />}
+        <div className="mt-6 flex items-center justify-between gap-2">
+          {!isNew ? <button type="button" className="fin-btn fin-btn-ghost fin-btn-danger" onClick={remove} disabled={busy}>Delete</button> : <span />}
           <div className="flex gap-2">
             <button type="button" className="fin-btn" onClick={onClose}>Cancel</button>
-            <button className="fin-btn fin-btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+            <button className="fin-btn fin-btn-primary px-6" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
       </form>

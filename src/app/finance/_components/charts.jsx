@@ -2,7 +2,7 @@
 // Hand-rolled SVG charts following the dataviz mark specs: 2px lines, <=24px
 // bars with a 4px rounded data-end, 2px surface gaps between stacked segments,
 // hairline grid, crosshair/per-mark tooltips, text in ink tokens only.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { aed, compact } from './format';
 import { accountColorVar } from '@/lib/finance/accounts.mjs';
 
@@ -70,6 +70,7 @@ export function CumulativeChart({ current, previous, daysInMonth, currentLabel, 
   const y = (v) => PAD.top + ih - (v / top) * ih;
   const line = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
   const last = current[current.length - 1];
+  const gid = `fin-area-${useId().replace(/:/g, '')}`;
 
   const onMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -101,7 +102,13 @@ export function CumulativeChart({ current, previous, daysInMonth, currentLabel, 
             <path d={line(previous)} fill="none" stroke="var(--fin-compare)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
             {current.length > 0 && (
               <>
-                <path d={`${line(current)}L${x(last.day)},${y(0)}L${x(1)},${y(0)}Z`} fill="var(--fin-s1)" opacity="0.1" />
+                <defs>
+                  <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="var(--fin-s1)" stopOpacity="0.22" />
+                    <stop offset="100%" stopColor="var(--fin-s1)" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d={`${line(current)}L${x(last.day)},${y(0)}L${x(1)},${y(0)}Z`} fill={`url(#${gid})`} />
                 <path d={line(current)} fill="none" stroke="var(--fin-s1)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
                 <circle cx={x(last.day)} cy={y(last.value)} r="5" fill="var(--fin-s1)" stroke="var(--fin-surface)" strokeWidth="2" />
               </>
@@ -218,7 +225,7 @@ export function HBar({ value, max, budget }) {
   const w = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
   const over = budget && value > budget;
   return (
-    <div className="relative h-2.5 w-full">
+    <div className="relative h-2 w-full rounded-full" style={{ background: 'var(--fin-surface-2)' }}>
       <div className="absolute inset-y-0 left-0" style={{ width: `${w * 100}%`, background: 'var(--fin-s1)', borderRadius: '0 4px 4px 0', minWidth: value > 0 ? 3 : 0 }} />
       {budget > 0 && max > 0 && (
         <div className="absolute" title={`Budget ${aed(budget, { decimals: 0 })}`}
