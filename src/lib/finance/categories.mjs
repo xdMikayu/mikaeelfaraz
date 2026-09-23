@@ -88,12 +88,60 @@ export function ruleCategory(merchant, rules = []) {
   return kw ? { category: kw, source: 'keyword' } : null;
 }
 
-// When SIB or Mashreq is charged by Tabby, it is a repayment of purchases already
-// counted on the Tabby card, so it must not be counted as spending a second time.
-// Tamara, Postpay etc. aren't tracked as cards, so their charges are the spending.
-const BNPL = /(^| )tabby( |$)/;
+// A Tabby charge on SIB or Mashreq is one of two things: an instalment for a
+// Tabby checkout purchase (tracked nowhere else, so it is spending) or a
+// repayment of the Tabby card (its purchases are already counted on the card).
+// Only a matching repayment on the Tabby card tells them apart; see planTabbyReconcile.
+// Tamara, Postpay etc. aren't tracked as cards, so their charges are always spending.
+const TABBY = /(^| )tabby( |$)/;
+const REPAYMENT = /(^| )(re)?payment( |$)/;
 
-export function isBnplRepayment(merchant, accountSlug) {
+export const TABBY_NOTES = {
+  instalment: 'Tabby instalment',
+  cardPayoff: 'Pays off the Tabby card, purchases already counted there',
+  repayment: 'Tabby card repayment, not spending',
+};
+// Notes written by earlier versions; rows carrying them are still managed.
+const LEGACY_NOTES = ['Tabby repayment, purchase already counted on the Tabby card', 'BNPL instalment, purchase already counted on Tabby'];
+export const MANAGED_TABBY_NOTES = [TABBY_NOTES.instalment, TABBY_NOTES.cardPayoff, ...LEGACY_NOTES];
+
+/** A bank-card charge whose merchant is Tabby. */
+export function isTabbyCharge(merchant, accountSlug) {
   if (accountSlug === 'tabby') return false;
-  return BNPL.test(merchantKey(merchant));
+  return TABBY.test(merchantKey(merchant));
+}
+
+/** A credit on the Tabby card that is the card being paid off (not a refund). */
+export function isTabbyCardRepayment(merchant, accountSlug, direction) {
+  return accountSlug === 'tabby' && direction === 'credit' && REPAYMENT.test(merchantKey(merchant));
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Decide, for each Tabby charge on a bank card, whether it paid off the Tabby card
+ * (same amount as a Tabby card repayment within 3 days: hide it) or is an instalment
+ * (count it). Each repayment pairs with at most one charge. Returns the row patches needed.
+ */
+export function planTabbyReconcile(charges, repayments) {
+  const paired = new Set();
+  const updates = [];
+  const byTime = (a, b) => new Date(a.occurred_at) - new Date(b.occurred_at);
+  for (const r of [...repayments].sort(byTime)) {
+    const t = new Date(r.occurred_at).getTime();
+    let best = null;
+    for (const c of charges) {
+      if (paired.has(c.id) || Math.abs(Number(c.amount_aed) - Number(r.amount_aed)) > 0.005) continue;
+      const gap = Math.abs(new Date(c.occurred_at).getTime() - t);
+      if (gap <= 3 * DAY && (!best || gap < best.gap)) best = { id: c.id, gap };
+    }
+    if (best) paired.add(best.id);
+  }
+  for (const c of charges) {
+    const want = paired.has(c.id)
+      ? { excluded: true, category: 'Transfers & Fees', notes: TABBY_NOTES.cardPayoff }
+      : { excluded: false, category: 'Shopping', notes: TABBY_NOTES.instalment };
+    if (c.excluded !== want.excluded || c.category !== want.category || c.notes !== want.notes) updates.push({ id: c.id, ...want });
+  }
+  return updates;
 }
