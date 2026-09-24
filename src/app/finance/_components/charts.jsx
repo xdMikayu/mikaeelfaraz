@@ -2,7 +2,7 @@
 // Hand-rolled SVG charts following the dataviz mark specs: 2px lines, <=24px
 // bars with a 4px rounded data-end, 2px surface gaps between stacked segments,
 // hairline grid, crosshair/per-mark tooltips, text in ink tokens only.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { aed, compact } from './format';
 import { accountColorVar } from '@/lib/finance/accounts.mjs';
 
@@ -80,11 +80,12 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220 
   });
   const h = hover != null ? buckets[hover] : null;
   const per = unit === 'day' ? 'day' : 'week';
+  const gid = `fin-bar-${useId().replace(/:/g, '')}`;
 
   return (
     <div>
       <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
-        <span className="fin-chip"><span className="fin-dot" style={{ background: 'var(--fin-s1)', borderRadius: 3 }} />Spent per {per}</span>
+        <span className="fin-chip"><span className="fin-dot" style={{ background: 'linear-gradient(180deg, var(--fin-accent-2), var(--fin-accent))', borderRadius: 3 }} />Spent per {per}</span>
         {average != null && (
           <span className="fin-chip">
             <span style={{ width: 16, borderTop: '2px dashed var(--fin-compare)', display: 'inline-block' }} />
@@ -95,6 +96,12 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220 
       <div ref={ref} className="relative" style={{ height }}>
         {width > 0 && (
           <svg width={width} height={height} role="img" aria-label={`Spend per ${per}`} onMouseLeave={() => setHover(null)}>
+            <defs>
+              <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--fin-accent-2)" />
+                <stop offset="100%" stopColor="var(--fin-accent)" />
+              </linearGradient>
+            </defs>
             {ticks.map((t) => (
               <g key={t}>
                 <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? 'var(--fin-axis)' : 'var(--fin-grid)'} strokeWidth="1" />
@@ -109,7 +116,7 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220 
                 <g key={i} onMouseEnter={() => setHover(i)}>
                   <rect x={PAD.left + band * i} y={PAD.top} width={band} height={ih} fill="transparent" />
                   {barH > 0 && (
-                    <path d={columnPath(cx - bw / 2, y(0) - barH, bw, barH, Math.min(4, bw / 2))} fill="var(--fin-s1)"
+                    <path d={columnPath(cx - bw / 2, y(0) - barH, bw, barH, Math.min(4, bw / 2))} fill={`url(#${gid})`}
                       opacity={hover == null || hover === i ? 1 : 0.45} />
                   )}
                   {shown.has(i) && (
@@ -255,7 +262,7 @@ export function HBar({ value, max, budget }) {
   const over = budget && value > budget;
   return (
     <div className="relative h-2 w-full rounded-full" style={{ background: 'var(--fin-surface-2)' }}>
-      <div className="absolute inset-y-0 left-0" style={{ width: `${w * 100}%`, background: 'var(--fin-s1)', borderRadius: '0 4px 4px 0', minWidth: value > 0 ? 3 : 0 }} />
+      <div className="absolute inset-y-0 left-0" style={{ width: `${w * 100}%`, background: 'linear-gradient(90deg, var(--fin-accent), var(--fin-accent-2))', borderRadius: 999, minWidth: value > 0 ? 4 : 0 }} />
       {budget > 0 && max > 0 && (
         <div className="absolute" title={`Budget ${aed(budget, { decimals: 0 })}`}
           style={{ left: `${Math.min(1, budget / max) * 100}%`, top: -3, bottom: -3, width: 2, background: over ? 'var(--fin-bad)' : 'var(--fin-ink-2)', borderRadius: 1 }} />

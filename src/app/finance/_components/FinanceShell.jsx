@@ -53,8 +53,9 @@ async function fetchAll(query) {
 function Logo() {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="grid h-8 w-8 place-items-center rounded-[10px] text-[15px] font-bold" style={{ background: 'linear-gradient(135deg, var(--fin-s1), var(--fin-s7))', color: '#fff' }}>M</span>
-      <span className="text-[15px] font-semibold tracking-tight">Money</span>
+      <span className="fin-display grid h-8 w-8 place-items-center rounded-full text-[15px] font-bold"
+        style={{ background: 'linear-gradient(135deg, #b28cff, #6b00f5)', color: '#fff', boxShadow: '0 4px 14px -4px rgba(107, 0, 245, 0.6), inset 0 1px 0 rgba(255,255,255,0.25)' }}>M</span>
+      <span className="fin-display text-[16px] font-semibold tracking-tight">Money</span>
     </span>
   );
 }
@@ -178,7 +179,7 @@ export default function FinanceShell({ children }) {
             ))}
           </nav>
           <div className="mt-auto flex flex-col gap-1">
-            {demo && <p className="fin-inset mb-2 px-3 py-2 text-xs fin-ink-2">Demo data</p>}
+            {demo && <p className="mb-2 rounded-full px-3 py-1.5 text-xs" style={{ background: 'var(--fin-side-hover)', color: 'var(--fin-side-ink)' }}>Demo data</p>}
             <button className="fin-nav-item" onClick={toggleTheme}>{dark ? <Sun size={18} /> : <Moon size={18} />} {dark ? 'Light mode' : 'Dark mode'}</button>
             {!demo && <button className="fin-nav-item" onClick={() => supabase.auth.signOut()}><LogOut size={18} /> Sign out</button>}
           </div>
