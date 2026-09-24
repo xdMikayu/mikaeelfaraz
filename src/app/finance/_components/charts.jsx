@@ -60,7 +60,10 @@ export function Legend({ items }) {
  * Spend per day or week in one hue, with the comparison period's average as a dashed
  * reference line. Hover/tap a bar for that day's or week's biggest purchases.
  */
-export function PeriodBars({ buckets, unit, average, averageLabel, height = 220, onSelect }) {
+export function PeriodBars({ buckets, unit, average, averageLabel, height = 220, onSelect, color }) {
+  // One card in focus: its brand colour. Otherwise Mifolio's violet.
+  const hi = color ? `color-mix(in srgb, ${color} 72%, white)` : 'var(--fin-accent-2)';
+  const lo = color || 'var(--fin-accent)';
   const [ref, width] = useWidth();
   const [hover, setHover] = useState(null);
   const max = Math.max(1, average || 0, ...buckets.map((b) => b.total));
@@ -85,7 +88,7 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220,
   return (
     <div>
       <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
-        <span className="fin-chip"><span className="fin-dot" style={{ background: 'linear-gradient(180deg, var(--fin-accent-2), var(--fin-accent))', borderRadius: 3 }} />Spent per {per}</span>
+        <span className="fin-chip"><span className="fin-dot" style={{ background: `linear-gradient(180deg, ${hi}, ${lo})`, borderRadius: 3 }} />Spent per {per}</span>
         {average != null && (
           <span className="fin-chip">
             <span style={{ width: 16, borderTop: '2px dashed var(--fin-compare)', display: 'inline-block' }} />
@@ -98,8 +101,8 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220,
           <svg width={width} height={height} role="img" aria-label={`Spend per ${per}`} onMouseLeave={() => setHover(null)}>
             <defs>
               <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="var(--fin-accent-2)" />
-                <stop offset="100%" stopColor="var(--fin-accent)" />
+                <stop offset="0%" style={{ stopColor: hi }} />
+                <stop offset="100%" style={{ stopColor: lo }} />
               </linearGradient>
             </defs>
             {ticks.map((t) => (
