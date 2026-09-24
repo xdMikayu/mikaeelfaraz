@@ -3,12 +3,12 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, Tags, ArrowUpRight, ArrowDownRight, Minus, ChevronRight, X } from 'lucide-react';
 import { useFinance, LoadingState } from './_components/FinanceShell';
-import { CumulativeChart, SpendBars, HBar } from './_components/charts';
+import { PeriodBars, SpendBars, HBar } from './_components/charts';
 import TransactionEditor from './_components/TransactionEditor';
 import { CategoryAvatar } from './_components/icons';
 import { aed, pct, dateTime, relative } from './_components/format';
 import { PERIODS, getPeriod } from '@/lib/finance/periods.mjs';
-import { summarize, monthlySeries, cumulativeForPeriod, spendSeries, spendOf } from '@/lib/finance/analytics.mjs';
+import { summarize, monthlySeries, periodBars, monthlyContext, spendOf } from '@/lib/finance/analytics.mjs';
 import { accountColorVar } from '@/lib/finance/accounts.mjs';
 import { dubaiParts } from '@/lib/finance/parse.mjs';
 
@@ -59,8 +59,8 @@ export default function Overview() {
   const period = useMemo(() => getPeriod(periodKey), [periodKey]);
   const s = useMemo(() => summarize(f.transactions, period, f.accounts, f.budgets), [f.transactions, period, f.accounts, f.budgets]);
   const months = useMemo(() => monthlySeries(f.transactions, 12), [f.transactions]);
-  const cumulative = useMemo(() => cumulativeForPeriod(f.transactions, period), [f.transactions, period]);
-  const series = useMemo(() => spendSeries(f.transactions, period), [f.transactions, period]);
+  const bars = useMemo(() => periodBars(f.transactions, period), [f.transactions, period]);
+  const context = useMemo(() => monthlyContext(f.transactions, period), [f.transactions, period]);
   const recent = f.transactions.slice(0, 6);
   const catMax = Math.max(1, ...s.categories.map((c) => Math.max(c.total, c.budget || 0)));
   const accountById = new Map(f.accounts.map((a) => [a.id, a]));
@@ -168,7 +168,7 @@ export default function Overview() {
             </dl>
           </div>
           <div className="mt-auto pt-8">
-            <CumulativeChart {...cumulative} height={240} />
+            <PeriodBars {...bars} height={240} />
           </div>
         </section>
 
@@ -236,11 +236,10 @@ export default function Overview() {
       <div className="grid gap-5 lg:grid-cols-3">
         <Panel
           className="lg:col-span-2"
-          title={series.unit === 'week' ? 'Weekly spend' : 'Monthly spend'}
-          subtitle={`${series.highlight != null ? `6 months to ${period.label}` : period.label} by card · ${aed(series.average, { decimals: 0 })} a ${series.unit} on average`}
+          title="Last 12 months"
+          subtitle={`By card · ${aed(context.average, { decimals: 0 })} a month on average${context.highlight.length < context.buckets.length ? ` · ${period.label} highlighted` : ''}`}
         >
-          <SpendBars buckets={series.buckets} highlight={series.highlight} accounts={f.accounts} height={230}
-            label={`${series.unit === 'week' ? 'Weekly' : 'Monthly'} spend by card, ${period.label}`} />
+          <SpendBars buckets={context.buckets} highlight={context.highlight} accounts={f.accounts} height={230} label="Monthly spend by card, last 12 months" />
         </Panel>
 
         <Panel

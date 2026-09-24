@@ -107,101 +107,77 @@ function dubaiDay(date) {
   const { y, m, d } = dubaiParts(date);
   return dubaiDate(y, m, d);
 }
-const dayLabel = (date) => {
-  const { m, d } = dubaiParts(date);
-  return `${d} ${SHORT[m]}`;
-};
 const isSingleMonth = (period) => period.key === 'this_month' || period.key === 'last_month';
 
-/** Running total per day over [from, to), with a point for every Dubai calendar day. */
-function runningTotal(transactions, from, to) {
-  const first = dubaiDay(from);
-  const n = Math.max(1, Math.round((dubaiDay(new Date(to.getTime() - 1)) - first) / DAY) + 1);
-  const daily = new Array(n).fill(0);
-  for (const t of transactions) {
-    if (!inRange(t, from, to)) continue;
-    const i = Math.round((dubaiDay(t.occurred_at) - first) / DAY);
-    if (i >= 0 && i < n) daily[i] += spendOf(t);
-  }
-  let run = 0;
-  return daily.map((v, i) => {
-    const date = new Date(first.getTime() + i * DAY);
-    return { i, value: (run += v), daily: v, label: dayLabel(date), date };
-  });
-}
+const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-/**
- * The selected period's running total against its comparison period, aligned by
- * day offset. This month is drawn against the whole of last month; other periods
- * against a window of the same length. Ticks are day numbers for a single month,
- * month names otherwise.
- */
-export function cumulativeForPeriod(transactions, period, now = new Date()) {
-  const single = isSingleMonth(period);
-  const curEnd = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
-  const current = runningTotal(transactions, period.start, curEnd);
-  const previous = runningTotal(transactions, period.prevStart, period.key === 'this_month' ? period.start : period.prevEnd);
-  const { y, m } = dubaiParts(period.start);
-  const length = Math.max(single ? daysInMonth(y, m) : current.length, previous.length);
-  const ticks = single
-    ? [1, 8, 15, 22, length].map((d) => ({ i: d - 1, label: String(d) }))
-    : current.filter((p) => dubaiParts(p.date).d === 1).map((p) => ({ i: p.i, label: SHORT[dubaiParts(p.date).m] }));
-  const prevMonth = dubaiParts(period.prevStart).m;
-  const labels = single
-    ? [SHORT[m], SHORT[prevMonth]]
-    : period.key === 'ytd'
-      ? [String(y), String(y - 1)]
-      : [period.label, `Previous ${period.months} months`];
-  return { current, previous, length, ticks, currentLabel: labels[0], previousLabel: labels[1] };
-}
-
-/**
- * Stacked-bar buckets that follow the period: weeks for 3 months, months for longer
- * periods (both clipped to the window, so they add up to the headline), and the six
- * months up to the selected one for a single month, with that month highlighted.
- * Returns { unit, buckets: [{ label, fullLabel, total, parts }], highlight, average }.
- */
-export function spendSeries(transactions, period, now = new Date()) {
-  const sum = (from, to) => {
-    const parts = {};
-    let total = 0;
-    for (const t of transactions) {
-      if (!inRange(t, from, to)) continue;
-      const v = spendOf(t);
-      parts[t.account_id] = (parts[t.account_id] || 0) + v;
-      total += v;
-    }
-    return { total, parts };
-  };
-  if (isSingleMonth(period)) {
-    const months = lastMonths(6, new Date(period.start.getTime() + DAY));
-    const buckets = months.map((mo) => ({ label: mo.label, fullLabel: mo.fullLabel, ...sum(mo.start, mo.end) }));
-    return { unit: 'month', buckets, highlight: buckets.length - 1, average: buckets.reduce((a, b) => a + b.total, 0) / buckets.length };
-  }
-  const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
-  const unit = period.key === '3m' ? 'week' : 'month';
-  const edges = [period.start];
-  let cursor = dubaiDay(period.start);
+/** Week edges from `start` to `end`: the first week is clipped, later ones start on Mondays. */
+function weekEdges(start, end) {
+  const edges = [start];
+  let cursor = dubaiDay(start);
   while (true) {
-    const { y, m, dow } = dubaiParts(cursor);
-    cursor = unit === 'week'
-      ? new Date(cursor.getTime() + (((8 - dow) % 7) || 7) * DAY) // next Monday
-      : dubaiDate(y, m + 1, 1);
+    cursor = new Date(cursor.getTime() + (((8 - dubaiParts(cursor).dow) % 7) || 7) * DAY);
     if (cursor >= end) break;
     edges.push(cursor);
   }
   edges.push(end);
+  return edges;
+}
+
+/**
+ * Spend per day (single-month periods) or per week (longer ones), each bucket with its
+ * biggest purchases, plus the comparison period's average per bucket as a reference.
+ * Days after today are returned with `future: true` so the axis still spans the month.
+ */
+export function periodBars(transactions, period, now = new Date()) {
+  const single = isSingleMonth(period);
+  const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
+  let edges;
+  if (single) {
+    const { y, m } = dubaiParts(period.start);
+    edges = Array.from({ length: daysInMonth(y, m) + 1 }, (_, i) => dubaiDate(y, m, 1 + i));
+  } else {
+    edges = weekEdges(period.start, end);
+  }
   const buckets = edges.slice(0, -1).map((from, k) => {
     const to = edges[k + 1];
     const a = dubaiParts(from);
     const b = dubaiParts(new Date(to.getTime() - 1));
-    const wholeMonth = unit === 'month' && a.d === 1 && b.d === daysInMonth(b.y, b.m);
-    const fullLabel = unit === 'week'
-      ? (a.m === b.m ? `${a.d}–${b.d} ${SHORT[b.m]}` : `${a.d} ${SHORT[a.m]} – ${b.d} ${SHORT[b.m]}`)
-      : wholeMonth ? monthLabel(a.y, a.m) : `${a.d}–${b.d} ${SHORT[a.m]} ${a.y}`;
-    return { label: unit === 'week' ? `${a.d} ${SHORT[a.m]}` : SHORT[a.m], fullLabel, ...sum(from, to) };
+    const future = from >= end;
+    const rows = future ? [] : transactions.filter((t) => !t.excluded && inRange(t, from, new Date(Math.min(to.getTime(), end.getTime()))));
+    const total = rows.reduce((sum, t) => sum + spendOf(t), 0);
+    const top = rows
+      .filter((t) => spendOf(t) > 0)
+      .sort((x, y) => spendOf(y) - spendOf(x))
+      .slice(0, 3)
+      .map((t) => ({ merchant: t.merchant || 'Unknown', amount: spendOf(t) }));
+    const lastDay = daysInMonth(a.y, a.m);
+    const label = single
+      ? ([1, 8, 15, 22, lastDay].includes(a.d) ? String(a.d) : '')
+      // Month names at month starts; the clipped first week only if it starts early in its month.
+      : ((k === 0 && a.d <= 7) || (k > 0 && (b.d < a.d || a.d === 1)) ? SHORT[b.d < a.d ? b.m : a.m] : '');
+    const fullLabel = single
+      ? `${WEEKDAY[a.dow]} ${a.d} ${SHORT[a.m]}`
+      : a.m === b.m ? `${a.d}–${b.d} ${SHORT[a.m]}` : `${a.d} ${SHORT[a.m]} – ${b.d} ${SHORT[b.m]}`;
+    return { label, fullLabel, total, count: rows.length, top, future };
   });
-  const total = buckets.reduce((s, x) => s + x.total, 0);
-  const units = unit === 'week' ? (end - period.start) / (7 * DAY) : period.months;
-  return { unit, buckets, highlight: null, average: total / Math.max(1, units) };
+
+  // Reference line: what a typical day/week looked like in the comparison period.
+  const prevEnd = period.key === 'this_month' ? period.start : period.prevEnd;
+  const prevTotal = transactions.filter((t) => inRange(t, period.prevStart, prevEnd)).reduce((sum, t) => sum + spendOf(t), 0);
+  const prevDays = (prevEnd - period.prevStart) / DAY;
+  const average = prevTotal > 0 ? prevTotal / (single ? prevDays : prevDays / 7) : null;
+  const { y } = dubaiParts(period.start);
+  const averageLabel = single
+    ? `${SHORT[dubaiParts(period.prevStart).m]} average`
+    : period.key === 'ytd' ? `${y - 1} average` : `Previous ${period.months} months average`;
+  return { unit: single ? 'day' : 'week', buckets, average, averageLabel };
+}
+
+/** The last 12 months by card, marking the months the selected period covers. */
+export function monthlyContext(transactions, period, now = new Date()) {
+  const buckets = monthlySeries(transactions, 12, now);
+  const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
+  const highlight = buckets.flatMap((mo, i) => (mo.end > period.start && mo.start < end ? [i] : []));
+  return { buckets, highlight, average: buckets.reduce((sum, b) => sum + b.total, 0) / buckets.length };
 }
