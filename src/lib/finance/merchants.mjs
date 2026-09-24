@@ -16,7 +16,7 @@ const ALIASES = [
   [/sephora/, 'Sephora'], [/\bfaces\b/, 'Faces'], [/virgin megastore/, 'Virgin Megastore'], [/apple store|apple\.com\/ae|apple retail/, 'Apple Store'],
   [/cicek ?sepeti/, 'Çiçeksepeti'], [/\bz2u\b/, 'Z2U'], [/\bmynted\b/, 'Mynted'], [/dragon mart/, 'Dragon Mart'], [/\bcartier\b/, 'Cartier'],
   // Subscriptions & digital
-  [/openai|chatgpt/, 'OpenAI'], [/anthropic|claude\.ai/, 'Anthropic'], [/youtube ?premium|youtubepremium/, 'YouTube Premium'], [/google ?one/, 'Google One'],
+  [/discord/, 'Discord'], [/openai|chatgpt/, 'OpenAI'], [/anthropic|claude\.ai/, 'Anthropic'], [/youtube ?premium|youtubepremium/, 'YouTube Premium'], [/google ?one/, 'Google One'],
   [/google.*(?:play|storage)|google \*|googl/, 'Google'], [/apple\.com\/bill|itunes/, 'Apple'], [/netflix/, 'Netflix'], [/spotify/, 'Spotify'],
   [/disney ?plus|disney\+/, 'Disney+'], [/\bosn\b/, 'OSN+'], [/shahid/, 'Shahid'], [/anghami/, 'Anghami'], [/microsoft|msft/, 'Microsoft'],
   [/\badobe\b/, 'Adobe'], [/\bnotion\b/, 'Notion'], [/\bcanva\b/, 'Canva'], [/name-?cheap/, 'Namecheap'], [/\bwhoop\b/, 'Whoop'], [/playstation|sony interactive/, 'PlayStation'],
@@ -83,7 +83,7 @@ export function cleanMerchant(raw) {
     .replace(/\b(?:apple|google|samsung)\s*pay\b/gi, ' ')
     .replace(/\b[\w-]+\.(?:com|net|org|io|ae|co)(?:\/\S*)?/gi, ' ') // domains, "amzn.com/bill"
     .replace(/\*+/g, ' ')
-    .replace(/[#]?\b\d{3,}\b/g, ' ') // store / phone / terminal numbers
+    .replace(/[#+]?\b\d{3,}\b/g, ' ') // store / phone / terminal numbers
     .replace(/\s+-\s+|\s-$/g, ' ');
   s = s.replace(COMPANY, ' ').replace(/\s+/g, ' ').trim();
   for (let i = 0; i < 3; i++) s = s.replace(COUNTRIES, '').replace(new RegExp(`\\s+${CITIES.source}\\s*$`, 'i'), '').trim();

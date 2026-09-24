@@ -1,8 +1,9 @@
 /* Mifolio — design tokens and components.
    Inspired by Revolut-style fintech: warm off-white (light) or violet-black (dark) canvas,
    one electric-violet accent, mint/coral for up/down, pill controls, hairline borders,
-   ambient glow. Series colours s1–s5 are validated as a set (lightness band, CVD
-   separation, contrast) against the card surfaces of each mode; keep their order.
+   ambient glow. Card brand colours (--fin-c-*: SIB blue, Mashreq orange, Tabby green,
+   noon gold, Neo magenta) are validated as a set in that stack order (lightness band, CVD
+   separation, contrast) against the card surface of each mode; so are series s1–s5.
    Dark values apply when <html> has .dark (set by FinanceShell). */
 
 .fin-root {
@@ -39,6 +40,11 @@
   --fin-side-hover: rgba(255, 255, 255, 0.06);
   --fin-side-active: rgba(255, 255, 255, 0.1);
   --fin-side-border: rgba(255, 255, 255, 0.06);
+  --fin-c-sib: #2f6fe4;
+  --fin-c-mashreq: #ea6a12;
+  --fin-c-tabby: #12a07a;
+  --fin-c-enbd: #ad8500;
+  --fin-c-neo: #b4389c;
   --fin-s1: #6d4ef5;
   --fin-s2: #0a93b8;
   --fin-s3: #d6307c;
@@ -93,6 +99,11 @@
   --fin-side-hover: rgba(255, 255, 255, 0.04);
   --fin-side-active: rgba(139, 107, 255, 0.14);
   --fin-side-border: rgba(255, 255, 255, 0.065);
+  --fin-c-sib: #4a82ee;
+  --fin-c-mashreq: #e56d18;
+  --fin-c-tabby: #17a17d;
+  --fin-c-enbd: #b08a0a;
+  --fin-c-neo: #c64a9e;
   --fin-s1: #8a78ff;
   --fin-s2: #16a3c6;
   --fin-s3: #e35592;

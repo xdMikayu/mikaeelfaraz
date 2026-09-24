@@ -365,3 +365,17 @@ test('Mashreq Neo debit emails in their different date formats', () => {
   assert.equal(c.currency, 'EUR');
   assert.equal(parseMashreqEmail(intro + 'Your card ending with 9876 was used for a purchase of AED 5 at X').ok, false); // no date
 });
+
+test('amounts written without a leading zero (".99")', () => {
+  const intro = 'Dear Customer, Thank you for banking with Mashreq Bank. Please note the details of a recent transaction on your Mashreq Card. ';
+  const e = parseMashreqEmail(intro + 'Your Neo VISA Debit Card Card ending with 9876 was used for a purchase of USD .99 at DISCORD* TEMPORARYAUTH +18005550123 US on 23-MAY-2024 06:15 PM. Available limit is AED  5,432.10 This is a system generated alert.');
+  assert.equal(e.ok, true);
+  assert.equal(e.amount, 0.99);
+  assert.equal(e.currency, 'USD');
+  assert.equal(e.account, 'mashreq_debit');
+  assert.equal(e.merchant, 'Discord');
+  assert.equal(e.availableBalance, 5432.1);
+  assert.equal(e.occurredAt, '2024-05-23T14:15:00.000Z');
+  assert.equal(parseTabbyAlert('Tabby: Transaction of AED .50 at RISE LLC was successful.', NOW).amount, 0.5);
+  assert.equal(normalizeMerchant('SOME SHOP +18005550123 US'), 'Some Shop');
+});

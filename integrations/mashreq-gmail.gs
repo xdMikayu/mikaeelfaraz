@@ -58,7 +58,7 @@ function backfill() {
   var endKey = monthKey_(now.getFullYear(), now.getMonth());
   ensureBackfillTrigger_(true);
   while (next <= endKey) {
-    if (Date.now() - started > 4.5 * 60 * 1000) { Logger.log('Pausing at ' + next + '; resumes in ~10 minutes'); return; }
+    if (Date.now() - started > 3.5 * 60 * 1000) { Logger.log('Pausing at ' + next + '; resumes in ~10 minutes'); return; }
     var y = Number(next.slice(0, 4)), m = Number(next.slice(5, 7)) - 1;
     var after = Utilities.formatDate(new Date(y, m, 1), 'Asia/Dubai', 'yyyy/MM/dd');
     var before = Utilities.formatDate(new Date(y, m + 1, 1), 'Asia/Dubai', 'yyyy/MM/dd');
@@ -106,14 +106,28 @@ function send_(messages) {
   var token = props.getProperty('INGEST_TOKEN');
   if (!url || !token) throw new Error('Set INGEST_URL and INGEST_TOKEN in Project Settings -> Script Properties');
   for (var i = 0; i < messages.length; i += BATCH) {
-    var events = messages.slice(i, i + BATCH).map(function (m) {
-      return {
-        source: 'email',
-        external_id: m.getId(),
-        received_at: m.getDate().toISOString(),
-        text: m.getPlainBody()
-      };
+    var batch = messages.slice(i, i + BATCH);
+    if (post_(url, token, batch)) continue;
+    // The batch kept failing: send its emails one at a time so one bad email can't
+    // block the rest. Re-sending is safe (already-saved emails come back as duplicates).
+    batch.forEach(function (m) {
+      if (!post_(url, token, [m])) Logger.log('Skipped one email after retries: "' + m.getSubject() + '" of ' + m.getDate());
     });
+  }
+}
+
+/** POST a few emails; retries brief server hiccups (a 502 is usually a slow request). */
+function post_(url, token, messages) {
+  var events = messages.map(function (m) {
+    return {
+      source: 'email',
+      external_id: m.getId(),
+      received_at: m.getDate().toISOString(),
+      text: m.getPlainBody()
+    };
+  });
+  var waits = [3, 10, 30, 70]; // seconds; the server takes over a cut-off email after a minute
+  for (var attempt = 0; ; attempt++) {
     var res = UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
@@ -122,7 +136,11 @@ function send_(messages) {
       muteHttpExceptions: true
     });
     var code = res.getResponseCode();
-    if (code >= 300) throw new Error('Ingest failed (' + code + '): ' + res.getContentText().slice(0, 300));
-    Logger.log(res.getContentText().slice(0, 300));
+    if (code < 300) { Logger.log(res.getContentText().slice(0, 300)); return true; }
+    var retryable = code >= 500 || code === 429;
+    if (!retryable) throw new Error('Ingest failed (' + code + '): ' + res.getContentText().slice(0, 300));
+    if (attempt >= waits.length) { Logger.log('Ingest still failing (' + code + ') after retries'); return false; }
+    Logger.log('Ingest hiccup (' + code + '), retrying in ' + waits[attempt] + 's');
+    Utilities.sleep(waits[attempt] * 1000);
   }
 }

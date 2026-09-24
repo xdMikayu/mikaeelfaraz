@@ -121,7 +121,7 @@ export function parseSibSms(text, now = new Date()) {
     return { ok: false, status: 'ignored', reason: 'Declined transaction' };
   }
   const m = s.match(
-    /txn on your card\s+[x*]*(\d{4})\s+at\s+(.+?)\s+for\s+([A-Z]{3})\s*([\d,]+(?:\.\d+)?)\s+on\s+(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*(?:[-\s](\d{2,4}))?\s+at\s+(\d{1,2}):(\d{2})/i
+    /txn on your card\s+[x*]*(\d{4})\s+at\s+(.+?)\s+for\s+([A-Z]{3})\s*(\d[\d,]*(?:\.\d+)?|\.\d+)\s+on\s+(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*(?:[-\s](\d{2,4}))?\s+at\s+(\d{1,2}):(\d{2})/i
   );
   if (!m) return { ok: false, status: 'unparsed', reason: 'Looks like SIB but the format was not recognised' };
   const [, last4, merchantRaw, cur, amt, dd, mon, yy, hh, mi] = m;
@@ -129,7 +129,7 @@ export function parseSibSms(text, now = new Date()) {
   if (month == null) return { ok: false, status: 'unparsed', reason: `Unknown month "${mon}"` };
   let year = yy ? Number(yy.length === 2 ? `20${yy}` : yy) : inferYear(month, +dd, +hh, +mi, now);
   const occurredAt = dubaiDate(year, month, +dd, +hh, +mi);
-  const bal = s.match(/available (?:balance|limit) is\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
+  const bal = s.match(/available (?:balance|limit) is\s*(?:([A-Z]{3})\s*)?(\d[\d,]*(?:\.\d+)?|\.\d+)/i);
   return finish({
     account: 'sib',
     last4,
@@ -181,7 +181,7 @@ function findDateTime(s) {
 export function parseMashreqEmail(text) {
   const s = collapse(text);
   if (!/mashreq/i.test(s) || !/(?:was|has been) used for (?:a|an)\s*(?:online\s+)?purchase/i.test(s)) return null;
-  const amt = s.match(/purchase (?:of|for)\s+([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/i);
+  const amt = s.match(/purchase (?:of|for)\s+([A-Z]{3})\s*(\d[\d,]*(?:\.\d+)?|\.\d+)/i);
   if (!amt) return { ok: false, status: 'unparsed', reason: 'Mashreq alert without a readable amount' };
   const after = s.slice(amt.index + amt[0].length);
   const when = findDateTime(after);
@@ -194,7 +194,7 @@ export function parseMashreqEmail(text) {
   // Credit and debit card alerts read alike; debit ones say so. (The server also routes by
   // card number, since the Cashback card's digits are known.)
   const debit = /debit\s+card|mashreq\s+debit/i.test(s);
-  const bal = s.match(/available (?:credit )?(?:limit|balance)\s*(?:is|of|:)\s*:?\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
+  const bal = s.match(/available (?:credit )?(?:limit|balance)\s*(?:is|of|:)\s*:?\s*(?:([A-Z]{3})\s*)?(\d[\d,]*(?:\.\d+)?|\.\d+)/i);
   return finish({
     account: debit ? 'mashreq_debit' : 'mashreq',
     last4,
@@ -221,10 +221,10 @@ export function parseTabbyAlert(text, now = new Date(), channel = 'alert') {
   }
   // "…transaction of AED 56.00 at RISE LLC was successful…" or
   // "Transaction of AED 420.00 At Digital Dubai. Your Tabby Card limit is now AED 1,408.26…"
-  const m = s.match(/transaction of\s+([A-Z]{3})\s*([\d,]*\d(?:\.\d{1,2})?)\s*at\s+(.+?)(?:\s+(?:was|is|has been)\s+(?:successful|approved|completed)|\.(?:\s|$)|\s+your\s|$)/i);
+  const m = s.match(/transaction of\s+([A-Z]{3})\s*(\d[\d,]*(?:\.\d{1,2})?|\.\d{1,2})\s*at\s+(.+?)(?:\s+(?:was|is|has been)\s+(?:successful|approved|completed)|\.(?:\s|$)|\s+your\s|$)/i);
   if (!m) return { ok: false, status: 'unparsed', reason: 'Looks like Tabby but the format was not recognised' };
   const [, cur, amt, merchantRaw] = m;
-  const bal = s.match(/(?:available tabby card limit is|tabby card limit is now)\s*(?:([A-Z]{3})\s*)?(\d[\d,]*(?:\.\d+)?)/i);
+  const bal = s.match(/(?:available tabby card limit is|tabby card limit is now)\s*(?:([A-Z]{3})\s*)?(\d[\d,]*(?:\.\d+)?|\.\d+)/i);
   return finish({
     account: 'tabby',
     last4: null,

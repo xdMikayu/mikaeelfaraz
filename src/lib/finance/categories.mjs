@@ -33,7 +33,7 @@ const KEYWORD_RULES = [
   ['Fuel', ['enoc', 'adnoc', 'emarat', 'eppco', 'petrol', 'fuel']],
   ['Bills & Utilities', ['du', 'etisalat', 'e&', 'eand', 'dewa', 'sewa', 'addc', 'aadc', 'fewa', 'etihad wateen', 'virgin mobile', 'empower', 'tabreed', 'lootah']],
   ['Government & Fees', ['digital dubai', 'dubai police', 'gdrfa', 'icp', 'amer', 'tasheel', 'mohre', 'municipality', 'dubai now', 'government', 'tamm', 'emirates id']],
-  ['Subscriptions', ['netflix', 'spotify', 'apple com', 'itunes', 'icloud', 'youtube', 'google', 'prime video', 'amazon prime', 'osn', 'shahid', 'disney', 'chatgpt', 'openai', 'anthropic', 'claude', 'microsoft', 'adobe', 'anghami', 'starzplay', 'notion', 'canva', 'apple', 'google one', 'whoop', 'namecheap', 'linkedin', 'github']],
+  ['Subscriptions', ['netflix', 'spotify', 'apple com', 'itunes', 'icloud', 'youtube', 'google', 'prime video', 'amazon prime', 'osn', 'shahid', 'disney', 'chatgpt', 'openai', 'anthropic', 'claude', 'microsoft', 'adobe', 'anghami', 'starzplay', 'notion', 'canva', 'apple', 'google one', 'whoop', 'namecheap', 'linkedin', 'github', 'discord']],
   ['Travel', ['emirates', 'flydubai', 'etihad', 'air arabia', 'booking com', 'agoda', 'airbnb', 'hotel', 'marriott', 'hilton', 'expedia', 'airline', 'airways', 'tiket com', 'trip com', 'atlys', 'vfs global', 'pelita air']],
   ['Health & Pharmacy', ['aster', 'life pharmacy', 'boots', 'bin sina', 'supercare', 'pharmacy', 'clinic', 'hospital', 'medcare', 'mediclinic', 'dental', 'medical']],
   ['Entertainment', ['vox', 'reel cinemas', 'novo', 'cinema', 'playstation', 'steam', 'xbox', 'nintendo', 'dubai parks', 'img worlds', 'ski dubai', 'bowling', 'platinumlist', 'virgin megastore']],
