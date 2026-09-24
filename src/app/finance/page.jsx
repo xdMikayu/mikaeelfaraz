@@ -93,6 +93,7 @@ export default function Overview() {
   const accountById = new Map(f.accounts.map((a) => [a.id, a]));
   // Closed cards only get a tile for periods they were used in.
   const tiles = sAll.byAccount.filter((b) => !b.account.closed_at || b.total || b.prevTotal || b.account.id === focusAccount);
+  const wideTiles = tiles.length > 3;
   const totalUncategorized = f.transactions.filter((t) => !t.category).length;
   const avgMonth = months.reduce((t, m) => t + m.total, 0) / 12;
 
@@ -197,9 +198,10 @@ export default function Overview() {
         </section>
       )}
 
-      {/* Hero + cards */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <section className="fin-card fin-card-hero flex flex-col p-5 sm:p-7 lg:col-span-2"
+      {/* Hero + cards. Up to three cards sit beside the hero; more would stretch it
+          (leaving a gap above the chart), so they move into a row underneath instead. */}
+      <div className={`grid gap-5 ${wideTiles ? '' : 'lg:grid-cols-3'}`}>
+        <section className={`fin-card fin-card-hero flex flex-col p-5 sm:p-7 ${wideTiles ? '' : 'lg:col-span-2'}`}
           style={focused ? { '--fin-glow': `radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, ${accountColorVar(focused.slug, f.accounts)} 18%, transparent), transparent 60%)`, borderColor: `color-mix(in srgb, ${accountColorVar(focused.slug, f.accounts)} 30%, var(--fin-border))` } : undefined}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -218,7 +220,7 @@ export default function Overview() {
           </div>
         </section>
 
-        <div className={`grid gap-4 lg:grid-cols-1 ${tiles.length > 3 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+        <div className={`grid gap-4 ${!wideTiles ? 'sm:grid-cols-3 lg:grid-cols-1' : tiles.length === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5'}`}>
           {tiles.map((b) => (
             <CardTile key={b.account.id} b={b} accounts={f.accounts} selected={focusAccount === b.account.id} dimmed={Boolean(focusAccount) && focusAccount !== b.account.id}
               onClick={() => setFocusAccount((cur) => (cur === b.account.id ? null : b.account.id))} />
@@ -344,7 +346,7 @@ function CardTile({ b, accounts, selected, dimmed, onClick }) {
   const change = b.prevTotal ? (b.total - b.prevTotal) / b.prevTotal : null;
   return (
     <button type="button" onClick={onClick} aria-pressed={selected}
-      className="fin-card relative block w-full overflow-hidden p-5 text-left transition-[opacity,box-shadow] duration-150"
+      className="fin-card relative flex w-full flex-col justify-start overflow-hidden p-5 text-left transition-[opacity,box-shadow] duration-150"
       style={{
         opacity: dimmed ? 0.5 : 1,
         boxShadow: selected ? `0 0 0 2px ${color}, var(--fin-shadow)` : undefined,
