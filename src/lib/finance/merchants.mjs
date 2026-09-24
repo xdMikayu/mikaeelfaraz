@@ -15,50 +15,56 @@ const ALIASES = [
   [/hollister/, 'Hollister'], [/abercrombie/, 'Abercrombie & Fitch'], [/\bnike\b/, 'Nike'], [/adidas/, 'Adidas'], [/decathlon/, 'Decathlon'],
   [/sephora/, 'Sephora'], [/\bfaces\b/, 'Faces'], [/virgin megastore/, 'Virgin Megastore'], [/apple store|apple\.com\/ae|apple retail/, 'Apple Store'],
   [/cicek ?sepeti/, 'Çiçeksepeti'], [/\bz2u\b/, 'Z2U'], [/\bmynted\b/, 'Mynted'], [/dragon mart/, 'Dragon Mart'], [/\bcartier\b/, 'Cartier'],
+  [/stockx/, 'StockX'], [/lenskart/, 'Lenskart'], [/sun (?:and|&) sand/, 'Sun & Sand Sports'], [/groupon/, 'Groupon'], [/franprix/, 'Franprix'],
+  [/circle k\b/, 'Circle K'], [/al.?futtaim.*toys|futtaim sons cotoys/, 'Al-Futtaim Toys'], [/al.?futtaim/, 'Al-Futtaim'],
   // Subscriptions & digital
   [/discord/, 'Discord'], [/openai|chatgpt/, 'OpenAI'], [/anthropic|claude\.ai/, 'Anthropic'], [/youtube ?premium|youtubepremium/, 'YouTube Premium'], [/google ?one/, 'Google One'],
-  [/google.*(?:play|storage)|google \*|googl/, 'Google'], [/apple\.com\/bill|itunes/, 'Apple'], [/netflix/, 'Netflix'], [/spotify/, 'Spotify'],
+  [/gsuite|google workspace/, 'Google Workspace'], [/google.*(?:play|storage)|google \*|googl/, 'Google'], [/apple\.com\/bill|itunes/, 'Apple'], [/netflix/, 'Netflix'], [/spotify/, 'Spotify'],
   [/disney ?plus|disney\+/, 'Disney+'], [/\bosn\b/, 'OSN+'], [/shahid/, 'Shahid'], [/anghami/, 'Anghami'], [/microsoft|msft/, 'Microsoft'],
   [/\badobe\b/, 'Adobe'], [/\bnotion\b/, 'Notion'], [/\bcanva\b/, 'Canva'], [/name-?cheap/, 'Namecheap'], [/\bwhoop\b/, 'Whoop'], [/playstation|sony interactive/, 'PlayStation'],
-  [/\bsteam(?:games|powered)?\b/, 'Steam'], [/roblox/, 'Roblox'], [/facebk|facebook|meta platforms/, 'Meta'], [/linkedin/, 'LinkedIn'], [/github/, 'GitHub'],
+  [/\bsteam(?:games|powered)?\b/, 'Steam'], [/roblox/, 'Roblox'], [/riot ?games|riotgames|^riot\b/, 'Riot Games'], [/twitch/, 'Twitch'], [/voicemod/, 'Voicemod'], [/facebk|facebook|meta platforms/, 'Meta'], [/linkedin/, 'LinkedIn'], [/github/, 'GitHub'],
   // Food delivery & dining
   [/talabat/, 'Talabat'], [/deliveroo/, 'Deliveroo'], [/keeta/, 'Keeta'], [/careem ?food/, 'Careem Food'], [/instashop/, 'Instashop'],
-  [/mc ?donald|mcdonalds|\bmcd\b/, "McDonald's"], [/\bkfc\b/, 'KFC'], [/burger ?king|burgerking/, 'Burger King'], [/five guys/, 'Five Guys'],
+  [/chipotle/, 'Chipotle'], [/p\.? ?f\.? ?chang/, "P.F. Chang's"], [/cinnabon/, 'Cinnabon'], [/cravia inc sbc|seattle.?s best/, "Seattle's Best Coffee"],
+  [/galadari ice cream/, 'Baskin-Robbins'], [/galadari group img|img worlds/, 'IMG Worlds of Adventure'], [/texas r(?:oad)?house/, 'Texas Roadhouse'],
+  [/emirates fast food/, 'Emirates Fast Food'], [/emirates leis/, 'Emirates Leisure Retail'],
+  [/mc ?donald|mcdonalds|\bmcd\b/, "McDonald's"], [/\bkfc\b/, 'KFC'], [/burger ?king|burgerking|^bk\b/, 'Burger King'], [/hardee/, "Hardee's"], [/five guys/, 'Five Guys'],
   [/shake shack/, 'Shake Shack'], [/nando/, "Nando's"], [/texas chicken/, 'Texas Chicken'], [/popeyes/, 'Popeyes'], [/pizza hut/, 'Pizza Hut'],
   [/domino/, "Domino's"], [/papa john/, "Papa John's"], [/\bsubway\b/, 'Subway'], [/starbucks/, 'Starbucks'], [/tim hortons/, 'Tim Hortons'],
   [/costa coffee|\bcosta\b/, 'Costa Coffee'], [/\bpret\b/, 'Pret A Manger'], [/dunkin/, "Dunkin'"], [/krispy kreme/, 'Krispy Kreme'], [/\btgif\b|tgi fridays/, 'TGI Fridays'],
   [/chili.?s/, "Chili's"], [/cold ?stone/, 'Cold Stone'], [/baskin/, 'Baskin-Robbins'], [/ben.?s cookies/, "Ben's Cookies"], [/carls? jr/, "Carl's Jr."],
-  [/peets/, "Peet's Coffee"], [/espressolab/, 'Espressolab'], [/dave.?s hot chicken/, "Dave's Hot Chicken"],
+  [/peets/, "Peet's Coffee"], [/h(?:a|ä)agen ?-?dazs/, 'Häagen-Dazs'], [/cotti coffee/, 'Cotti Coffee'], [/dr\.? ?boba/, 'Dr. Boba'], [/top ?golf/, 'Topgolf'], [/espressolab/, 'Espressolab'], [/dave.?s hot chicken/, "Dave's Hot Chicken"],
   // Groceries
-  [/carrefour/, 'Carrefour'], [/spinneys/, 'Spinneys'], [/\blulu\b/, 'Lulu'], [/waitrose/, 'Waitrose'], [/choithrams/, 'Choithrams'], [/union coop/, 'Union Coop'],
+  [/carrefour/, 'Carrefour'], [/spinneys/, 'Spinneys'], [/\blulu(?!lemon)/, 'Lulu'], [/waitrose/, 'Waitrose'], [/choithrams/, 'Choithrams'], [/union coop/, 'Union Coop'],
   [/grandiose/, 'Grandiose'], [/viva supermarket|\bviva\b/, 'Viva'], [/kibsons/, 'Kibsons'], [/al maya/, 'Al Maya'], [/west zone/, 'West Zone'],
   [/supermarche mini/, 'Supermarché Mini Mart'],
   // Transport & fuel
-  [/careem hala/, 'Careem Hala'], [/careem bike/, 'Careem Bike'], [/careem/, 'Careem'], [/\blime\b/, 'Lime'], [/\buber\b/, 'Uber'], [/\bbolt\b/, 'Bolt'], [/dubai taxi/, 'Dubai Taxi'], [/national taxi/, 'National Taxi'],
+  [/careem hala/, 'Careem Hala'], [/careem bike/, 'Careem Bike'], [/careem/, 'Careem'], [/\blime\b/, 'Lime'], [/\buber\b/, 'Uber'], [/\bbolt\b/, 'Bolt'], [/dubai taxi/, 'Dubai Taxi'], [/karwa|mowasalat/, 'Karwa'], [/national taxi/, 'National Taxi'],
   [/cars taxi/, 'Cars Taxi'], [/\bsalik\b/, 'Salik'], [/\brta\b|nol card/, 'RTA'], [/u ?drive/, 'Udrive'], [/\bekar\b/, 'Ekar'], [/indigo rent/, 'Indigo Rent A Car'],
   [/\bdott\b/, 'Dott'], [/\btesla\b/, 'Tesla'], [/\benoc\b/, 'ENOC'], [/\badnoc\b/, 'ADNOC'], [/\bemarat\b/, 'Emarat'], [/\beppco\b/, 'EPPCO'],
   // Travel
-  [/agoda/, 'Agoda'], [/booking\.com|booking com/, 'Booking.com'], [/airbnb/, 'Airbnb'], [/expedia/, 'Expedia'], [/trip\.? ?com|trip dot com/, 'Trip.com'],
-  [/tiket\.? ?com|tiketcom/, 'Tiket.com'], [/emirates airline|emirates\.com|\bemirates\b(?! (?:post|nbd|id))/, 'Emirates'], [/flydubai/, 'flydubai'],
+  [/qatar ?airways/, 'Qatar Airways'], [/agoda/, 'Agoda'], [/booking\.com|booking com/, 'Booking.com'], [/airbnb/, 'Airbnb'], [/expedia/, 'Expedia'], [/trip\.? ?com|trip dot com/, 'Trip.com'],
+  [/tiket\.? ?com|tiketcom/, 'Tiket.com'], [/emirates airline|emirates\.com|\bemirates\b(?! (?:post|nbd|id|fast food|leis))/, 'Emirates'], [/flydubai/, 'flydubai'],
   [/etihad ?air|etihadair/, 'Etihad Airways'], [/air arabia/, 'Air Arabia'], [/pelita air/, 'Pelita Air'], [/atlys/, 'Atlys'], [/vfs global|vfs gcc/, 'VFS Global'],
   // Bills, government, BNPL
-  [/\bdu\b.*apple pay|^du\b|\bdu telecom|emirates integrated/, 'du'], [/\be&|etisalat|eand\b/, 'e&'], [/virgin mobile/, 'Virgin Mobile'], [/\bdewa\b/, 'DEWA'],
-  [/digital dubai|smart dubai/, 'Digital Dubai'], [/\bgdrfa\b/, 'GDRFA'], [/\bicp\b/, 'ICP'], [/dubai police/, 'Dubai Police'], [/emirates post/, 'Emirates Post'],
+  [/\bdu\b.*apple pay|^du\b|\bdu telecom|emirates integrated/, 'du'], [/\be&|etisalat|eand\b/, 'e&'], [/virgin mobile/, 'Virgin Mobile'], [/vodafone/, 'Vodafone'], [/\bdewa\b/, 'DEWA'],
+  [/digital dubai|smart dubai/, 'Digital Dubai'], [/\bgdrfa\b/, 'GDRFA'], [/\bicp\b/, 'ICP'], [/dubai police/, 'Dubai Police'], [/emirates post/, 'Emirates Post'], [/dubai ?pay/, 'DubaiPay'], [/typing cent/, 'Typing Centre'], [/^amer\b/, 'Amer Centre'],
   [/tabby/, 'Tabby'], [/tamara/, 'Tamara'], [/postpay/, 'Postpay'],
   // Services
   [/urban ?company|urbanclap/, 'Urban Company'], [/justlife/, 'Justlife'], [/guinness world/, 'Guinness World Records'], [/aramex/, 'Aramex'],
   [/reel (?:cinemas|entertainment)/, 'Reel Cinemas'], [/\bvox\b/, 'VOX Cinemas'], [/novo cinemas/, 'Novo Cinemas'], [/district by zomato/, 'District'],
-  [/\bemaar\b/, 'Emaar'], [/motiongate|mgate/, 'Motiongate'],
+  [/\bemaar\b/, 'Emaar'], [/motiongate|mgate/, 'Motiongate'], [/platinumlist/, 'Platinumlist'], [/ticketmaster/, 'Ticketmaster'], [/biletix/, 'Biletix'],
+  [/launchgood/, 'LaunchGood'], [/\bunrwa\b/, 'UNRWA'], [/^paypal\s+\d/, 'PayPal'],
 ];
 
 // Payment processors / gateways that prefix the real merchant ("SP *SHOP", "GEIDEA*TABBY").
-const PREFIXES = /^(?:sp|sq|sqr|pp|paypal|pos|qlub|paymob|geidea|myf|tap|pmb|ccb|dlo|payu|stripe|checkout|2co|fs|zettle|sumup)\s*\*+\s*/i;
-const CITIES = /\b(?:dubai|abu ?dhabi|sharjah|ajman|al ain|fujairah|ras ?al ?khaimah|rasalkhaimah|rak|umm al quwain|dxb|auh|shj|london|istanbul|mountain view|san francisco|san jose|cork|amsterdam|singapore|sydney|plano|phoenix|norwich|jakarta|internet)\b/gi;
-const COUNTRIES = /(?:\s+\+?\s*(?:ae|are|uae|us|usa|gb|gbr|uk|ie|irl|sg|sgp|tr|tur|in|ind|au|aus|de|deu|nl|nld|fr|fra|es|esp|it|ita|hk|hkg|sa|sau|id|idn|ca|can|ch|che|lu|lux))+\s*$/i;
-const COMPANY = /\b(?:l\.?l\.?c|fz-?llc|fz-?e|fzco|fz|dmcc|l\.?t\.?d|limited|inc|co|corp|trading|trad|general trading|br of|branch|est|establishment)\b\.?/gi;
+const PREFIXES = /^(?:sp|sq|sqr|pp|paypal|pos|qlub|paymob|geidea|myf|tap|pmb|ccb|dlo|payu|stripe|checkout|2co|fs|zettle|sumup|xsolla|iyzico|paycell|noq|sdg|ubr)\s*\*+\s*|^sp\s+(?=[a-z])/i;
+const CITIES = /\b(?:dubai|abu ?dhabi|sharjah|ajman|al ain|fujairah|ras ?al ?khaimah|rasalkhaimah|rak|umm al quwain|dxb|auh|shj|london|istanbul|mountain view|san francisco|san jose|cork|amsterdam|singapore|sydney|plano|phoenix|norwich|jakarta|internet|doha|karachi|dublin|stockholm|philadelphia|boston|luxembourg|hong kong)\b/gi;
+const COUNTRIES = /(?:\s+\+?\s*(?:ae|are|uae|us|usa|gb|gbr|uk|ie|irl|sg|sgp|tr|tur|in|ind|au|aus|de|deu|nl|nld|fr|fra|es|esp|it|ita|hk|hkg|sa|sau|id|idn|ca|can|ch|che|lu|lux|qa|qat|pk|pak|cz|cze|se|swe))+\s*$/i;
+const COMPANY = /\b(?:general trad\w*|manufac\w*|establ\w*|a\.s\b|l\.?l\.?c|fz-?llc|fz-?e|fzco|fz|dmcc|l\.?t\.?d|limited|inc|co|corp|trading|tradi|trad|br of|branch|est)\b\.?/gi;
 
 const LOWER_WORDS = new Set(['al', 'el', 'bin', 'abu', 'of', 'the', 'and', 'de', 'la', 'le', 'st', 'my', 'by', 'at', 'in', 'on', 'to']);
-const ACRONYMS = new Set(['rta', 'dewa', 'sewa', 'addc', 'fewa', 'enoc', 'adnoc', 'eppco', 'ikea', 'vox', 'img', 'bbq', 'tgi', 'dxb', 'auh', 'uae', 'usa', 'mcd', 'ace', 'dhl', 'ups', 'nyu', 'ksa']);
+const ACRONYMS = new Set(['rta', 'dewa', 'sewa', 'addc', 'fewa', 'enoc', 'adnoc', 'eppco', 'ikea', 'vox', 'img', 'bbq', 'tgi', 'dxb', 'auh', 'uae', 'usa', 'mcd', 'ace', 'dhl', 'ups', 'nyu', 'ksa', 'admm', 'unrwa']);
 
 function titleCase(s) {
   return s
@@ -81,12 +87,14 @@ export function cleanMerchant(raw) {
   let s = original
     .replace(PREFIXES, '')
     .replace(/\b(?:apple|google|samsung)\s*pay\b/gi, ' ')
-    .replace(/\b[\w-]+\.(?:com|net|org|io|ae|co)(?:\/\S*)?/gi, ' ') // domains, "amzn.com/bill"
+    .replace(/\b(?:[\w-]+\.)+(?:com|net|org|io|ae|co)(?:\/\S*)?/gi, ' ') // domains, "amzn.com/bill"
     .replace(/\*+/g, ' ')
     .replace(/[#+]?\b\d{3,}\b/g, ' ') // store / phone / terminal numbers
     .replace(/\s+-\s+|\s-$/g, ' ');
-  s = s.replace(COMPANY, ' ').replace(/\s+/g, ' ').trim();
+  s = s.replace(COMPANY, ' ').replace(/\s-(?=\w)|(?<=\w)-\s/g, ' ').replace(/\s+/g, ' ').trim();
   for (let i = 0; i < 3; i++) s = s.replace(COUNTRIES, '').replace(new RegExp(`\\s+${CITIES.source}\\s*$`, 'i'), '').trim();
+  // Descriptors cut "Restaurant" short: "MASTER CUP REST", "SMOKD EATERY RESTAURAN".
+  s = s.replace(/\s+(?:rest|resta|restau|restaur|restaura|restauran|restuarant|cat n rest)\.?$/i, '');
   s = s.replace(/[\s,.-]+$/, '').trim();
   if (s.length < 2) s = original;
   return titleCase(s);

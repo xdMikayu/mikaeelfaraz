@@ -379,3 +379,47 @@ test('amounts written without a leading zero (".99")', () => {
   assert.equal(parseTabbyAlert('Tabby: Transaction of AED .50 at RISE LLC was successful.', NOW).amount, 0.5);
   assert.equal(normalizeMerchant('SOME SHOP +18005550123 US'), 'Some Shop');
 });
+
+test('more descriptors get clean names and the right category', () => {
+  const cases = {
+    'MCDONALDS-ENOC GARDENS DUBAI AE': ["McDonald's", 'Dining & Cafés'],
+    'QATAR AIRWAYS DIGITAL DUBAI GB': ['Qatar Airways', 'Travel'],
+    '4525#QATARAIRWAYS.COM DOHA GB': ['Qatar Airways', 'Travel'],
+    'EMIRATES FAST FOOD CO DUBAI AE': ['Emirates Fast Food', 'Dining & Cafés'],
+    'HARDEES-DUBAI MALL-FC DUBAI AE': ["Hardee's", 'Dining & Cafés'],
+    'PEETS DUBAI HILLS MALL DUBAI AE': ["Peet's Coffee", 'Dining & Cafés'],
+    'www.groupon.ae groupon.ae NL': ['Groupon', null],
+    'platinumlist.net Dubai AE': ['Platinumlist', 'Entertainment'],
+    'MOWASALAT KARWA COMPAN DOHA QA': ['Karwa', 'Transport'],
+    'IYZICO*riotgames.com ISTANBUL TR': ['Riot Games', 'Entertainment'],
+    'XSOLLA *VOICEMOD XSOLLA.COM US': ['Voicemod', 'Entertainment'],
+    'SOME PLACE REST DUBAI AE': ['Some Place', null],
+    'ANOTHER EATERY RESTAURAN DUBAI AE': ['Another Eatery', 'Dining & Cafés'],
+    'SOME SHOP GENERAL TRADI DUBAI AE': ['Some Shop', null],
+    'LuluHypermarket BARSHA Dubai AE': ['Lulu', 'Groceries'],
+    'LULULEMON DUBAI AE': ['Lululemon', null],
+    'Saylan Welfare Trust KARACHI PK': ['Saylan Welfare Trust', null],
+  };
+  for (const [raw, [name, category]] of Object.entries(cases)) {
+    assert.equal(normalizeMerchant(raw), name, raw);
+    if (category) assert.equal(keywordCategory(normalizeMerchant(raw)), category, raw);
+  }
+});
+
+test('gold: Malabar rate widget, spot conversion and holding values', async () => {
+  const { parseMalabarRates, spotPerGram, fillKarats, valueHoldings } = await import('./gold.mjs');
+  const html = '<div class="golddprice_today"><table><tr><td>24 KT(999) - </td><td>AED  530.25/g</td></tr><tr><td>22 KT(916) - </td><td>AED  491.00/g</td></tr><tr><td>18 KT(750) - </td><td>AED  401.75/g</td></tr></table><p class="last_date"><span class="dt">Updated on : 23/09/2026</span><span class="tm"> 11:31 AM </span></p></div>';
+  const r = parseMalabarRates(html);
+  assert.equal(r.currency, 'AED');
+  assert.deepEqual(r.perGram, { 24: 530.25, 22: 491, 18: 401.75 });
+  assert.equal(r.updated, '2026-09-23T07:31:00.000Z');
+  assert.equal(fillKarats(r.perGram)[21], 463.97);
+  assert.equal(parseMalabarRates('<p>no rates</p>'), null);
+  const spot = spotPerGram(3110.34768); // $100/g pure
+  assert.equal(spot[24], 367.25);
+  assert.equal(spot[22], 336.4);
+  const v = valueHoldings([{ karat: 24, grams: 20, cost_aed: 7000 }, { karat: 22, grams: 10, cost_aed: null }], spot);
+  assert.equal(v.value, 20 * 367.25 + 10 * 336.4);
+  assert.equal(v.gain, 20 * 367.25 - 7000);
+  assert.equal(v.cost, 7000);
+});

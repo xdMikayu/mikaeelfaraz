@@ -352,12 +352,29 @@ export async function tidyUp(db, userId, { maxWrites = 120 } = {}) {
     dropped.add(m.drop);
   }
   let renamed = 0;
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const rules = await loadRules(db, userId);
   for (const [name, ids] of planRenames(rows.filter((r) => !dropped.has(r.id)), normalizeMerchantLegacy, normalizeMerchant)) {
-    for (let i = 0; i < ids.length && writes < maxWrites; i += 200) {
-      const { error } = await db.from('fin_transactions').update({ merchant: name }).eq('user_id', userId).in('id', ids.slice(i, i + 200));
-      if (error) throw error;
-      writes++;
-      renamed += Math.min(200, ids.length - i);
+    // A keyword category was picked from the old name ("Mcdonalds-enoc Gardens" → Fuel),
+    // so pick it again from the new one. Categories you, the AI or a rule set stay.
+    // Tabby charges are left to reconcileTabby.
+    const hit = merchantKey(name).includes('tabby') ? null : ruleCategory(name, rules);
+    const groups = new Map();
+    for (const id of ids) {
+      const r = byId.get(id);
+      const recat = hit && (!r.category || r.category_source === 'keyword') && hit.category !== r.category;
+      const patch = recat ? { merchant: name, category: hit.category, category_source: hit.source } : { merchant: name };
+      const k = JSON.stringify(patch);
+      if (!groups.has(k)) groups.set(k, { patch, ids: [] });
+      groups.get(k).ids.push(id);
+    }
+    for (const { patch, ids: groupIds } of groups.values()) {
+      for (let i = 0; i < groupIds.length && writes < maxWrites; i += 200) {
+        const { error } = await db.from('fin_transactions').update(patch).eq('user_id', userId).in('id', groupIds.slice(i, i + 200));
+        if (error) throw error;
+        writes++;
+        renamed += Math.min(200, groupIds.length - i);
+      }
     }
     if (writes >= maxWrites) break;
   }
