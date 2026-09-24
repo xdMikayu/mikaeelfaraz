@@ -3,7 +3,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { CATEGORIES } from './categories.mjs';
 
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5';
+// Haiku is plenty for putting merchants into buckets and summarising a month, at a
+// fraction of the cost. Set ANTHROPIC_MODEL to use a larger model instead.
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5';
+const SMALL = MODEL.includes('haiku');
 
 export function aiEnabled() {
   return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -15,9 +18,11 @@ function getClient() {
   return client;
 }
 
-// Opus 5 can decline a request via its safety classifiers; `fallbacks: "default"`
-// re-runs a declined request on Anthropic's recommended fallback model server-side.
-const FALLBACK = { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' };
+// Larger models (Opus 5 and up) can decline a request via safety classifiers; `fallbacks:
+// "default"` re-runs a declined request on Anthropic's recommended fallback model. They also
+// take an effort level. Haiku supports neither, so both are only sent to larger models.
+const FALLBACK = SMALL ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' };
+const effort = (level) => (SMALL ? {} : { effort: level });
 
 function textOf(response) {
   if (response.stop_reason === 'refusal') {
@@ -60,7 +65,7 @@ export async function categorizeMerchants(items) {
     model: MODEL,
     max_tokens: 4000,
     ...FALLBACK,
-    output_config: { effort: 'low', format: { type: 'json_schema', schema: CATEGORIZE_SCHEMA } },
+    output_config: { ...effort('low'), format: { type: 'json_schema', schema: CATEGORIZE_SCHEMA } },
     system:
       'You categorize card transactions for a personal budget tracker. The cardholder lives in the UAE (Dubai/Sharjah), so merchants are mostly UAE businesses; use your knowledge of UAE brands. ' +
       'Pick the single best category for each merchant. Use "Other" only when the merchant genuinely cannot be identified. ' +
@@ -83,7 +88,7 @@ export async function spendingInsights(summary) {
     model: MODEL,
     max_tokens: 2000,
     ...FALLBACK,
-    output_config: { effort: 'medium' },
+    ...(SMALL ? {} : { output_config: effort('medium') }),
     system:
       'You are a friendly, direct personal-finance assistant for someone in the UAE. Amounts are in AED. ' +
       'Given a JSON spending summary, write 4–6 short bullet points: where the money went, what changed versus the comparison period and why (name categories and merchants), ' +
