@@ -184,33 +184,45 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
 
   // 3. Same purchase already reported by another channel? Merge into it.
   //    Statements only carry a date, so they match anything on the same Dubai day.
+  //    That works both ways: a live alert for a purchase already imported from a statement
+  //    finds the statement row on its day (and gives it the real time).
   const t = new Date(parsed.occurredAt).getTime();
-  let from = new Date(t - MERGE_WINDOW_MS);
-  let to = new Date(t + MERGE_WINDOW_MS);
-  if (parsed.source === 'statement') {
-    const { y, m, d } = dubaiParts(parsed.occurredAt);
-    from = dubaiDate(y, m, d);
-    to = new Date(from.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const { y, m, d } = dubaiParts(parsed.occurredAt);
+  const dayStart = dubaiDate(y, m, d);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const candidates = (from, to, onlyStatements) => {
+    let q = db
+      .from('fin_transactions')
+      .select('id, source, sources, occurred_at, available_balance, merchant, merchant_raw')
+      .eq('user_id', userId)
+      .eq('account_id', account.id)
+      .eq('amount', parsed.amount)
+      .eq('direction', parsed.direction)
+      .gte('occurred_at', from.toISOString())
+      .lte('occurred_at', to.toISOString());
+    if (onlyStatements) q = q.eq('source', 'statement');
+    return q.limit(10);
+  };
+  const unmerged = (rows) => (rows || []).find((n) => !(n.sources || [n.source]).includes(parsed.source));
+  const near = parsed.source === 'statement'
+    ? await candidates(dayStart, dayEnd, false)
+    : await candidates(new Date(t - MERGE_WINDOW_MS), new Date(t + MERGE_WINDOW_MS), false);
+  if (near.error) throw near.error;
+  let twin = unmerged(near.data);
+  if (!twin && parsed.source !== 'statement') {
+    const sameDay = await candidates(dayStart, dayEnd, true);
+    if (sameDay.error) throw sameDay.error;
+    twin = unmerged(sameDay.data);
   }
-  const { data: near, error: nearErr } = await db
-    .from('fin_transactions')
-    .select('id, source, sources, occurred_at, available_balance, merchant, merchant_raw')
-    .eq('user_id', userId)
-    .eq('account_id', account.id)
-    .eq('amount', parsed.amount)
-    .eq('direction', parsed.direction)
-    .gte('occurred_at', from.toISOString())
-    .lte('occurred_at', to.toISOString())
-    .limit(10);
-  if (nearErr) throw nearErr;
-  const twin = (near || []).find((n) => !(n.sources || [n.source]).includes(parsed.source));
   if (twin) {
     const patch = { sources: Array.from(new Set([...(twin.sources || [twin.source]), parsed.source])) };
     if (twin.available_balance == null && parsed.availableBalance != null) patch.available_balance = parsed.availableBalance;
-    // Bank alerts carry the real timestamp and descriptor; Wallet only has "now".
-    if (twin.source === 'wallet' && !['wallet', 'statement'].includes(parsed.source)) {
+    // Bank alerts carry the real timestamp and descriptor; Wallet only has "now" and a
+    // statement only a date. The statement's clean merchant name and category are kept.
+    if (['wallet', 'statement'].includes(twin.source) && !['wallet', 'statement'].includes(parsed.source)) {
       patch.occurred_at = parsed.occurredAt;
       patch.merchant_raw = parsed.merchantRaw;
+      if (twin.source === 'statement') patch.source = parsed.source; // now a live-tracked purchase
     }
     await db.from('fin_transactions').update(patch).eq('id', twin.id);
     await finishRaw({ status: 'merged', transaction_id: twin.id });
