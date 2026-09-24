@@ -177,6 +177,14 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
     await finishRaw({ status: 'unparsed', reason: `No account "${parsed.account}"` });
     return { status: 'unparsed', reason: `No account "${parsed.account}"` };
   }
+  // Alerts name the card's last 4 digits. The first one teaches us the card; after that,
+  // alerts for another card from the same bank (e.g. a Mashreq debit card, whose emails
+  // look the same) are ignored. The digits can be corrected in Setup → Cards.
+  if (parsed.last4 && account.last4 && parsed.last4 !== account.last4) {
+    const reason = `Card ending ${parsed.last4} isn't a tracked card (tracking ${account.name} ending ${account.last4})`;
+    await finishRaw({ status: 'ignored', reason });
+    return { status: 'ignored', reason };
+  }
   if (parsed.last4 && !account.last4) {
     await db.from('fin_accounts').update({ last4: parsed.last4 }).eq('id', account.id);
     account.last4 = parsed.last4;
