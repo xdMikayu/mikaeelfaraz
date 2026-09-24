@@ -379,3 +379,29 @@ test('amounts written without a leading zero (".99")', () => {
   assert.equal(parseTabbyAlert('Tabby: Transaction of AED .50 at RISE LLC was successful.', NOW).amount, 0.5);
   assert.equal(normalizeMerchant('SOME SHOP +18005550123 US'), 'Some Shop');
 });
+
+test('more descriptors get clean names and the right category', () => {
+  const cases = {
+    'MCDONALDS-ENOC GARDENS DUBAI AE': ["McDonald's", 'Dining & Cafés'],
+    'QATAR AIRWAYS DIGITAL DUBAI GB': ['Qatar Airways', 'Travel'],
+    '4525#QATARAIRWAYS.COM DOHA GB': ['Qatar Airways', 'Travel'],
+    'EMIRATES FAST FOOD CO DUBAI AE': ['Emirates Fast Food', 'Dining & Cafés'],
+    'HARDEES-DUBAI MALL-FC DUBAI AE': ["Hardee's", 'Dining & Cafés'],
+    'PEETS DUBAI HILLS MALL DUBAI AE': ["Peet's Coffee", 'Dining & Cafés'],
+    'www.groupon.ae groupon.ae NL': ['Groupon', null],
+    'platinumlist.net Dubai AE': ['Platinumlist', 'Entertainment'],
+    'MOWASALAT KARWA COMPAN DOHA QA': ['Karwa', 'Transport'],
+    'IYZICO*riotgames.com ISTANBUL TR': ['Riot Games', 'Entertainment'],
+    'XSOLLA *VOICEMOD XSOLLA.COM US': ['Voicemod', 'Entertainment'],
+    'SOME PLACE REST DUBAI AE': ['Some Place', null],
+    'ANOTHER EATERY RESTAURAN DUBAI AE': ['Another Eatery', 'Dining & Cafés'],
+    'SOME SHOP GENERAL TRADI DUBAI AE': ['Some Shop', null],
+    'LuluHypermarket BARSHA Dubai AE': ['Lulu', 'Groceries'],
+    'LULULEMON DUBAI AE': ['Lululemon', null],
+    'Saylan Welfare Trust KARACHI PK': ['Saylan Welfare Trust', null],
+  };
+  for (const [raw, [name, category]] of Object.entries(cases)) {
+    assert.equal(normalizeMerchant(raw), name, raw);
+    if (category) assert.equal(keywordCategory(normalizeMerchant(raw)), category, raw);
+  }
+});
