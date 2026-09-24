@@ -271,9 +271,31 @@ function UnreadInbox() {
   const [adding, setAdding] = useState(null); // raw event being turned into a transaction
   const tabby = f.accounts.find((a) => a.slug === 'tabby');
   const isBlankAlert = (r) => r.source === 'alert' && !['text', 'title', 'subtitle', 'body'].some((k) => String(r.payload?.[k] ?? '').trim());
+  const [retrying, setRetrying] = useState(null);
+  const [notes, setNotes] = useState({}); // raw id → why a retry still failed
   const dismiss = async (id) => {
     if (!f.demo) await f.supabase.from('fin_raw_events').update({ status: 'dismissed' }).eq('id', id);
     f.setData((d) => ({ ...d, rawEvents: d.rawEvents.filter((r) => r.id !== id) }));
+  };
+  const textOf = (r) => r.payload?.text || [r.payload?.title, r.payload?.subtitle, r.payload?.body].filter(Boolean).join(' · ') || JSON.stringify(r.payload);
+  // Run a stored message through the parser again (e.g. after a new format was added).
+  const retry = async (r) => {
+    setRetrying(r.id);
+    try {
+      const { external_id: _drop, ...payload } = r.payload || {};
+      const res = await f.api('ingest', { events: [{ ...payload, source: r.source, received_at: r.received_at, external_id: `retry:${r.id}:${Date.now()}` }] });
+      const out = res.results?.[0] || {};
+      if (['parsed', 'merged', 'duplicate'].includes(out.status)) {
+        await dismiss(r.id);
+        f.reload();
+      } else {
+        setNotes((n) => ({ ...n, [r.id]: out.reason || 'Still not recognised' }));
+      }
+    } catch (e) {
+      setNotes((n) => ({ ...n, [r.id]: e.message }));
+    } finally {
+      setRetrying(null);
+    }
   };
   return (
     <section className="fin-card overflow-hidden">
@@ -292,14 +314,17 @@ function UnreadInbox() {
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs fin-muted">
                 <span>{dateTime(r.received_at)} · {r.source}</span>
                 <span className="flex gap-2">
-                  {isBlankAlert(r) && tabby && <button className="fin-btn h-7 px-3 text-xs" onClick={() => setAdding(r)}>Add details</button>}
-                  <button className="fin-btn fin-btn-ghost h-7 px-3 text-xs" onClick={() => dismiss(r.id)}>Dismiss</button>
+                  {isBlankAlert(r) && tabby && <button className="fin-btn fin-btn-sm" onClick={() => setAdding(r)}>Add details</button>}
+                  {!isBlankAlert(r) && !f.demo && (
+                    <button className="fin-btn fin-btn-sm" disabled={retrying === r.id} onClick={() => retry(r)}>{retrying === r.id ? 'Trying…' : 'Try again'}</button>
+                  )}
+                  <button className="fin-btn fin-btn-ghost fin-btn-sm" onClick={() => dismiss(r.id)}>Dismiss</button>
                 </span>
               </div>
               <p className="whitespace-pre-wrap break-words text-sm">
-                {isBlankAlert(r) ? 'A Tabby notification arrived but iOS didn’t pass its text. If it was a purchase, tap “Add details”.' : r.payload?.text || JSON.stringify(r.payload)}
+                {isBlankAlert(r) ? 'A Tabby notification arrived but iOS didn’t pass its text. If it was a purchase, tap “Add details”.' : textOf(r)}
               </p>
-              {!isBlankAlert(r) && r.reason && <p className="mt-1 text-xs fin-muted">{r.reason}</p>}
+              {!isBlankAlert(r) && (notes[r.id] || r.reason) && <p className="mt-1 text-xs fin-muted">{notes[r.id] || r.reason}</p>}
             </li>
           ))}
         </ul>

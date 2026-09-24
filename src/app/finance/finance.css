@@ -108,6 +108,7 @@
   white-space: nowrap;
 }
 .fin-btn:hover { background: var(--fin-surface-2); }
+.fin-btn-sm { height: 30px; padding: 0 12px; font-size: 12.5px; }
 .fin-btn:active { transform: scale(0.98); }
 .fin-btn:disabled { opacity: 0.5; cursor: default; }
 .fin-btn-primary { background: var(--fin-accent); color: var(--fin-accent-ink); border-color: transparent; }

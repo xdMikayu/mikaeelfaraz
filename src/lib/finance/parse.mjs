@@ -177,10 +177,12 @@ export function parseTabbyAlert(text, now = new Date(), channel = 'alert') {
   if (/declined|failed|unsuccessful|reversed|refund/i.test(s)) {
     return { ok: false, status: 'ignored', reason: 'Tabby alert is not a successful purchase' };
   }
-  const m = s.match(/transaction of\s+([A-Z]{3})\s*([\d,]*\d(?:\.\d{1,2})?)\s*at\s+(.+?)\s+(?:was|is|has been)\s+(?:successful|approved|completed)/i);
+  // "…transaction of AED 56.00 at RISE LLC was successful…" or
+  // "Transaction of AED 420.00 At Digital Dubai. Your Tabby Card limit is now AED 1,408.26…"
+  const m = s.match(/transaction of\s+([A-Z]{3})\s*([\d,]*\d(?:\.\d{1,2})?)\s*at\s+(.+?)(?:\s+(?:was|is|has been)\s+(?:successful|approved|completed)|\.(?:\s|$)|\s+your\s|$)/i);
   if (!m) return { ok: false, status: 'unparsed', reason: 'Looks like Tabby but the format was not recognised' };
   const [, cur, amt, merchantRaw] = m;
-  const bal = s.match(/available tabby card limit is\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
+  const bal = s.match(/(?:available tabby card limit is|tabby card limit is now)\s*(?:([A-Z]{3})\s*)?(\d[\d,]*(?:\.\d+)?)/i);
   return finish({
     account: 'tabby',
     last4: null,
