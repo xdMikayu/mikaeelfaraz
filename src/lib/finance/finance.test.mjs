@@ -350,3 +350,18 @@ test('drill-down periods: one month, one week', () => {
   assert.ok(Math.abs(wb.buckets.reduce((a, b) => a + b.total, 0) - w.total) < 1e-6);
   assert.ok(wb.average > 0);
 });
+
+test('Mashreq Neo debit emails in their different date formats', () => {
+  const intro = 'Dear Customer, Thank you for banking with Mashreq Bank. Please note the details of a recent transaction on your Mashreq Card. ';
+  const a = parseMashreqEmail(intro + 'Your Neo VISA Debit Card ending with 9876 was used for a purchase of USD 21.00 at OPENAI *CHATGPT SUBSCR US on 24-Sep-2026 at 08:52 PM. Available balance is AED 5,432.10');
+  assert.equal(a.account, 'mashreq_debit');
+  assert.equal(a.occurredAt, '2026-09-24T16:52:00.000Z');
+  assert.equal(a.merchant, 'OpenAI');
+  const b = parseMashreqEmail(intro + 'Your Neo VISA Debit Card ending with 9876 was used for a purchase of AED 45.50 at CARREFOUR MOE on 24/09/2026 20:52:10. Available Balance: AED 5,386.60');
+  assert.equal(b.occurredAt, '2026-09-24T16:52:00.000Z');
+  assert.equal(b.availableBalance, 5386.6);
+  const c = parseMashreqEmail(intro + 'Your Neo VISA Debit Card ending in 9876 has been used for an online purchase of EUR 12.99 at SPOTIFY STOCKHOLM SE on 12 Mar 23.');
+  assert.equal(c.occurredAt, '2023-03-12T08:00:00.000Z'); // no time given: noon Dubai
+  assert.equal(c.currency, 'EUR');
+  assert.equal(parseMashreqEmail(intro + 'Your card ending with 9876 was used for a purchase of AED 5 at X').ok, false); // no date
+});
