@@ -1,6 +1,7 @@
 {
-  "name": "Money",
-  "short_name": "Money",
+  "name": "Mifolio",
+  "short_name": "Mifolio",
+  "description": "Every card, every dirham, in one place.",
   "start_url": "/finance",
   "scope": "/finance",
   "display": "standalone",

@@ -60,7 +60,7 @@ export function Legend({ items }) {
  * Spend per day or week in one hue, with the comparison period's average as a dashed
  * reference line. Hover/tap a bar for that day's or week's biggest purchases.
  */
-export function PeriodBars({ buckets, unit, average, averageLabel, height = 220 }) {
+export function PeriodBars({ buckets, unit, average, averageLabel, height = 220, onSelect }) {
   const [ref, width] = useWidth();
   const [hover, setHover] = useState(null);
   const max = Math.max(1, average || 0, ...buckets.map((b) => b.total));
@@ -113,7 +113,7 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220 
               const v = Math.max(0, b.total);
               const barH = v > 0 ? Math.max(2, y(0) - y(v)) : 0;
               return (
-                <g key={i} onMouseEnter={() => setHover(i)}>
+                <g key={i} onMouseEnter={() => setHover(i)} onClick={onSelect && !b.future ? () => onSelect(b) : undefined} style={onSelect && !b.future ? { cursor: 'pointer' } : undefined}>
                   <rect x={PAD.left + band * i} y={PAD.top} width={band} height={ih} fill="transparent" />
                   {barH > 0 && (
                     <path d={columnPath(cx - bw / 2, y(0) - barH, bw, barH, Math.min(4, bw / 2))} fill={`url(#${gid})`}
@@ -151,6 +151,7 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220 
                 {h.count > h.top.length && <div className="fin-muted">+{h.count - h.top.length} more</div>}
               </div>
             )}
+            {onSelect && !h.future && <div className="mt-1.5 fin-muted">Tap to open this {per}</div>}
           </div>
         )}
       </div>
@@ -171,7 +172,7 @@ function Row({ color, label, value, sub }) {
 }
 
 /** Monthly spend stacked by card; `highlight` marks the months the selected period covers. */
-export function SpendBars({ buckets, accounts, highlight = [], height = 220, label = 'Spend by card' }) {
+export function SpendBars({ buckets, accounts, highlight = [], height = 220, label = 'Spend by card', onSelect }) {
   const lit = new Set(highlight);
   const partial = lit.size > 0 && lit.size < buckets.length; // only dim when the period is a subset
   const [ref, width] = useWidth();
@@ -213,7 +214,8 @@ export function SpendBars({ buckets, accounts, highlight = [], height = 220, lab
                 .map((a) => ({ a, v: Math.max(0, mo.parts[a.id] || 0) }))
                 .filter((s) => s.v > 0);
               return (
-                <g key={mo.fullLabel} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
+                <g key={mo.fullLabel} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
+                  onClick={onSelect ? () => onSelect(mo, i) : undefined} style={onSelect ? { cursor: 'pointer' } : undefined}>
                   <rect x={PAD.left + band * i} y={PAD.top} width={band} height={ih} fill="transparent" />
                   {segs.map((s, j) => {
                     const y1 = y(acc + s.v);
@@ -249,6 +251,7 @@ export function SpendBars({ buckets, accounts, highlight = [], height = 220, lab
             {present.map((a) => (
               <Row key={a.id} color={accountColorVar(a.slug, accounts)} label={a.name} value={aed(buckets[hover].parts[a.id] || 0, { decimals: 0 })} />
             ))}
+            {onSelect && <div className="mt-1.5 fin-muted">Tap to open this month</div>}
           </div>
         )}
       </div>

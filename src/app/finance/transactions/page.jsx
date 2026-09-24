@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Upload, Download, Inbox, Search, X, ChevronDown } from 'lucide-react';
+import { Plus, Upload, Download, Inbox, Search, X, ChevronDown, RefreshCw, Copy, Check } from 'lucide-react';
 import { useFinance, LoadingState } from '../_components/FinanceShell';
 import TransactionEditor from '../_components/TransactionEditor';
 import { CategoryAvatar } from '../_components/icons';
@@ -278,14 +278,43 @@ function UnreadInbox() {
     f.setData((d) => ({ ...d, rawEvents: d.rawEvents.filter((r) => r.id !== id) }));
   };
   const textOf = (r) => r.payload?.text || [r.payload?.title, r.payload?.subtitle, r.payload?.body].filter(Boolean).join(' · ') || JSON.stringify(r.payload);
+  const [bulk, setBulk] = useState(null); // { done, total, fixed }
+  const [copied, setCopied] = useState(null);
+  const retryEvent = (r) => {
+    const { external_id: _drop, ...payload } = r.payload || {};
+    return { ...payload, source: r.source, received_at: r.received_at, external_id: `retry:${r.id}:${Date.now()}` };
+  };
+  const readable = (out) => ['parsed', 'merged', 'duplicate'].includes(out?.status);
+  // Re-read every stuck message, 5 per request (the site's functions stop after ~10 s).
+  const retryAll = async () => {
+    const items = f.rawEvents.filter((r) => !isBlankAlert(r));
+    let fixed = 0;
+    setBulk({ done: 0, total: items.length, fixed });
+    for (let i = 0; i < items.length; i += 5) {
+      const batch = items.slice(i, i + 5);
+      try {
+        const res = await f.api('ingest', { events: batch.map(retryEvent) });
+        for (let k = 0; k < batch.length; k++) {
+          if (readable(res.results?.[k])) { await dismiss(batch[k].id); fixed++; }
+          else setNotes((n) => ({ ...n, [batch[k].id]: res.results?.[k]?.reason || 'Still not recognised' }));
+        }
+      } catch (e) {
+        batch.forEach((r) => setNotes((n) => ({ ...n, [r.id]: e.message })));
+      }
+      setBulk({ done: Math.min(items.length, i + 5), total: items.length, fixed });
+    }
+    f.reload();
+  };
+  const copy = async (r) => {
+    try { await navigator.clipboard.writeText(textOf(r)); setCopied(r.id); setTimeout(() => setCopied(null), 1500); } catch { /* clipboard blocked */ }
+  };
   // Run a stored message through the parser again (e.g. after a new format was added).
   const retry = async (r) => {
     setRetrying(r.id);
     try {
-      const { external_id: _drop, ...payload } = r.payload || {};
-      const res = await f.api('ingest', { events: [{ ...payload, source: r.source, received_at: r.received_at, external_id: `retry:${r.id}:${Date.now()}` }] });
+      const res = await f.api('ingest', { events: [retryEvent(r)] });
       const out = res.results?.[0] || {};
-      if (['parsed', 'merged', 'duplicate'].includes(out.status)) {
+      if (readable(out)) {
         await dismiss(r.id);
         f.reload();
       } else {
@@ -307,6 +336,15 @@ function UnreadInbox() {
         </span>
         <ChevronDown size={16} className="fin-muted transition-transform" style={{ transform: open ? 'rotate(180deg)' : undefined }} />
       </button>
+      {open && !f.demo && f.rawEvents.some((r) => !isBlankAlert(r)) && (
+        <div className="flex flex-wrap items-center gap-3 px-5 pb-3">
+          <button className="fin-btn fin-btn-sm" disabled={Boolean(bulk && bulk.done < bulk.total)} onClick={retryAll}>
+            <RefreshCw size={13} className={bulk && bulk.done < bulk.total ? 'animate-spin' : undefined} />
+            {bulk && bulk.done < bulk.total ? `Reading ${bulk.done}/${bulk.total}…` : 'Try again all'}
+          </button>
+          {bulk && bulk.done >= bulk.total && <span className="text-xs fin-ink-2">{bulk.fixed} of {bulk.total} read{bulk.fixed < bulk.total ? ' — copy one that\'s still stuck and send it over' : ''}</span>}
+        </div>
+      )}
       {open && (
         <ul className="space-y-2 px-5 pb-5">
           {f.rawEvents.map((r) => (
@@ -317,6 +355,9 @@ function UnreadInbox() {
                   {isBlankAlert(r) && tabby && <button className="fin-btn fin-btn-sm" onClick={() => setAdding(r)}>Add details</button>}
                   {!isBlankAlert(r) && !f.demo && (
                     <button className="fin-btn fin-btn-sm" disabled={retrying === r.id} onClick={() => retry(r)}>{retrying === r.id ? 'Trying…' : 'Try again'}</button>
+                  )}
+                  {!isBlankAlert(r) && (
+                    <button className="fin-btn fin-btn-ghost fin-btn-sm" onClick={() => copy(r)} aria-label="Copy message text">{copied === r.id ? <Check size={13} /> : <Copy size={13} />}</button>
                   )}
                   <button className="fin-btn fin-btn-ghost fin-btn-sm" onClick={() => dismiss(r.id)}>Dismiss</button>
                 </span>

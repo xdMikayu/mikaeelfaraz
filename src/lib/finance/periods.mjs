@@ -69,6 +69,27 @@ export function getPeriod(key, now = new Date(), earliest = null) {
   }
 }
 
+/** One calendar month, opened by tapping its bar; compared with the month before. */
+export function monthPeriod(y, m, now = new Date()) {
+  const start = dubaiDate(y, m, 1);
+  const end = new Date(Math.min(dubaiDate(y, m + 1, 1).getTime(), now.getTime() + 60 * 1000));
+  const p = dubaiParts(start);
+  return {
+    key: `month:${p.y}-${String(p.m + 1).padStart(2, '0')}`, label: monthLabel(p.y, p.m), single: true,
+    start, end, prevStart: dubaiDate(y, m - 1, 1), prevEnd: start, prevLabel: monthLabel(p.y, p.m - 1), months: 1,
+  };
+}
+
+/** Any stretch of days (e.g. a week, opened from its bar); compared with the same stretch before it. */
+export function rangePeriod(start, end, label) {
+  const len = end.getTime() - start.getTime();
+  const days = Math.round(len / 86400000);
+  return {
+    key: `range:${start.toISOString()}`, label, start, end, prevStart: new Date(start.getTime() - len), prevEnd: start,
+    prevLabel: `the ${days} days before`, months: len / (30.44 * 86400000), days,
+  };
+}
+
 /** The last `n` calendar months (oldest first) as { y, m, label, start, end }. */
 export function lastMonths(n, now = new Date()) {
   const { y, m } = dubaiParts(now);

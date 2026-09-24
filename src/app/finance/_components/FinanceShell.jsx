@@ -55,7 +55,9 @@ function Logo() {
     <span className="flex items-center gap-2.5">
       <span className="fin-display grid h-8 w-8 place-items-center rounded-full text-[15px] font-bold"
         style={{ background: 'linear-gradient(135deg, #b28cff, #6b00f5)', color: '#fff', boxShadow: '0 4px 14px -4px rgba(107, 0, 245, 0.6), inset 0 1px 0 rgba(255,255,255,0.25)' }}>M</span>
-      <span className="fin-display text-[16px] font-semibold tracking-tight">Money</span>
+      <span className="fin-display text-[17px] font-bold tracking-tight">
+        Mi<span style={{ background: 'linear-gradient(135deg, #b28cff, var(--fin-accent))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>folio</span>
+      </span>
     </span>
   );
 }
@@ -106,7 +108,7 @@ export default function FinanceShell({ children }) {
         fetchAll(() => supabase.from('fin_transactions').select('*').gte('occurred_at', since.toISOString()).order('occurred_at', { ascending: false })),
         supabase.from('fin_merchant_rules').select('*').then((r) => (r.error ? Promise.reject(r.error) : r.data)),
         supabase.from('fin_budgets').select('*').then((r) => (r.error ? Promise.reject(r.error) : r.data)),
-        supabase.from('fin_raw_events').select('*').eq('status', 'unparsed').order('received_at', { ascending: false }).limit(50)
+        supabase.from('fin_raw_events').select('*').eq('status', 'unparsed').order('received_at', { ascending: false }).limit(500)
           .then((r) => (r.error ? Promise.reject(r.error) : r.data)),
         // Everything that reached the ingest endpoint, whatever happened to it.
         supabase.from('fin_raw_events').select('id, received_at, source, status, reason, payload').order('received_at', { ascending: false }).limit(25)
@@ -274,7 +276,7 @@ function SignIn({ supabase }) {
           <Logo />
           <div>
             <h1 className="fin-h1">Welcome back</h1>
-            <p className="mt-1 text-sm fin-ink-2">Your private spending dashboard.</p>
+            <p className="mt-1 text-sm fin-ink-2">Every card, every dirham, in one place.</p>
           </div>
         </div>
         <div>

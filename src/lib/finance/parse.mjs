@@ -7,6 +7,8 @@
 //   - Tabby alert:    "Transaction of AED 1.00 At DU Apple Pay was successful. Your available Tabby Card limit is AED 1,900.00"
 //   - Apple Wallet:   iOS Shortcuts "Transaction" automation → { card, merchant, amount }
 
+import { cleanMerchant } from './merchants.mjs';
+
 const DUBAI_OFFSET_MS = 4 * 60 * 60 * 1000; // UAE is UTC+4 all year (no DST)
 
 const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
@@ -61,9 +63,14 @@ export function toAed(amount, currency) {
   return { amountAed: Math.round(amount * rate * 100) / 100, fxEstimated: !PEGGED.has(currency) };
 }
 
+/** Clean display name for a raw merchant descriptor; see merchants.mjs. */
+export function normalizeMerchant(raw) {
+  return cleanMerchant(raw);
+}
+
 /**
- * Clean up a raw merchant descriptor for display:
- * "DU Apple Pay 800188 AE" → "DU", "CAREEM HALA DUBAI AE" → "Careem Hala".
+ * The first version of the merchant cleaner, kept only so rows it named can be recognised
+ * and renamed with cleanMerchant (rows you renamed yourself won't match it).
  */
 const LOWER_WORDS = new Set(['al', 'el', 'bin', 'abu', 'of', 'the', 'and', 'de', 'la', 'le', 'st', 'my', 'by', 'at', 'in', 'on', 'to']);
 
@@ -71,7 +78,7 @@ const LOWER_WORDS = new Set(['al', 'el', 'bin', 'abu', 'of', 'the', 'and', 'de',
 // descriptors is title-cased ("SOME NEW SHOP" → "Some New Shop").
 const ACRONYMS = new Set(['rta', 'dewa', 'sewa', 'addc', 'fewa', 'enoc', 'adnoc', 'eppco', 'ikea', 'vox', 'img', 'bbq', 'tgi', 'dxb', 'auh', 'uae', 'usa', 'fze', 'llc', 'mcd', 'ace', 'dhl', 'ups', 'nyu', 'ksa']);
 
-export function normalizeMerchant(raw) {
+export function normalizeMerchantLegacy(raw) {
   let s = String(raw || '').replace(/\s+/g, ' ').trim();
   s = s
     .replace(/\b(?:apple|google|samsung)\s*pay\b/gi, ' ')
@@ -136,33 +143,65 @@ export function parseSibSms(text, now = new Date()) {
   });
 }
 
+/**
+ * A date (and optional time) written the ways bank emails write them: "23-SEP-2026 12:39 PM",
+ * "23 Sep 2026 at 20:52", "23/09/2026 20:52:10", "2026-09-23 20:52", "23-Sep-26". Day comes
+ * before month (UAE style). Returns Dubai wall-clock parts, or null. No time means noon.
+ */
+function findDateTime(s) {
+  const time = String.raw`(?:\s*(?:at|,)?\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?)?`;
+  const patterns = [
+    [new RegExp(String.raw`\b(\d{1,2})[-\s/]([A-Za-z]{3})[a-z]*[-\s/,]+(\d{2,4})` + time, 'i'), (m) => [m[3], MONTHS[m[2].toLowerCase()], m[1], m[4], m[5], m[6]]],
+    [new RegExp(String.raw`\b(\d{4})-(\d{1,2})-(\d{1,2})(?:T|\s)?` + time, 'i'), (m) => [m[1], +m[2] - 1, m[3], m[4], m[5], m[6]]],
+    [new RegExp(String.raw`\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})` + time, 'i'), (m) => [m[3], +m[2] - 1, m[1], m[4], m[5], m[6]]],
+  ];
+  for (const [re, pick] of patterns) {
+    const m = s.match(re);
+    if (!m) continue;
+    let [y, mo, d, h, mi, ampm] = pick(m);
+    if (mo == null || mo < 0 || mo > 11) continue;
+    y = +y < 100 ? 2000 + +y : +y;
+    let hh = h == null ? 12 : +h;
+    if (ampm) {
+      const pm = ampm.toUpperCase() === 'PM';
+      if (pm && hh < 12) hh += 12;
+      if (!pm && hh === 12) hh = 0;
+    }
+    return { y, mo, d: +d, hh, mi: mi == null ? 0 : +mi, index: m.index };
+  }
+  return null;
+}
+
+/**
+ * Mashreq card alert email (Cashback credit card, or the Neo debit card), e.g.
+ * "Your Mashreq Cashback Card ending with 1234 was used for a purchase of AED 1.00 at
+ * DU Apple Pay 800188 AE on 23-SEP-2026 12:39 PM. Available limit is AED 9,876.54".
+ * Each part is found on its own, so small wording or date-format differences still read.
+ */
 export function parseMashreqEmail(text) {
   const s = collapse(text);
-  if (!/mashreq/i.test(s) || !/was used for a purchase/i.test(s)) return null;
-  const m = s.match(
-    /card ending (?:with|in)\s+(\d{4}) was used for a purchase of\s+([A-Z]{3})\s*([\d,]+(?:\.\d+)?)\s+at\s+(.+?)\s+on\s+(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*[-\s](\d{4})\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i
-  );
-  if (!m) return { ok: false, status: 'unparsed', reason: 'Looks like Mashreq but the format was not recognised' };
-  const [, last4, cur, amt, merchantRaw, dd, mon, yyyy, hRaw, mi, ampm] = m;
-  const month = MONTHS[mon.toLowerCase()];
-  if (month == null) return { ok: false, status: 'unparsed', reason: `Unknown month "${mon}"` };
-  let hh = +hRaw;
-  if (ampm) {
-    const pm = ampm.toUpperCase() === 'PM';
-    if (pm && hh < 12) hh += 12;
-    if (!pm && hh === 12) hh = 0;
-  }
-  // Credit and debit card alerts share this wording; debit ones name the card as such.
-  // (The server also routes by card number, since the credit card's digits are known.)
-  const debit = /mashreq\s+debit|debit\s+card\s+ending/i.test(s);
-  const bal = s.match(/available (?:limit|balance) is\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
+  if (!/mashreq/i.test(s) || !/(?:was|has been) used for (?:a|an)\s*(?:online\s+)?purchase/i.test(s)) return null;
+  const amt = s.match(/purchase (?:of|for)\s+([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/i);
+  if (!amt) return { ok: false, status: 'unparsed', reason: 'Mashreq alert without a readable amount' };
+  const after = s.slice(amt.index + amt[0].length);
+  const when = findDateTime(after);
+  if (!when) return { ok: false, status: 'unparsed', reason: 'Mashreq alert without a readable date' };
+  // The merchant sits between "at" and the date ("… at NOON DUBAI AE on 23-SEP-2026 …").
+  const head = after.slice(0, when.index).replace(/\s+on\s*$/i, '').replace(/[,.]\s*$/, '');
+  const mer = head.match(/^\s*(?:at|with|from)\s+(.+)$/i);
+  const merchantRaw = (mer ? mer[1] : head).trim() || 'Mashreq purchase';
+  const last4 = (s.match(/card\s+(?:number\s+)?ending\s+(?:with|in)?\s*[x*]*(\d{4})/i) || [])[1] || null;
+  // Credit and debit card alerts read alike; debit ones say so. (The server also routes by
+  // card number, since the Cashback card's digits are known.)
+  const debit = /debit\s+card|mashreq\s+debit/i.test(s);
+  const bal = s.match(/available (?:credit )?(?:limit|balance)\s*(?:is|of|:)\s*:?\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
   return finish({
     account: debit ? 'mashreq_debit' : 'mashreq',
     last4,
-    amount: toNumber(amt),
-    currency: cur.toUpperCase(),
-    merchantRaw: merchantRaw.trim(),
-    occurredAt: dubaiDate(+yyyy, month, +dd, hh, +mi),
+    amount: toNumber(amt[2]),
+    currency: amt[1].toUpperCase(),
+    merchantRaw,
+    occurredAt: dubaiDate(when.y, when.mo, when.d, when.hh, when.mi),
     availableBalance: bal ? toNumber(bal[2]) : null,
     source: 'email',
     wallet: /apple\s*pay/i.test(merchantRaw),

@@ -7,7 +7,8 @@ const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-fin
 const display = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap', weight: ['500', '600', '700'], variable: '--font-display' });
 
 export const metadata = {
-  title: 'Money · Mikaeel Faraz',
+  title: 'Mifolio',
+  description: 'Every card, every dirham, in one place.',
   robots: { index: false, follow: false },
   // Home-screen app: its own icon and name (iOS reads apple-touch-icon; Android the manifest).
   manifest: '/finance/manifest.webmanifest',
@@ -15,7 +16,7 @@ export const metadata = {
     icon: [{ url: '/finance/favicon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/finance/icon.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/finance/apple-touch-icon.png', sizes: '180x180' }],
   },
-  appleWebApp: { title: 'Money' },
+  appleWebApp: { title: 'Mifolio' },
 };
 
 export const viewport = { themeColor: '#0b0a10' };
