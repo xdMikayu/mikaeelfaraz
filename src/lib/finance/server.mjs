@@ -3,9 +3,10 @@
 // from a client component.
 import { createClient } from '@supabase/supabase-js';
 import { timingSafeEqual } from 'node:crypto';
-import { parseEvent, dubaiDate, dubaiParts } from './parse.mjs';
+import { parseEvent, normalizeMerchant, normalizeMerchantLegacy } from './parse.mjs';
 import { CATEGORIES, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES, MANAGED_TABBY_NOTES } from './categories.mjs';
 import { DEFAULT_ACCOUNTS } from './accounts.mjs';
+import { STATEMENT_WINDOW_MS, isStatementTwin, planDuplicateMerges, planRenames } from './dedupe.mjs';
 import { aiEnabled, categorizeMerchants } from './ai.mjs';
 
 // A Wallet notification and a bank email/SMS for the same purchase can arrive
@@ -215,36 +216,41 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
   }
 
   // 3. Same purchase already reported by another channel? Merge into it.
-  //    Statements only carry a date, so they match anything on the same Dubai day.
-  //    That works both ways: a live alert for a purchase already imported from a statement
-  //    finds the statement row on its day (and gives it the real time).
+  //    Live alerts match each other within 20 minutes. A statement row only has a date
+  //    (often the posting date, a day after the purchase), so it matches a live alert
+  //    within 36 hours on the same day or with the same merchant — in either order.
   const t = new Date(parsed.occurredAt).getTime();
-  const { y, m, d } = dubaiParts(parsed.occurredAt);
-  const dayStart = dubaiDate(y, m, d);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-  const candidates = (from, to, onlyStatements) => {
+  const candidates = (windowMs, onlyStatements) => {
     let q = db
       .from('fin_transactions')
       .select('id, source, sources, occurred_at, available_balance, merchant, merchant_raw')
       .eq('user_id', userId)
       .eq('account_id', account.id)
       .eq('amount', parsed.amount)
+      .eq('currency', parsed.currency)
       .eq('direction', parsed.direction)
-      .gte('occurred_at', from.toISOString())
-      .lte('occurred_at', to.toISOString());
+      .gte('occurred_at', new Date(t - windowMs).toISOString())
+      .lte('occurred_at', new Date(t + windowMs).toISOString());
     if (onlyStatements) q = q.eq('source', 'statement');
-    return q.limit(10);
+    return q.limit(20);
   };
-  const unmerged = (rows) => (rows || []).find((n) => !(n.sources || [n.source]).includes(parsed.source));
-  const near = parsed.source === 'statement'
-    ? await candidates(dayStart, dayEnd, false)
-    : await candidates(new Date(t - MERGE_WINDOW_MS), new Date(t + MERGE_WINDOW_MS), false);
-  if (near.error) throw near.error;
-  let twin = unmerged(near.data);
-  if (!twin && parsed.source !== 'statement') {
-    const sameDay = await candidates(dayStart, dayEnd, true);
-    if (sameDay.error) throw sameDay.error;
-    twin = unmerged(sameDay.data);
+  const unmerged = (rows) => (rows || []).filter((n) => !(n.sources || [n.source]).includes(parsed.source));
+  const closest = (rows) => rows.sort((x, y) => Math.abs(new Date(x.occurred_at) - t) - Math.abs(new Date(y.occurred_at) - t))[0];
+  const me = { occurredAt: parsed.occurredAt, merchant: parsed.merchant, merchantRaw: parsed.merchantRaw };
+  let twin;
+  if (parsed.source === 'statement') {
+    const near = await candidates(STATEMENT_WINDOW_MS, false);
+    if (near.error) throw near.error;
+    twin = closest(unmerged(near.data).filter((n) => isStatementTwin(me, n)));
+  } else {
+    const near = await candidates(MERGE_WINDOW_MS, false);
+    if (near.error) throw near.error;
+    twin = closest(unmerged(near.data));
+    if (!twin) {
+      const stmts = await candidates(STATEMENT_WINDOW_MS, true);
+      if (stmts.error) throw stmts.error;
+      twin = closest(unmerged(stmts.data).filter((n) => isStatementTwin(n, me)));
+    }
   }
   if (twin) {
     const patch = { sources: Array.from(new Set([...(twin.sources || [twin.source]), parsed.source])) };
@@ -312,6 +318,52 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
  * first, then Claude for merchants nothing matched. Claude's answers are saved
  * as merchant rules, so each new merchant is only ever sent once.
  */
+/** Every row of a user, paged past PostgREST's 1,000-row limit. */
+async function allRows(db, userId, columns) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.from('fin_transactions').select(columns).eq('user_id', userId).order('id').range(from, from + 999);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < 1000) return out;
+  }
+}
+
+/**
+ * Periodic clean-up: merge purchases recorded twice (a statement row plus the alert for it
+ * that arrived before matching was lenient enough), and give rows the old merchant cleaner
+ * named their cleaner name. Idempotent; capped per run so it fits a function's time limit.
+ */
+export async function tidyUp(db, userId, { maxWrites = 120 } = {}) {
+  const rows = await allRows(db, userId, 'id, account_id, amount, currency, direction, occurred_at, merchant, merchant_raw, source, sources, category, category_source, available_balance');
+  let writes = 0;
+  let merged = 0;
+  const dropped = new Set();
+  for (const m of planDuplicateMerges(rows)) {
+    if (writes >= maxWrites) break;
+    const { error: e1 } = await db.from('fin_raw_events').update({ transaction_id: m.keep }).eq('user_id', userId).eq('transaction_id', m.drop);
+    if (e1) throw e1;
+    const { error: e2 } = await db.from('fin_transactions').delete().eq('user_id', userId).eq('id', m.drop);
+    if (e2) throw e2;
+    const { error: e3 } = await db.from('fin_transactions').update(m.patch).eq('user_id', userId).eq('id', m.keep);
+    if (e3) throw e3;
+    writes += 3;
+    merged++;
+    dropped.add(m.drop);
+  }
+  let renamed = 0;
+  for (const [name, ids] of planRenames(rows.filter((r) => !dropped.has(r.id)), normalizeMerchantLegacy, normalizeMerchant)) {
+    for (let i = 0; i < ids.length && writes < maxWrites; i += 200) {
+      const { error } = await db.from('fin_transactions').update({ merchant: name }).eq('user_id', userId).in('id', ids.slice(i, i + 200));
+      if (error) throw error;
+      writes++;
+      renamed += Math.min(200, ids.length - i);
+    }
+    if (writes >= maxWrites) break;
+  }
+  return { merged, renamed };
+}
+
 export async function categorizePending(db, userId, { maxMerchants = 40 } = {}) {
   const { data: pending, error } = await db
     .from('fin_transactions')

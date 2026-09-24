@@ -24,17 +24,20 @@ export const CATEGORIES = [
 export const UNCATEGORIZED = 'Uncategorized';
 
 const KEYWORD_RULES = [
-  ['Groceries', ['talabat mart', 'noon minutes', 'instashop', 'carrefour', 'lulu', 'spinneys', 'waitrose', 'union coop', 'choithrams', 'grandiose', 'viva', 'kibsons', 'nesto', 'al maya', 'west zone', 'geant', 'supermarket', 'hypermarket', 'grocery', 'baqala']],
+  // Checked first: names that would otherwise hit a broader keyword below.
+  ['Groceries', ['amazon grocery', 'amazon fresh']],
+  ['Shopping', ['apple store']],
+  ['Groceries', ['supermarche', 'mini mart', 'minimart', 'talabat mart', 'noon minutes', 'instashop', 'carrefour', 'lulu', 'spinneys', 'waitrose', 'union coop', 'choithrams', 'grandiose', 'viva', 'kibsons', 'nesto', 'al maya', 'west zone', 'geant', 'supermarket', 'hypermarket', 'grocery', 'baqala']],
   ['Food Delivery', ['talabat', 'deliveroo', 'noon food', 'careem food', 'zomato', 'keeta', 'smiles']],
-  ['Transport', ['careem', 'uber', 'rta', 'salik', 'nol', 'parkin', 'parking', 'hala', 'taxi', 'metro', 'yango', 'bolt', 'darb', 'mawaqif']],
+  ['Transport', ['careem', 'uber', 'udrive', 'ekar', 'lime', 'dott', 'rent a car', 'indigo rent', 'rta', 'salik', 'nol', 'parkin', 'parking', 'hala', 'taxi', 'metro', 'yango', 'bolt', 'darb', 'mawaqif']],
   ['Fuel', ['enoc', 'adnoc', 'emarat', 'eppco', 'petrol', 'fuel']],
   ['Bills & Utilities', ['du', 'etisalat', 'e&', 'eand', 'dewa', 'sewa', 'addc', 'aadc', 'fewa', 'etihad wateen', 'virgin mobile', 'empower', 'tabreed', 'lootah']],
   ['Government & Fees', ['digital dubai', 'dubai police', 'gdrfa', 'icp', 'amer', 'tasheel', 'mohre', 'municipality', 'dubai now', 'government', 'tamm', 'emirates id']],
-  ['Subscriptions', ['netflix', 'spotify', 'apple com', 'itunes', 'icloud', 'youtube', 'google', 'prime video', 'amazon prime', 'osn', 'shahid', 'disney', 'chatgpt', 'openai', 'anthropic', 'claude', 'microsoft', 'adobe', 'anghami', 'starzplay', 'notion', 'canva']],
-  ['Travel', ['emirates', 'flydubai', 'etihad', 'air arabia', 'booking com', 'agoda', 'airbnb', 'hotel', 'marriott', 'hilton', 'expedia', 'airline', 'airways']],
+  ['Subscriptions', ['netflix', 'spotify', 'apple com', 'itunes', 'icloud', 'youtube', 'google', 'prime video', 'amazon prime', 'osn', 'shahid', 'disney', 'chatgpt', 'openai', 'anthropic', 'claude', 'microsoft', 'adobe', 'anghami', 'starzplay', 'notion', 'canva', 'apple', 'google one', 'whoop', 'namecheap', 'linkedin', 'github']],
+  ['Travel', ['emirates', 'flydubai', 'etihad', 'air arabia', 'booking com', 'agoda', 'airbnb', 'hotel', 'marriott', 'hilton', 'expedia', 'airline', 'airways', 'tiket com', 'trip com', 'atlys', 'vfs global', 'pelita air']],
   ['Health & Pharmacy', ['aster', 'life pharmacy', 'boots', 'bin sina', 'supercare', 'pharmacy', 'clinic', 'hospital', 'medcare', 'mediclinic', 'dental', 'medical']],
   ['Entertainment', ['vox', 'reel cinemas', 'novo', 'cinema', 'playstation', 'steam', 'xbox', 'nintendo', 'dubai parks', 'img worlds', 'ski dubai', 'bowling', 'platinumlist', 'virgin megastore']],
-  ['Personal Care & Fitness', ['salon', 'barber', 'spa', 'gym', 'fitness', 'crossfit', 'padel', 'grooming']],
+  ['Personal Care & Fitness', ['salon', 'barber', 'spa', 'gym', 'fitness', 'crossfit', 'padel', 'grooming', 'urban company', 'justlife', 'laundry']],
   ['Education', ['udemy', 'coursera', 'university', 'school', 'academy', 'books', 'kinokuniya', 'magrudy']],
   ['Dining & Cafés', ['starbucks', 'tim hortons', 'costa', 'mcdonald', 'kfc', 'burger', 'pizza', 'cafe', 'coffee', 'restaurant', 'shake shack', 'subway', 'dunkin', 'pret', 'bakery', 'grill', 'kitchen', 'eatery', 'shawarma', 'karak', 'chai', 'hardee', 'popeyes', 'nando', 'five guys', 'krispy kreme', 'baskin', 'bistro', 'diner', 'sushi']],
   ['Shopping', ['noon', 'amazon', 'namshi', 'shein', 'ikea', 'h m', 'zara', 'centrepoint', 'max fashion', 'sharaf dg', 'jumbo', 'apple store', 'mall', 'trendyol', 'temu', 'aliexpress', 'ace', 'dragon mart', 'decathlon', 'nike', 'adidas', 'sephora', 'faces', 'home centre', 'daiso', 'dubai duty free', 'tamara', 'postpay', 'cashew', 'spotii']],

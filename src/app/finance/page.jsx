@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, Tags, ArrowUpRight, ArrowDownRight, Minus, ChevronRight, X } from 'lucide-react';
 import { useFinance, LoadingState } from './_components/FinanceShell';
@@ -7,7 +7,7 @@ import { PeriodBars, SpendBars, HBar } from './_components/charts';
 import TransactionEditor from './_components/TransactionEditor';
 import { CategoryAvatar } from './_components/icons';
 import { aed, pct, dateTime, relative } from './_components/format';
-import { PERIODS, getPeriod } from '@/lib/finance/periods.mjs';
+import { PERIODS, getPeriod, monthPeriod, rangePeriod } from '@/lib/finance/periods.mjs';
 import { summarize, monthlySeries, periodBars, monthlyContext, spendOf } from '@/lib/finance/analytics.mjs';
 import { accountColorVar } from '@/lib/finance/accounts.mjs';
 import { dubaiParts } from '@/lib/finance/parse.mjs';
@@ -56,17 +56,43 @@ export default function Overview() {
   const [insight, setInsight] = useState({ busy: false, text: null, error: null });
   const [catBusy, setCatBusy] = useState(null);
 
+  // Drill-down: tap a card tile to focus on that card, a month or week bar to open it.
+  const [focusAccount, setFocusAccount] = useState(null);
+  const [range, setRange] = useState(null); // { kind: 'month', y, m } | { kind: 'range', start, end, label }
+
   const earliest = useMemo(() => f.transactions.reduce((min, t) => (!min || t.occurred_at < min ? t.occurred_at : min), null), [f.transactions]);
-  const period = useMemo(() => getPeriod(periodKey, new Date(), earliest), [periodKey, earliest]);
-  const s = useMemo(() => summarize(f.transactions, period, f.accounts, f.budgets), [f.transactions, period, f.accounts, f.budgets]);
-  const months = useMemo(() => monthlySeries(f.transactions, 12), [f.transactions]);
-  const bars = useMemo(() => periodBars(f.transactions, period), [f.transactions, period]);
-  const context = useMemo(() => monthlyContext(f.transactions, period), [f.transactions, period]);
-  const recent = f.transactions.slice(0, 6);
+  const period = useMemo(() => {
+    if (range?.kind === 'month') return monthPeriod(range.y, range.m);
+    if (range?.kind === 'range') return rangePeriod(new Date(range.start), new Date(range.end), range.label);
+    return getPeriod(periodKey, new Date(), earliest);
+  }, [periodKey, earliest, range]);
+  const focused = focusAccount ? f.accounts.find((a) => a.id === focusAccount) : null;
+  const txs = useMemo(() => (focusAccount ? f.transactions.filter((t) => t.account_id === focusAccount) : f.transactions), [f.transactions, focusAccount]);
+  const s = useMemo(() => summarize(txs, period, focused ? [focused] : f.accounts, f.budgets), [txs, period, focused, f.accounts, f.budgets]);
+  // Card tiles always show every card, so you can switch between them.
+  const sAll = useMemo(() => (focusAccount ? summarize(f.transactions, period, f.accounts, f.budgets) : s), [focusAccount, f.transactions, period, f.accounts, f.budgets, s]);
+  const months = useMemo(() => monthlySeries(txs, 12), [txs]);
+  const bars = useMemo(() => periodBars(txs, period), [txs, period]);
+  const context = useMemo(() => monthlyContext(txs, period), [txs, period]);
+  const recent = txs.slice(0, 6);
+  const scopeLabel = focused ? `${focused.name} · ${period.label}` : period.label;
+  // A summary belongs to the view it was asked for.
+  useEffect(() => setInsight({ busy: false, text: null, error: null }), [period.key, focusAccount]);
+  const openBucket = (b) => {
+    const p = dubaiParts(b.start);
+    if (bars.unit === 'month') setRange({ kind: 'month', y: p.y, m: p.m });
+    else if (bars.unit === 'week') setRange({ kind: 'range', start: b.start, end: b.end, label: b.fullLabel });
+    else return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const openMonth = (mo) => {
+    setRange({ kind: 'month', y: mo.y, m: mo.m });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const catMax = Math.max(1, ...s.categories.map((c) => Math.max(c.total, c.budget || 0)));
   const accountById = new Map(f.accounts.map((a) => [a.id, a]));
   // Closed cards only get a tile for periods they were used in.
-  const tiles = s.byAccount.filter((b) => !b.account.closed_at || b.total || b.prevTotal);
+  const tiles = sAll.byAccount.filter((b) => !b.account.closed_at || b.total || b.prevTotal || b.account.id === focusAccount);
   const totalUncategorized = f.transactions.filter((t) => !t.category).length;
   const avgMonth = months.reduce((t, m) => t + m.total, 0) / 12;
 
@@ -88,6 +114,7 @@ export default function Overview() {
     setInsight({ busy: true, text: null, error: null });
     try {
       const summary = {
+        focus: focused ? `Only the ${focused.name} (${focused.kind === 'debit' ? 'debit card' : focused.kind === 'bnpl' ? 'buy-now-pay-later card' : 'credit card'})` : 'All cards',
         period: period.label,
         comparedWith: period.prevLabel,
         totalAed: Math.round(s.total),
@@ -120,7 +147,7 @@ export default function Overview() {
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
           <div className="fin-seg" role="group" aria-label="Period">
             {PERIODS.map((p) => (
-              <button key={p.key} aria-pressed={periodKey === p.key} onClick={() => setPeriodKey(p.key)}>{p.label}</button>
+              <button key={p.key} aria-pressed={!range && periodKey === p.key} onClick={() => { setRange(null); setPeriodKey(p.key); }}>{p.label}</button>
             ))}
           </div>
           <div className="flex gap-2">
@@ -137,10 +164,27 @@ export default function Overview() {
       </div>
       {catBusy && catBusy !== 'Categorizing…' && <p className="text-sm fin-ink-2">{catBusy}</p>}
 
+      {(focused || range) && (
+        <div className="fin-fade-in flex flex-wrap items-center gap-2">
+          <span className="text-sm fin-muted">Showing</span>
+          {focused && (
+            <button className="fin-chipbtn" data-active="true" onClick={() => setFocusAccount(null)} aria-label={`Show all cards instead of ${focused.name}`}>
+              <span className="fin-dot" style={{ background: accountColorVar(focused.slug, f.accounts) }} />{focused.name}<X size={13} />
+            </button>
+          )}
+          {range && (
+            <button className="fin-chipbtn" data-active="true" onClick={() => setRange(null)} aria-label={`Back to ${PERIODS.find((p) => p.key === periodKey)?.label}`}>
+              {period.label}<X size={13} />
+            </button>
+          )}
+          <button className="fin-link text-sm" onClick={() => { setFocusAccount(null); setRange(null); }}>Clear</button>
+        </div>
+      )}
+
       {(insight.text || insight.error) && (
         <section className="fin-card fin-card-hero fin-fade-in p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="fin-h2 flex items-center gap-2"><span className="fin-pill fin-pill-accent"><Sparkles size={12} /> Claude</span> {period.label}</h2>
+            <h2 className="fin-h2 flex items-center gap-2"><span className="fin-pill fin-pill-accent"><Sparkles size={12} /> Claude</span> {scopeLabel}</h2>
             <button className="fin-btn fin-btn-ghost fin-icon-btn" onClick={() => setInsight({ busy: false, text: null, error: null })} aria-label="Close insights"><X size={16} /></button>
           </div>
           {insight.error ? (
@@ -158,7 +202,7 @@ export default function Overview() {
         <section className="fin-card fin-card-hero flex flex-col p-5 sm:p-7 lg:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="fin-eyebrow">Spent · {period.label}</p>
+              <p className="fin-eyebrow">Spent · {scopeLabel}</p>
               <p className="fin-hero-num fin-num mt-3"><span className="fin-cur">AED</span>{whole(s.total)}</p>
               {!period.noCompare && <div className="mt-4"><DeltaPill change={s.change} label={period.prevLabel} /></div>}
             </div>
@@ -169,12 +213,15 @@ export default function Overview() {
             </dl>
           </div>
           <div className="mt-auto pt-8">
-            <PeriodBars {...bars} height={240} />
+            <PeriodBars {...bars} height={240} onSelect={bars.unit === 'day' ? undefined : openBucket} />
           </div>
         </section>
 
         <div className={`grid gap-4 lg:grid-cols-1 ${tiles.length > 3 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
-          {tiles.map((b) => <CardTile key={b.account.id} b={b} accounts={f.accounts} />)}
+          {tiles.map((b) => (
+            <CardTile key={b.account.id} b={b} accounts={f.accounts} selected={focusAccount === b.account.id} dimmed={Boolean(focusAccount) && focusAccount !== b.account.id}
+              onClick={() => setFocusAccount((cur) => (cur === b.account.id ? null : b.account.id))} />
+          ))}
         </div>
       </div>
 
@@ -240,7 +287,7 @@ export default function Overview() {
           title="Last 12 months"
           subtitle={`By card · ${aed(context.average, { decimals: 0 })} a month on average${context.highlight.length < context.buckets.length ? ` · ${period.label} highlighted` : ''}`}
         >
-          <SpendBars buckets={context.buckets} highlight={context.highlight} accounts={f.accounts} height={230} label="Monthly spend by card, last 12 months" />
+          <SpendBars buckets={context.buckets} highlight={context.highlight} accounts={focused ? [focused] : f.accounts} height={230} label="Monthly spend by card, last 12 months" onSelect={openMonth} />
         </Panel>
 
         <Panel
@@ -289,13 +336,15 @@ function Empty({ text }) {
   return <p className="fin-inset px-4 py-6 text-center text-sm fin-muted">{text}</p>;
 }
 
-function CardTile({ b, accounts }) {
+function CardTile({ b, accounts, selected, dimmed, onClick }) {
   const color = accountColorVar(b.account.slug, accounts);
   const limit = Number(b.account.credit_limit) || null;
   const used = limit && b.available != null ? Math.max(0, Math.min(1, 1 - b.available / limit)) : null;
   const change = b.prevTotal ? (b.total - b.prevTotal) / b.prevTotal : null;
   return (
-    <section className="fin-card relative overflow-hidden p-5">
+    <button type="button" onClick={onClick} aria-pressed={selected}
+      className="fin-card relative block w-full overflow-hidden p-5 text-left transition-[opacity,box-shadow] duration-150"
+      style={{ opacity: dimmed ? 0.5 : 1, boxShadow: selected ? `0 0 0 2px ${color}, var(--fin-shadow)` : undefined }}>
       <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: color }} aria-hidden />
       <div className="flex items-center justify-between gap-2">
         <span className="fin-chip text-[13px] font-medium" style={{ color: 'var(--fin-ink)' }}>
@@ -329,6 +378,6 @@ function CardTile({ b, accounts }) {
           <p className="text-xs fin-muted">Balance shows after the next alert</p>
         )}
       </div>
-    </section>
+    </button>
   );
 }

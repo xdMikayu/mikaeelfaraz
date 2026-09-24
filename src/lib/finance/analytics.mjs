@@ -107,7 +107,7 @@ function dubaiDay(date) {
   const { y, m, d } = dubaiParts(date);
   return dubaiDate(y, m, d);
 }
-const isSingleMonth = (period) => period.key === 'this_month' || period.key === 'last_month';
+const isSingleMonth = (period) => period.key === 'this_month' || period.key === 'last_month' || Boolean(period.single);
 
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -132,9 +132,14 @@ function weekEdges(start, end) {
 export function periodBars(transactions, period, now = new Date()) {
   const single = isSingleMonth(period);
   const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
-  const unit = single ? 'day' : period.key === 'all' ? 'month' : 'week';
+  const isRange = period.key.startsWith('range:');
+  const unit = single || isRange ? 'day' : period.key === 'all' ? 'month' : 'week';
   let edges;
-  if (single) {
+  if (isRange) {
+    edges = [period.start];
+    for (let next = new Date(dubaiDay(period.start).getTime() + DAY); next < period.end; next = new Date(next.getTime() + DAY)) edges.push(next);
+    edges.push(period.end);
+  } else if (single) {
     const { y, m } = dubaiParts(period.start);
     edges = Array.from({ length: daysInMonth(y, m) + 1 }, (_, i) => dubaiDate(y, m, 1 + i));
   } else if (unit === 'month') {
@@ -159,25 +164,29 @@ export function periodBars(transactions, period, now = new Date()) {
     const lastDay = daysInMonth(a.y, a.m);
     const label = unit === 'month'
       ? (k === 0 || a.m === 0 ? String(a.y) : '') // years along a multi-year axis
+      : isRange
+      ? `${WEEKDAY[a.dow]} ${a.d}`
       : single
       ? ([1, 8, 15, 22, lastDay].includes(a.d) ? String(a.d) : '')
       // Month names at month starts; the clipped first week only if it starts early in its month.
       : ((k === 0 && a.d <= 7) || (k > 0 && (b.d < a.d || a.d === 1)) ? SHORT[b.d < a.d ? b.m : a.m] : '');
     const fullLabel = unit === 'month'
       ? monthLabel(a.y, a.m)
-      : single
+      : single || isRange
       ? `${WEEKDAY[a.dow]} ${a.d} ${SHORT[a.m]}`
       : a.m === b.m ? `${a.d}–${b.d} ${SHORT[a.m]}` : `${a.d} ${SHORT[a.m]} – ${b.d} ${SHORT[b.m]}`;
-    return { label, fullLabel, total, count: rows.length, top, future };
+    return { label, fullLabel, total, count: rows.length, top, future, start: from.toISOString(), end: to.toISOString() };
   });
 
   // Reference line: what a typical day/week looked like in the comparison period.
   const prevEnd = period.key === 'this_month' ? period.start : period.prevEnd;
   const prevTotal = transactions.filter((t) => inRange(t, period.prevStart, prevEnd)).reduce((sum, t) => sum + spendOf(t), 0);
   const prevDays = (prevEnd - period.prevStart) / DAY;
-  const average = prevTotal > 0 ? prevTotal / (single ? prevDays : prevDays / 7) : null;
+  const average = prevTotal > 0 ? prevTotal / (unit === 'day' ? prevDays : prevDays / 7) : null;
   const { y } = dubaiParts(period.start);
-  const averageLabel = single
+  const averageLabel = isRange
+    ? 'Before this average'
+    : single
     ? `${SHORT[dubaiParts(period.prevStart).m]} average`
     : period.key === 'ytd' ? `${y - 1} average` : `Previous ${period.months} months average`;
   return { unit, buckets, average, averageLabel };

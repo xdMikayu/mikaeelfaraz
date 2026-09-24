@@ -2,9 +2,10 @@
 // Card numbers and balances below are made up — never commit real ones (public repo).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
+import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, normalizeMerchantLegacy, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
 import { keywordCategory, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES } from './categories.mjs';
-import { getPeriod } from './periods.mjs';
+import { getPeriod, monthPeriod, rangePeriod } from './periods.mjs';
+import { planDuplicateMerges, planRenames, isStatementTwin, sameMerchant } from './dedupe.mjs';
 import { summarize, periodBars, monthlyContext } from './analytics.mjs';
 
 const NOW = new Date('2026-09-23T10:00:00Z'); // 14:00 in Dubai
@@ -59,7 +60,7 @@ test('Mashreq email', () => {
   assert.equal(r.account, 'mashreq');
   assert.equal(r.last4, '9876');
   assert.equal(r.amount, 1);
-  assert.equal(r.merchant, 'DU');
+  assert.equal(r.merchant, 'du');
   assert.equal(r.availableBalance, 9876.54);
   assert.equal(r.wallet, true);
   assert.equal(r.occurredAt, '2026-09-23T08:39:00.000Z');
@@ -75,7 +76,7 @@ test('Wallet event (Tabby)', () => {
   assert.equal(r.ok, true);
   assert.equal(r.account, 'tabby');
   assert.equal(r.amount, 1);
-  assert.equal(r.merchant, 'DU');
+  assert.equal(r.merchant, 'du');
   assert.equal(r.occurredAt, NOW.toISOString());
   assert.equal(parseWalletEvent({ card: 'Some Other Card', merchant: 'x', amount: '1' }, NOW).ok, false);
 });
@@ -95,13 +96,13 @@ test('amounts', () => {
 });
 
 test('merchant normalization', () => {
-  assert.equal(normalizeMerchant('DU Apple Pay 800188 AE'), 'DU');
+  assert.equal(normalizeMerchant('DU Apple Pay 800188 AE'), 'du');
   assert.equal(normalizeMerchant('CAREEM HALA DUBAI AE'), 'Careem Hala');
   assert.equal(normalizeMerchant('Digital Dubai'), 'Digital Dubai');
   assert.equal(normalizeMerchant('KFC 1234 SHARJAH ARE'), 'KFC');
   assert.equal(normalizeMerchant('AL REEF BAKERY'), 'Al Reef Bakery');
-  assert.equal(normalizeMerchant('du'), 'DU');
-  assert.equal(normalizeMerchant('SOME NEW SHOP LLC'), 'Some New Shop LLC');
+  assert.equal(normalizeMerchant('du'), 'du');
+  assert.equal(normalizeMerchant('SOME NEW SHOP LLC'), 'Some New Shop');
   assert.equal(normalizeMerchant('ENOC 1043 DUBAI AE'), 'ENOC');
 });
 
@@ -166,7 +167,7 @@ test('Tabby app alert', () => {
   assert.equal(r.ok, true);
   assert.equal(r.account, 'tabby');
   assert.equal(r.amount, 1);
-  assert.equal(r.merchant, 'DU');
+  assert.equal(r.merchant, 'du');
   assert.equal(r.availableBalance, 1234.56);
   assert.equal(r.source, 'sms');
   assert.equal(r.occurredAt, NOW.toISOString());
@@ -281,4 +282,71 @@ test('Mashreq debit card alerts are told apart from the Cashback card', () => {
   assert.equal(debit.account, 'mashreq_debit');
   assert.equal(debit.availableBalance, 5432.1);
   assert.equal(debit.last4, '9876');
+});
+
+test('merchant names are cleaned for display', () => {
+  assert.equal(normalizeMerchant('AMZN MKTP US Amzn.com/bill US'), 'Amazon');
+  assert.equal(normalizeMerchant('Openai Chatgpt Subscr + US'), 'OpenAI');
+  assert.equal(normalizeMerchant('AGODA.COM 8B Dps-cgk Internet'), 'Agoda');
+  assert.equal(normalizeMerchant('SP Guinness World Reco + GB'), 'Guinness World Records');
+  assert.equal(normalizeMerchant('GEIDEA*TABBY FZ LLC dubai ARE'), 'Tabby');
+  assert.equal(normalizeMerchant('SOME NEW SHOP LLC DUBAI AE'), 'Some New Shop');
+  assert.equal(normalizeMerchant('AL MUBARAK CAFE LLC SHARJAH 784'), 'Al Mubarak Cafe');
+  assert.equal(normalizeMerchant('Digital Dubai'), 'Digital Dubai');
+  assert.equal(normalizeMerchant('Lululemon DUBAI AE'), 'Lululemon');
+  assert.equal(keywordCategory('Amazon Grocery'), 'Groceries');
+  assert.equal(keywordCategory('Apple Store'), 'Shopping');
+  assert.equal(keywordCategory('Apple'), 'Subscriptions');
+});
+
+test('statement rows pair with the alert for the same purchase', () => {
+  const s = { id: 's', account_id: 'm', amount: 1192.67, currency: 'AED', direction: 'debit', occurred_at: '2026-09-16T08:00:00Z', merchant: 'Agoda', merchant_raw: 'AGODA.COM 8B DPS-CGK INTERNET 276', source: 'statement', sources: ['statement'], category: 'Travel' };
+  const l = { id: 'l', account_id: 'm', amount: 1192.67, currency: 'AED', direction: 'debit', occurred_at: '2026-09-15T19:40:00Z', merchant: 'AGODA.COM 8B Dps-cgk Internet', merchant_raw: 'AGODA.COM 8B Dps-cgk Internet', source: 'email', sources: ['email'], category: null, available_balance: 9000 };
+  const other = { ...l, id: 'o', merchant: 'Noon', merchant_raw: 'NOON DUBAI AE', occurred_at: '2026-09-15T08:00:00Z' }; // different day and merchant
+  const far = { ...l, id: 'f', occurred_at: '2026-09-12T08:00:00Z' }; // too far apart
+  const plan = planDuplicateMerges([s, l, other, far]);
+  assert.equal(plan.length, 1);
+  assert.deepEqual([plan[0].keep, plan[0].drop], ['s', 'l']);
+  assert.equal(plan[0].patch.occurred_at, l.occurred_at);
+  assert.equal(plan[0].patch.source, 'email');
+  assert.deepEqual(plan[0].patch.sources, ['statement', 'email']);
+  assert.equal(plan[0].patch.available_balance, 9000);
+  assert.ok(!('category' in plan[0].patch)); // the statement's category stays
+  // Already merged rows are left alone.
+  assert.equal(planDuplicateMerges([{ ...s, source: 'email', sources: ['statement', 'email'] }, l]).length, 0);
+  // Same day needs no name match; a different day does.
+  assert.equal(isStatementTwin(s, { ...other, occurred_at: '2026-09-16T05:00:00Z' }), true);
+  assert.equal(isStatementTwin(s, other), false);
+  assert.equal(sameMerchant({ merchant: 'du' }, { merchant_raw: 'DU Apple Pay 800188 AE' }), false); // too short to trust
+});
+
+test('rename only rows the old cleaner named', () => {
+  const rows = [
+    { id: 'a', source: 'email', merchant_raw: 'AMZN MKTP US Amzn.com/bill US', merchant: normalizeMerchantLegacy('AMZN MKTP US Amzn.com/bill US') },
+    { id: 'b', source: 'email', merchant_raw: 'AMZN MKTP US Amzn.com/bill US', merchant: 'Books for uni' }, // renamed by hand
+    { id: 'c', source: 'statement', merchant_raw: 'TIKETCOM SG 702', merchant: 'Tiket.com' },
+  ];
+  const plan = planRenames(rows, normalizeMerchantLegacy, normalizeMerchant);
+  assert.deepEqual([...plan.entries()], [['Amazon', ['a']]]);
+});
+
+test('drill-down periods: one month, one week', () => {
+  const now = new Date('2026-09-23T14:00:00+04:00');
+  const txs = [];
+  for (let k = 0; k < 900; k++) txs.push({ id: `t${k}`, merchant: 'M', account_id: 'a', amount_aed: 10, direction: 'debit', occurred_at: new Date(now - k * 20 * 3600 * 1000).toISOString() });
+  const june = monthPeriod(2025, 5, now);
+  assert.equal(june.label, 'Jun 2025');
+  assert.equal(june.prevLabel, 'May 2025');
+  const bars = periodBars(txs, june, now);
+  assert.equal(bars.unit, 'day');
+  assert.equal(bars.buckets.length, 30);
+  assert.ok(Math.abs(bars.buckets.reduce((a, b) => a + b.total, 0) - summarize(txs, june).total) < 1e-6);
+  const weekBars = periodBars(txs, getPeriod('3m', now), now);
+  const w = weekBars.buckets[3];
+  const week = rangePeriod(new Date(w.start), new Date(w.end), w.fullLabel);
+  const wb = periodBars(txs, week, now);
+  assert.equal(wb.unit, 'day');
+  assert.equal(wb.buckets.length, 7);
+  assert.ok(Math.abs(wb.buckets.reduce((a, b) => a + b.total, 0) - w.total) < 1e-6);
+  assert.ok(wb.average > 0);
 });

@@ -7,6 +7,8 @@
 //   - Tabby alert:    "Transaction of AED 1.00 At DU Apple Pay was successful. Your available Tabby Card limit is AED 1,900.00"
 //   - Apple Wallet:   iOS Shortcuts "Transaction" automation → { card, merchant, amount }
 
+import { cleanMerchant } from './merchants.mjs';
+
 const DUBAI_OFFSET_MS = 4 * 60 * 60 * 1000; // UAE is UTC+4 all year (no DST)
 
 const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
@@ -61,9 +63,14 @@ export function toAed(amount, currency) {
   return { amountAed: Math.round(amount * rate * 100) / 100, fxEstimated: !PEGGED.has(currency) };
 }
 
+/** Clean display name for a raw merchant descriptor; see merchants.mjs. */
+export function normalizeMerchant(raw) {
+  return cleanMerchant(raw);
+}
+
 /**
- * Clean up a raw merchant descriptor for display:
- * "DU Apple Pay 800188 AE" → "DU", "CAREEM HALA DUBAI AE" → "Careem Hala".
+ * The first version of the merchant cleaner, kept only so rows it named can be recognised
+ * and renamed with cleanMerchant (rows you renamed yourself won't match it).
  */
 const LOWER_WORDS = new Set(['al', 'el', 'bin', 'abu', 'of', 'the', 'and', 'de', 'la', 'le', 'st', 'my', 'by', 'at', 'in', 'on', 'to']);
 
@@ -71,7 +78,7 @@ const LOWER_WORDS = new Set(['al', 'el', 'bin', 'abu', 'of', 'the', 'and', 'de',
 // descriptors is title-cased ("SOME NEW SHOP" → "Some New Shop").
 const ACRONYMS = new Set(['rta', 'dewa', 'sewa', 'addc', 'fewa', 'enoc', 'adnoc', 'eppco', 'ikea', 'vox', 'img', 'bbq', 'tgi', 'dxb', 'auh', 'uae', 'usa', 'fze', 'llc', 'mcd', 'ace', 'dhl', 'ups', 'nyu', 'ksa']);
 
-export function normalizeMerchant(raw) {
+export function normalizeMerchantLegacy(raw) {
   let s = String(raw || '').replace(/\s+/g, ' ').trim();
   s = s
     .replace(/\b(?:apple|google|samsung)\s*pay\b/gi, ' ')
