@@ -79,7 +79,7 @@ export function PeriodBars({ buckets, unit, average, averageLabel, height = 220 
     if (b.label && cx - lastX >= b.label.length * 6.5 + 12) { shown.add(i); lastX = cx; }
   });
   const h = hover != null ? buckets[hover] : null;
-  const per = unit === 'day' ? 'day' : 'week';
+  const per = unit === 'day' ? 'day' : unit === 'month' ? 'month' : 'week';
   const gid = `fin-bar-${useId().replace(/:/g, '')}`;
 
   return (
