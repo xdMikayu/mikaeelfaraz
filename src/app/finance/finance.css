@@ -45,6 +45,7 @@
   --fin-c-tabby: #12a07a;
   --fin-c-enbd: #ad8500;
   --fin-c-neo: #b4389c;
+  --fin-gold: var(--fin-c-enbd); /* gold holdings; follows the theme's gold */
   --fin-s1: #6d4ef5;
   --fin-s2: #0a93b8;
   --fin-s3: #d6307c;
