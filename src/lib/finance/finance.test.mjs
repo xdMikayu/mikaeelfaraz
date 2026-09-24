@@ -251,3 +251,16 @@ test('charts follow the selected period and add up to the headline', () => {
   assert.equal(spendSeries(txs, getPeriod('6m', now), now).buckets.length, 7); // 23 Mar–23 Sep: 7 calendar months, ends clipped
   assert.deepEqual(cumulativeForPeriod(txs, getPeriod('6m', now), now).ticks.map((t) => t.label), ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
 });
+
+test('Tabby alert: "Transaction of … At …. Your Tabby Card limit is now …" format', () => {
+  const r = parseTabbyAlert('Tabby Transaction of AED 420.00 At Digital Dubai. Your Tabby Card limit is now AED 1,408.26. You can now split your purchase into 6 months.', NOW);
+  assert.equal(r.ok, true);
+  assert.equal(r.amount, 420);
+  assert.equal(r.merchant, 'Digital Dubai');
+  assert.equal(r.availableBalance, 1408.26);
+  assert.equal(r.account, 'tabby');
+  // The older wording still works, and a merchant with a dot in its name survives.
+  const old = parseTabbyAlert('Your Tabby Card transaction of AED 36.09 at noon.com was successful.', NOW);
+  assert.equal(old.ok, true);
+  assert.equal(old.merchantRaw, 'noon.com');
+});
