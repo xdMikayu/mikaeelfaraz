@@ -111,12 +111,12 @@ export default function Overview() {
   return (
     <div className="fin-fade-in space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="shrink-0">
           <p className="fin-eyebrow">{greeting()}</p>
-          <h1 className="fin-h1 mt-1">Your spending</h1>
+          <h1 className="fin-h1 mt-1 whitespace-nowrap">Your spending</h1>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
           <div className="fin-seg" role="group" aria-label="Period">
             {PERIODS.map((p) => (
               <button key={p.key} aria-pressed={periodKey === p.key} onClick={() => setPeriodKey(p.key)}>{p.label}</button>
