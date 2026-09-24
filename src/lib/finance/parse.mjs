@@ -152,9 +152,12 @@ export function parseMashreqEmail(text) {
     if (pm && hh < 12) hh += 12;
     if (!pm && hh === 12) hh = 0;
   }
-  const bal = s.match(/available limit is\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
+  // Credit and debit card alerts share this wording; debit ones name the card as such.
+  // (The server also routes by card number, since the credit card's digits are known.)
+  const debit = /mashreq\s+debit|debit\s+card\s+ending/i.test(s);
+  const bal = s.match(/available (?:limit|balance) is\s*(?:([A-Z]{3})\s*)?([\d,]+(?:\.\d+)?)/i);
   return finish({
-    account: 'mashreq',
+    account: debit ? 'mashreq_debit' : 'mashreq',
     last4,
     amount: toNumber(amt),
     currency: cur.toUpperCase(),

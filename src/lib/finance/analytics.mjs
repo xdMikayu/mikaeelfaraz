@@ -132,10 +132,15 @@ function weekEdges(start, end) {
 export function periodBars(transactions, period, now = new Date()) {
   const single = isSingleMonth(period);
   const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
+  const unit = single ? 'day' : period.key === 'all' ? 'month' : 'week';
   let edges;
   if (single) {
     const { y, m } = dubaiParts(period.start);
     edges = Array.from({ length: daysInMonth(y, m) + 1 }, (_, i) => dubaiDate(y, m, 1 + i));
+  } else if (unit === 'month') {
+    edges = [period.start];
+    for (let { y, m } = dubaiParts(period.start), next = dubaiDate(y, m + 1, 1); next < end; next = dubaiDate(dubaiParts(next).y, dubaiParts(next).m + 1, 1)) edges.push(next);
+    edges.push(end);
   } else {
     edges = weekEdges(period.start, end);
   }
@@ -152,11 +157,15 @@ export function periodBars(transactions, period, now = new Date()) {
       .slice(0, 3)
       .map((t) => ({ merchant: t.merchant || 'Unknown', amount: spendOf(t) }));
     const lastDay = daysInMonth(a.y, a.m);
-    const label = single
+    const label = unit === 'month'
+      ? (k === 0 || a.m === 0 ? String(a.y) : '') // years along a multi-year axis
+      : single
       ? ([1, 8, 15, 22, lastDay].includes(a.d) ? String(a.d) : '')
       // Month names at month starts; the clipped first week only if it starts early in its month.
       : ((k === 0 && a.d <= 7) || (k > 0 && (b.d < a.d || a.d === 1)) ? SHORT[b.d < a.d ? b.m : a.m] : '');
-    const fullLabel = single
+    const fullLabel = unit === 'month'
+      ? monthLabel(a.y, a.m)
+      : single
       ? `${WEEKDAY[a.dow]} ${a.d} ${SHORT[a.m]}`
       : a.m === b.m ? `${a.d}–${b.d} ${SHORT[a.m]}` : `${a.d} ${SHORT[a.m]} – ${b.d} ${SHORT[b.m]}`;
     return { label, fullLabel, total, count: rows.length, top, future };
@@ -171,7 +180,7 @@ export function periodBars(transactions, period, now = new Date()) {
   const averageLabel = single
     ? `${SHORT[dubaiParts(period.prevStart).m]} average`
     : period.key === 'ytd' ? `${y - 1} average` : `Previous ${period.months} months average`;
-  return { unit: single ? 'day' : 'week', buckets, average, averageLabel };
+  return { unit, buckets, average, averageLabel };
 }
 
 /** The last 12 months by card, marking the months the selected period covers. */

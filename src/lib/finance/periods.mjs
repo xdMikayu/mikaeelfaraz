@@ -11,6 +11,7 @@ export const PERIODS = [
   { key: '6m', label: 'Last 6 months' },
   { key: 'ytd', label: 'This year' },
   { key: '12m', label: 'Last 12 months' },
+  { key: 'all', label: 'All time' },
 ];
 
 export function monthLabel(y, m) {
@@ -19,7 +20,7 @@ export function monthLabel(y, m) {
 }
 
 /** Returns { key, label, start, end, prevStart, prevEnd, prevLabel, months } with Date instants; end is exclusive. */
-export function getPeriod(key, now = new Date()) {
+export function getPeriod(key, now = new Date(), earliest = null) {
   const { y, m, d, hh, mi } = dubaiParts(now);
   const end = new Date(now.getTime() + 60 * 1000);
   const rolling = (n) => {
@@ -38,6 +39,13 @@ export function getPeriod(key, now = new Date()) {
     case '3m': return { key, label: 'Last 3 months', ...rolling(3) };
     case '6m': return { key, label: 'Last 6 months', ...rolling(6) };
     case '12m': return { key, label: 'Last 12 months', ...rolling(12) };
+    case 'all': {
+      // From the month of the first transaction (or five years back); nothing to compare with.
+      const first = earliest ? dubaiParts(earliest) : { y: y - 5, m };
+      const start = dubaiDate(first.y, first.m, 1);
+      const months = Math.max(1, (y - first.y) * 12 + (m - first.m) + d / 31);
+      return { key, label: 'All time', start, end, prevStart: start, prevEnd: start, prevLabel: '', months, noCompare: true };
+    }
     case 'ytd': {
       const start = dubaiDate(y, 0, 1);
       const prevStart = dubaiDate(y - 1, 0, 1);

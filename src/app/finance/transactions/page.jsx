@@ -125,8 +125,8 @@ export default function Transactions() {
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </SelectChip>
           <SelectChip value={periodKey} onChange={setPeriodKey} label={periodKey === 'all' ? 'All time' : PERIODS.find((p) => p.key === periodKey)?.label} active={periodKey !== 'all'}>
-            <option value="all">All time (24 months)</option>
-            {PERIODS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+            <option value="all">All time</option>
+            {PERIODS.filter((p) => p.key !== 'all').map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
           </SelectChip>
           {filtered && (
             <button className="fin-chipbtn" onClick={() => { setQ(''); setAccount(''); setCategory(''); setPeriodKey('all'); }}>

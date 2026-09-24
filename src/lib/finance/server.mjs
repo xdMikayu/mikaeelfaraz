@@ -77,6 +77,11 @@ export async function ensureAccounts(db, userId) {
   return new Map(data.map((a) => [a.slug, a]));
 }
 
+// Accounts created the first time an alert for them arrives.
+const AUTO_ACCOUNTS = { mashreq_debit: { account_name: 'Mashreq Debit', account_kind: 'debit' } };
+// Where an alert for a different card from the same bank belongs.
+const SIBLING = { mashreq: 'mashreq_debit' };
+
 async function addAccount(db, userId, accounts, slug, event) {
   const sort = Math.max(0, ...[...accounts.values()].map((a) => a.sort || 0)) + 1;
   const row = { user_id: userId, slug, name: String(event.account_name).slice(0, 60), kind: ['credit', 'debit', 'bnpl'].includes(event.account_kind) ? event.account_kind : 'credit', sort };
@@ -150,15 +155,27 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
   const externalId = event.external_id ? String(event.external_id).slice(0, 200) : null;
 
   // 1. Store the raw event first. (user, source, external_id) is unique, so a
-  //    re-sent Gmail message is recognised and skipped.
-  const { data: raw, error: rawErr } = await db
+  //    re-sent Gmail message is recognised and skipped — unless its first attempt was
+  //    cut off before finishing (still 'pending' a minute later), in which case this
+  //    attempt takes it over, so a timed-out batch loses nothing when it is re-sent.
+  let { data: raw, error: rawErr } = await db
     .from('fin_raw_events')
     .insert({ user_id: userId, source, external_id: externalId, payload: event, status: 'pending' })
     .select('id')
     .single();
   if (rawErr) {
-    if (rawErr.code === '23505') return { status: 'duplicate', reason: 'Already received' };
-    throw rawErr;
+    if (rawErr.code !== '23505') throw rawErr;
+    const { data: prior, error: priorErr } = await db
+      .from('fin_raw_events')
+      .select('id, status, received_at')
+      .eq('user_id', userId)
+      .eq('source', source)
+      .eq('external_id', externalId)
+      .maybeSingle();
+    if (priorErr) throw priorErr;
+    const stalled = prior && prior.status === 'pending' && now - new Date(prior.received_at) > 60 * 1000;
+    if (!stalled) return { status: 'duplicate', reason: 'Already received' };
+    raw = { id: prior.id };
   }
   const finishRaw = (patch) => db.from('fin_raw_events').update(patch).eq('id', raw.id);
 
@@ -173,9 +190,24 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
   let account = accounts.get(parsed.account);
   // A statement can bring in a card you don't track live (e.g. one you've closed).
   if (!account && parsed.source === 'statement' && event.account_name) account = await addAccount(db, userId, accounts, parsed.account, event);
+  if (!account && AUTO_ACCOUNTS[parsed.account]) account = await addAccount(db, userId, accounts, parsed.account, AUTO_ACCOUNTS[parsed.account]);
   if (!account) {
     await finishRaw({ status: 'unparsed', reason: `No account "${parsed.account}"` });
     return { status: 'unparsed', reason: `No account "${parsed.account}"` };
+  }
+  // Alerts name the card's last 4 digits. The first one teaches us the card; after that,
+  // alerts for another card from the same bank (e.g. a Mashreq debit card, whose emails
+  // look the same) are ignored. The digits can be corrected in Setup → Cards.
+  if (parsed.last4 && account.last4 && parsed.last4 !== account.last4 && SIBLING[parsed.account]) {
+    // Mashreq debit and credit alerts read alike: a different card number from the same
+    // bank is the debit card.
+    parsed.account = SIBLING[parsed.account];
+    account = accounts.get(parsed.account) || (await addAccount(db, userId, accounts, parsed.account, AUTO_ACCOUNTS[parsed.account]));
+  }
+  if (parsed.last4 && account.last4 && parsed.last4 !== account.last4) {
+    const reason = `Card ending ${parsed.last4} isn't a tracked card (tracking ${account.name} ending ${account.last4})`;
+    await finishRaw({ status: 'ignored', reason });
+    return { status: 'ignored', reason };
   }
   if (parsed.last4 && !account.last4) {
     await db.from('fin_accounts').update({ last4: parsed.last4 }).eq('id', account.id);

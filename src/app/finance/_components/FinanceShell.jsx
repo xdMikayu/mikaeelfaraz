@@ -10,7 +10,7 @@ import { demoData } from './demo';
 const FinanceContext = createContext(null);
 export const useFinance = () => useContext(FinanceContext);
 
-const HISTORY_MONTHS = 24;
+const HISTORY_MONTHS = 72; // enough for "All time" back to the first imported statements
 const PAGE = 1000;
 
 const NAV = [

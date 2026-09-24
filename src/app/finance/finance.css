@@ -1,7 +1,7 @@
 /* Money — design tokens and components.
    Inspired by Revolut-style fintech: warm off-white (light) or violet-black (dark) canvas,
    one electric-violet accent, mint/coral for up/down, pill controls, hairline borders,
-   ambient glow. Series colours s1–s4 are validated as a set (lightness band, CVD
+   ambient glow. Series colours s1–s5 are validated as a set (lightness band, CVD
    separation, contrast) against the card surfaces of each mode; keep their order.
    Dark values apply when <html> has .dark (set by FinanceShell). */
 
@@ -97,7 +97,7 @@
   --fin-s2: #16a3c6;
   --fin-s3: #e35592;
   --fin-s4: #b98314;
-  --fin-s5: #2fb98f;
+  --fin-s5: #22a37d;
   --fin-s6: #e07a3f;
   --fin-s7: #6f7dff;
   --fin-s8: #a58576;

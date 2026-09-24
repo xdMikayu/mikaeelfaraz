@@ -56,7 +56,8 @@ export default function Overview() {
   const [insight, setInsight] = useState({ busy: false, text: null, error: null });
   const [catBusy, setCatBusy] = useState(null);
 
-  const period = useMemo(() => getPeriod(periodKey), [periodKey]);
+  const earliest = useMemo(() => f.transactions.reduce((min, t) => (!min || t.occurred_at < min ? t.occurred_at : min), null), [f.transactions]);
+  const period = useMemo(() => getPeriod(periodKey, new Date(), earliest), [periodKey, earliest]);
   const s = useMemo(() => summarize(f.transactions, period, f.accounts, f.budgets), [f.transactions, period, f.accounts, f.budgets]);
   const months = useMemo(() => monthlySeries(f.transactions, 12), [f.transactions]);
   const bars = useMemo(() => periodBars(f.transactions, period), [f.transactions, period]);
@@ -159,7 +160,7 @@ export default function Overview() {
             <div>
               <p className="fin-eyebrow">Spent · {period.label}</p>
               <p className="fin-hero-num fin-num mt-3"><span className="fin-cur">AED</span>{whole(s.total)}</p>
-              <div className="mt-4"><DeltaPill change={s.change} label={period.prevLabel} /></div>
+              {!period.noCompare && <div className="mt-4"><DeltaPill change={s.change} label={period.prevLabel} /></div>}
             </div>
             <dl className="grid grid-cols-3 gap-x-6 gap-y-1 text-right sm:grid-cols-1 sm:gap-y-3">
               <Stat label="Purchases" value={s.count} />
@@ -182,7 +183,7 @@ export default function Overview() {
         <Panel
           className="lg:col-span-2"
           title="Where it went"
-          subtitle={`${period.label} · change vs ${period.prevLabel}${f.budgets.length ? ' · marker = budget' : ''}`}
+          subtitle={`${period.label}${period.noCompare ? '' : ` · change vs ${period.prevLabel}`}${f.budgets.length ? ' · marker = budget' : ''}`}
         >
           {s.categories.length === 0 && <Empty text="No spending in this period yet." />}
           <ul className="space-y-1">
@@ -203,7 +204,7 @@ export default function Overview() {
                       <span className="mt-1.5 flex justify-between text-xs fin-muted">
                         <span>{c.count} {c.count === 1 ? 'purchase' : 'purchases'} · {Math.round(share * 100)}%</span>
                         <span style={{ color: c.total === 0 ? undefined : up ? 'var(--fin-bad)' : down ? 'var(--fin-good)' : undefined }}>
-                          {c.total === 0 ? 'none this period' : pct(c.change)}
+                          {c.total === 0 ? 'none this period' : period.noCompare ? '' : pct(c.change)}
                           {c.budget && c.total > c.budget ? ` · ${aed(c.total - c.budget, { decimals: 0 })} over budget` : ''}
                         </span>
                       </span>
@@ -314,7 +315,7 @@ function CardTile({ b, accounts }) {
         ) : b.available != null ? (
           <>
             <div className="flex justify-between text-xs">
-              <span className="fin-ink-2">Available</span>
+              <span className="fin-ink-2">{b.account.kind === 'debit' ? 'Balance' : 'Available'}</span>
               <span className="fin-num font-semibold">{aed(b.available, { decimals: 0 })}</span>
             </div>
             {used != null && (

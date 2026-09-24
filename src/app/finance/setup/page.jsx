@@ -137,9 +137,9 @@ export default function Setup() {
 /** One tile per card: is anything arriving from it? */
 function ConnectionStatus() {
   const f = useFinance();
-  const CHANNEL = { sib: 'SMS', mashreq: 'Gmail', tabby: 'Notification / Wallet' };
+  const CHANNEL = { sib: 'SMS', mashreq: 'Gmail', mashreq_debit: 'Gmail', tabby: 'Notification / Wallet' };
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className={`grid gap-3 ${f.accounts.filter((a) => !a.closed_at).length > 3 ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-3'}`}>
       {f.accounts.filter((a) => !a.closed_at).map((a) => {
         const last = f.transactions.find((t) => t.account_id === a.id && !['manual', 'statement'].includes(t.source));
         const fresh = last && Date.now() - new Date(last.created_at || last.occurred_at).getTime() < 30 * 86400000;

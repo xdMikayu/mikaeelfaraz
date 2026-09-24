@@ -7,10 +7,14 @@
  *        INGEST_URL   = https://mikaeelfaraz.com/api/finance/ingest
  *        INGEST_TOKEN = <your FINANCE_INGEST_TOKEN>
  *   3. Run setup() once (grants Gmail read access, installs a 5-minute trigger).
- *   4. Run backfill() once to import older alerts.
+ *   4. Run backfill() once to import older alerts. It works through one month at a
+ *      time from BACKFILL_FROM (default Sep 2022) and, because Apps Script stops a run
+ *      after 6 minutes, schedules itself to carry on every 10 minutes until it reaches
+ *      today. Watch progress in Executions; backfillStatus() prints where it is.
  *
- * Only sends messages newer than the last one it sent, so quiet runs make no
- * web requests. The server also ignores re-sent Gmail message ids.
+ * Both the Cashback (credit) card and the debit card send these alerts; the site files
+ * each under its own account. Only messages newer than the last one sent go out on each
+ * sync, and the server ignores re-sent Gmail message ids, so re-running is safe.
  * No secrets live in this file — keep the token in Script Properties.
  */
 var SENDER = 'MashreqAlerts@mashreq.com';
@@ -41,21 +45,55 @@ function sync() {
   props.setProperty('LAST_TS', String(maxTs));
 }
 
-/** One-off: import older alerts (default ~13 months). Safe to re-run. */
+/**
+ * One-off history import, one calendar month per step, oldest first. Resumes where it
+ * stopped: progress lives in the BACKFILL_NEXT script property ("2022-09"), and while
+ * months remain a 10-minute trigger keeps calling this. Safe to re-run.
+ */
 function backfill() {
-  var messages = [];
-  for (var start = 0; ; start += 100) {
-    var threads = GmailApp.search('from:' + SENDER + ' newer_than:400d', start, 100);
-    threads.forEach(function (thread) {
-      thread.getMessages().forEach(function (m) { if (isAlert_(m)) messages.push(m); });
-    });
-    if (threads.length < 100) break;
-  }
-  Logger.log('Backfilling ' + messages.length + ' alerts');
-  send_(messages);
   var props = PropertiesService.getScriptProperties();
-  var maxTs = messages.reduce(function (acc, m) { return Math.max(acc, m.getDate().getTime()); }, Number(props.getProperty('LAST_TS') || 0));
-  props.setProperty('LAST_TS', String(maxTs));
+  var started = Date.now();
+  var next = props.getProperty('BACKFILL_NEXT') || props.getProperty('BACKFILL_FROM') || '2022-09';
+  var now = new Date();
+  var endKey = monthKey_(now.getFullYear(), now.getMonth());
+  ensureBackfillTrigger_(true);
+  while (next <= endKey) {
+    if (Date.now() - started > 4.5 * 60 * 1000) { Logger.log('Pausing at ' + next + '; resumes in ~10 minutes'); return; }
+    var y = Number(next.slice(0, 4)), m = Number(next.slice(5, 7)) - 1;
+    var after = Utilities.formatDate(new Date(y, m, 1), 'Asia/Dubai', 'yyyy/MM/dd');
+    var before = Utilities.formatDate(new Date(y, m + 1, 1), 'Asia/Dubai', 'yyyy/MM/dd');
+    var messages = [];
+    for (var start = 0; ; start += 100) {
+      var threads = GmailApp.search('from:' + SENDER + ' after:' + after + ' before:' + before, start, 100);
+      threads.forEach(function (thread) {
+        thread.getMessages().forEach(function (msg) { if (isAlert_(msg)) messages.push(msg); });
+      });
+      if (threads.length < 100) break;
+    }
+    Logger.log(next + ': ' + messages.length + ' alerts');
+    send_(messages);
+    next = monthKey_(y, m + 1);
+    props.setProperty('BACKFILL_NEXT', next);
+  }
+  ensureBackfillTrigger_(false);
+  Logger.log('Backfill complete');
+}
+
+/** Where the backfill has got to. */
+function backfillStatus() {
+  var p = PropertiesService.getScriptProperties();
+  Logger.log('Next month to import: ' + (p.getProperty('BACKFILL_NEXT') || p.getProperty('BACKFILL_FROM') || '2022-09 (not started)'));
+}
+
+function monthKey_(y, m) {
+  var d = new Date(y, m, 1);
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
+}
+
+function ensureBackfillTrigger_(on) {
+  var existing = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'backfill'; });
+  if (on && !existing.length) ScriptApp.newTrigger('backfill').timeBased().everyMinutes(10).create();
+  if (!on) existing.forEach(function (t) { ScriptApp.deleteTrigger(t); });
 }
 
 function isAlert_(m) {

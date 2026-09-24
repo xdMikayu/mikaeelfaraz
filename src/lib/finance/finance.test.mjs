@@ -232,13 +232,14 @@ test('charts follow the selected period and add up to the headline', () => {
     const at = new Date(now.getTime() - k * 22 * 3600 * 1000); // every 22h, so times of day vary
     txs.push({ id: `t${k}`, merchant: `M${k % 5}`, account_id: k % 3 ? 'a' : 'b', amount_aed: 10 + (k % 7), direction: k % 29 ? 'debit' : 'credit', excluded: k % 31 === 0, occurred_at: at.toISOString() });
   }
-  for (const key of ['this_month', 'last_month', '3m', '6m', 'ytd', '12m']) {
-    const period = getPeriod(key, now);
+  for (const key of ['this_month', 'last_month', '3m', '6m', 'ytd', '12m', 'all']) {
+    const period = getPeriod(key, now, txs.at(-1).occurred_at);
     const s = summarize(txs, period);
     const bars = periodBars(txs, period, now);
     const sum = bars.buckets.reduce((a, b) => a + b.total, 0);
     assert.ok(Math.abs(sum - s.total) < 1e-6, `${key}: bars add up to the headline`);
-    assert.ok(bars.average > 0, `${key}: has a comparison average`);
+    if (key === 'all') assert.equal(bars.average, null); // nothing to compare with
+    else assert.ok(bars.average > 0, `${key}: has a comparison average`);
     for (const b of bars.buckets) assert.ok(b.top.length <= 3);
     const ctx = monthlyContext(txs, period, now);
     assert.equal(ctx.buckets.length, 12);
@@ -250,6 +251,11 @@ test('charts follow the selected period and add up to the headline', () => {
   assert.equal(month.buckets.filter((b) => b.future).length, 7); // …with 24–30 Sep still to come
   assert.equal(month.averageLabel, 'Aug average');
   assert.equal(periodBars(txs, getPeriod('3m', now), now).unit, 'week');
+  const all = periodBars(txs, getPeriod('all', now, '2025-08-20T10:00:00Z'), now);
+  assert.equal(all.unit, 'month');
+  assert.equal(all.buckets.length, 14); // Aug 2025 – Sep 2026
+  assert.equal(all.buckets[0].label, '2025');
+  assert.equal(all.buckets[5].label, '2026'); // January
   assert.deepEqual(monthlyContext(txs, getPeriod('this_month', now), now).highlight, [11]);
   assert.deepEqual(monthlyContext(txs, getPeriod('3m', now), now).highlight, [8, 9, 10, 11]); // 23 Jun – 23 Sep
 });
@@ -265,4 +271,14 @@ test('Tabby alert: "Transaction of … At …. Your Tabby Card limit is now …"
   const old = parseTabbyAlert('Your Tabby Card transaction of AED 36.09 at noon.com was successful.', NOW);
   assert.equal(old.ok, true);
   assert.equal(old.merchantRaw, 'noon.com');
+});
+
+test('Mashreq debit card alerts are told apart from the Cashback card', () => {
+  const credit = parseMashreqEmail('Your Mashreq Cashback Card ending with 1234 was used for a purchase of AED 1.00 at DU Apple Pay 800188 AE on 23-SEP-2026 12:39 PM. Available limit is AED 9,876.54');
+  assert.equal(credit.account, 'mashreq');
+  assert.equal(credit.availableBalance, 9876.54);
+  const debit = parseMashreqEmail('Your Mashreq Debit Card ending with 9876 was used for a purchase of USD 21.00 at OPENAI *CHATGPT SUBSCR US on 05-SEP-2026 09:12 AM. Available balance is AED 5,432.10');
+  assert.equal(debit.account, 'mashreq_debit');
+  assert.equal(debit.availableBalance, 5432.1);
+  assert.equal(debit.last4, '9876');
 });
