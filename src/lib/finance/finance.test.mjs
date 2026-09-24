@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
 import { keywordCategory, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES } from './categories.mjs';
 import { getPeriod } from './periods.mjs';
-import { summarize, cumulativeForPeriod, spendSeries } from './analytics.mjs';
+import { summarize, periodBars, monthlyContext } from './analytics.mjs';
 
 const NOW = new Date('2026-09-23T10:00:00Z'); // 14:00 in Dubai
 
@@ -230,26 +230,28 @@ test('charts follow the selected period and add up to the headline', () => {
   const txs = [];
   for (let k = 0; k < 420; k++) {
     const at = new Date(now.getTime() - k * 22 * 3600 * 1000); // every 22h, so times of day vary
-    txs.push({ id: `t${k}`, account_id: k % 3 ? 'a' : 'b', amount_aed: 10 + (k % 7), direction: k % 29 ? 'debit' : 'credit', excluded: k % 31 === 0, occurred_at: at.toISOString() });
+    txs.push({ id: `t${k}`, merchant: `M${k % 5}`, account_id: k % 3 ? 'a' : 'b', amount_aed: 10 + (k % 7), direction: k % 29 ? 'debit' : 'credit', excluded: k % 31 === 0, occurred_at: at.toISOString() });
   }
   for (const key of ['this_month', 'last_month', '3m', '6m', 'ytd', '12m']) {
     const period = getPeriod(key, now);
     const s = summarize(txs, period);
-    const cum = cumulativeForPeriod(txs, period, now);
-    assert.ok(Math.abs(cum.current.at(-1).value - s.total) < 1e-6, `${key}: running total ends at the headline`);
-    assert.ok(cum.length >= cum.current.length && cum.length >= cum.previous.length);
-    const series = spendSeries(txs, period, now);
-    if (key === 'this_month' || key === 'last_month') {
-      assert.equal(series.buckets.length, 6);
-      assert.ok(Math.abs(series.buckets[series.highlight].total - s.total) < 1e-6, `${key}: highlighted month is the headline`);
-    } else {
-      const sum = series.buckets.reduce((a, b) => a + b.total, 0);
-      assert.ok(Math.abs(sum - s.total) < 1e-6, `${key}: buckets add up to the headline`);
-    }
+    const bars = periodBars(txs, period, now);
+    const sum = bars.buckets.reduce((a, b) => a + b.total, 0);
+    assert.ok(Math.abs(sum - s.total) < 1e-6, `${key}: bars add up to the headline`);
+    assert.ok(bars.average > 0, `${key}: has a comparison average`);
+    for (const b of bars.buckets) assert.ok(b.top.length <= 3);
+    const ctx = monthlyContext(txs, period, now);
+    assert.equal(ctx.buckets.length, 12);
+    assert.ok(ctx.highlight.length >= 1);
   }
-  assert.equal(spendSeries(txs, getPeriod('3m', now), now).unit, 'week');
-  assert.equal(spendSeries(txs, getPeriod('6m', now), now).buckets.length, 7); // 23 Mar–23 Sep: 7 calendar months, ends clipped
-  assert.deepEqual(cumulativeForPeriod(txs, getPeriod('6m', now), now).ticks.map((t) => t.label), ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
+  const month = periodBars(txs, getPeriod('this_month', now), now);
+  assert.equal(month.unit, 'day');
+  assert.equal(month.buckets.length, 30); // the whole of September…
+  assert.equal(month.buckets.filter((b) => b.future).length, 7); // …with 24–30 Sep still to come
+  assert.equal(month.averageLabel, 'Aug average');
+  assert.equal(periodBars(txs, getPeriod('3m', now), now).unit, 'week');
+  assert.deepEqual(monthlyContext(txs, getPeriod('this_month', now), now).highlight, [11]);
+  assert.deepEqual(monthlyContext(txs, getPeriod('3m', now), now).highlight, [8, 9, 10, 11]); // 23 Jun – 23 Sep
 });
 
 test('Tabby alert: "Transaction of … At …. Your Tabby Card limit is now …" format', () => {
