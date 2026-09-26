@@ -239,3 +239,122 @@ export function weekCompare(transactions, now = new Date()) {
   const prevSameTotal = sum(prevSame);
   return { days, total, prevSameTotal, prevWeekTotal: sum(spend(lastMonday, monday)), change: pctChange(total, prevSameTotal), movers, count: cur.length };
 }
+
+const median = (xs) => {
+  if (!xs.length) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const k = Math.floor(s.length / 2);
+  return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2;
+};
+
+/** The `n` complete calendar months before `start`, oldest first. */
+function monthsBefore(start, n) {
+  const { y, m } = dubaiParts(start);
+  return Array.from({ length: n }, (_, i) => {
+    const k = n - i;
+    return { start: dubaiDate(y, m - k, 1), end: dubaiDate(y, m - k + 1, 1), label: SHORT[dubaiParts(dubaiDate(y, m - k, 1)).m] };
+  });
+}
+
+/**
+ * What a normal month costs: the median of the last `n` complete months that had any
+ * spending (a median, so one big trip or purchase doesn't make every month look cheap).
+ */
+export function typicalMonth(transactions, before, n = 6) {
+  const months = monthsBefore(before, n).map((mo) => ({ ...mo, total: transactions.filter((t) => inRange(t, mo.start, mo.end)).reduce((s, t) => s + spendOf(t), 0) }));
+  const live = months.filter((mo) => mo.total > 0);
+  return { total: median(live.map((mo) => mo.total)), months, count: live.length };
+}
+
+/**
+ * Running total through a month or week, day by day, against the period before and an even
+ * pace to your typical month (or week). Also where you'll land at today's rate.
+ * Returns null for periods it doesn't apply to (quarters, years).
+ */
+export function paceSeries(transactions, period, now = new Date()) {
+  const isMonth = isSingleMonth(period);
+  if (!isMonth && !period.week) return null;
+  const start = period.start;
+  const n = isMonth ? daysInMonth(dubaiParts(start).y, dubaiParts(start).m) : 7;
+  const end = new Date(start.getTime() + n * DAY);
+  const elapsed = Math.min(n, Math.max(0, Math.ceil((Math.min(now.getTime(), end.getTime()) - start.getTime()) / DAY)));
+  const byDay = (from, len) => {
+    const out = Array(len).fill(0);
+    for (const t of transactions) {
+      const i = Math.floor((new Date(t.occurred_at).getTime() - from.getTime()) / DAY);
+      if (i >= 0 && i < len) out[i] += spendOf(t);
+    }
+    return out;
+  };
+  const cum = (xs) => xs.reduce((acc, v, i) => (acc.push((acc[i - 1] || 0) + v), acc), []);
+  const cur = cum(byDay(start, n));
+  const prevStart = isMonth ? dubaiDate(dubaiParts(start).y, dubaiParts(start).m - 1, 1) : new Date(start.getTime() - 7 * DAY);
+  const prevLen = isMonth ? daysInMonth(dubaiParts(prevStart).y, dubaiParts(prevStart).m) : 7;
+  const prevCum = cum(byDay(prevStart, prevLen));
+  const typical = isMonth ? typicalMonth(transactions, start).total : typicalMonth(transactions, start).total * (7 / 30.44);
+  const points = Array.from({ length: n }, (_, i) => {
+    const d = new Date(start.getTime() + i * DAY);
+    const p = dubaiParts(d);
+    return {
+      i, day: p.d, label: isMonth ? String(p.d) : WEEKDAY[p.dow],
+      cur: i < elapsed ? cur[i] : null,
+      prev: prevCum[Math.min(i, prevLen - 1)],
+      even: typical ? (typical * (i + 1)) / n : null,
+    };
+  });
+  const spent = elapsed ? cur[elapsed - 1] : 0;
+  const complete = elapsed >= n;
+  const projected = complete ? spent : elapsed >= 3 ? (spent / elapsed) * n : null;
+  const evenNow = typical && elapsed ? (typical * elapsed) / n : null;
+  return {
+    unit: isMonth ? 'month' : 'week', points, elapsed, days: n, spent, projected, typical: typical || null, complete,
+    prevTotal: prevCum[prevLen - 1] || 0,
+    prevSame: prevCum[Math.min(Math.max(elapsed, 1), prevLen) - 1] || 0,
+    // Positive: spending faster than a typical period at this point.
+    aheadOfTypical: evenNow ? spent - evenNow : null,
+  };
+}
+
+/**
+ * For each category: its typical spend for a period this long (median of the last six
+ * complete months, scaled) and a six-month trail for a sparkline.
+ */
+export function categoryContext(transactions, period, n = 6) {
+  const months = monthsBefore(period.start, n);
+  const out = new Map();
+  for (const [k, mo] of months.entries()) {
+    for (const t of transactions) {
+      if (!inRange(t, mo.start, mo.end)) continue;
+      const c = t.category || UNCATEGORIZED;
+      if (!out.has(c)) out.set(c, Array(n).fill(0));
+      out.get(c)[k] += spendOf(t);
+    }
+  }
+  const scale = period.months || 1;
+  const ctx = new Map();
+  for (const [c, trail] of out) ctx.set(c, { usual: median(trail.filter((v) => v > 0).length >= 2 ? trail : []) * scale, trail, labels: months.map((m) => m.label) });
+  return ctx;
+}
+
+/**
+ * Merchants you pay every month (subscriptions, phone, gym…): charged in at least three of
+ * the last four complete months. Returns [{ merchant, monthly, months }] by monthly cost.
+ */
+export function recurringCharges(transactions, before, n = 4) {
+  const months = monthsBefore(before, n);
+  const seen = new Map();
+  months.forEach((mo, k) => {
+    for (const t of transactions) {
+      if (t.excluded || t.direction === 'credit' || !inRange(t, mo.start, mo.end)) continue;
+      const m = t.merchant || t.merchant_raw;
+      if (!m) continue;
+      if (!seen.has(m)) seen.set(m, { merchant: m, category: t.category, byMonth: Array(n).fill(0) });
+      seen.get(m).byMonth[k] += spendOf(t);
+    }
+  });
+  return [...seen.values()]
+    .map((r) => ({ ...r, months: r.byMonth.filter((v) => v > 0).length }))
+    .filter((r) => r.months >= Math.min(3, n) && ['Subscriptions', 'Bills & Utilities', 'Personal Care & Fitness', 'Education'].includes(r.category))
+    .map((r) => ({ merchant: r.merchant, category: r.category, months: r.months, monthly: median(r.byMonth.filter((v) => v > 0)) }))
+    .sort((a, b) => b.monthly - a.monthly);
+}

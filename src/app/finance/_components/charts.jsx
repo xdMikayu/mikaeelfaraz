@@ -255,12 +255,12 @@ export function SpendBars({ buckets, accounts, highlight = [], height = 220, lab
 }
 
 /** Horizontal magnitude bars (single hue) with a value at the tip. */
-export function HBar({ value, max, budget }) {
+export function HBar({ value, max, budget, color }) {
   const w = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
   const over = budget && value > budget;
   return (
     <div className="relative h-2 w-full rounded-full" style={{ background: 'var(--fin-surface-2)' }}>
-      <div className="absolute inset-y-0 left-0" style={{ width: `${w * 100}%`, background: 'var(--fin-bar)', borderRadius: 2, minWidth: value > 0 ? 3 : 0 }} />
+      <div className="absolute inset-y-0 left-0" style={{ width: `${w * 100}%`, background: color || 'var(--fin-bar)', borderRadius: 2, minWidth: value > 0 ? 3 : 0 }} />
       {budget > 0 && max > 0 && (
         <div className="absolute" title={`Budget ${aed(budget, { decimals: 0 })}`}
           style={{ left: `${Math.min(1, budget / max) * 100}%`, top: -3, bottom: -3, width: 2, background: over ? 'var(--fin-bad)' : 'var(--fin-ink-2)', borderRadius: 1 }} />
@@ -433,5 +433,85 @@ export function NetWorthLine({ points, height = 200, format = (v) => aed(v, { de
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Running total through the month (or week): this period as a solid line up to today, a
+ * dotted run-on to where today's pace lands, last period as a quiet line, and an even pace
+ * to a typical period as a dashed diagonal. Hover or drag to read any day.
+ */
+export function PaceChart({ pace, height = 230, color = 'var(--fin-ink)' }) {
+  const [ref, width] = useWidth();
+  const [hover, setHover] = useState(null);
+  const pad = { top: 14, right: 16, bottom: 26, left: 48 };
+  const pts = pace.points;
+  const n = pts.length;
+  const max = Math.max(1, pace.projected || 0, ...pts.map((p) => Math.max(p.cur || 0, p.prev || 0, p.even || 0)));
+  const ticks = niceTicks(max, 3);
+  const top = ticks[ticks.length - 1];
+  const iw = Math.max(10, width - pad.left - pad.right);
+  const ih = height - pad.top - pad.bottom;
+  const x = (i) => pad.left + (n === 1 ? 0 : (i / (n - 1)) * iw);
+  const y = (v) => pad.top + ih - (v / top) * ih;
+  const path = (key) => pts.filter((p) => p[key] != null).map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
+  const last = pts.filter((p) => p.cur != null).at(-1);
+  const curPath = path('cur');
+  const area = last ? `${curPath}L${x(last.i)},${y(0)}L${x(0)},${y(0)}Z` : '';
+  const labelIdx = pace.unit === 'week' ? pts.map((p) => p.i) : pts.filter((p) => [1, 8, 15, 22].includes(p.day) || p.i === n - 1).map((p) => p.i);
+  const onMove = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    setHover(Math.max(0, Math.min(n - 1, Math.round(((px - pad.left) / iw) * (n - 1)))));
+  };
+  const h = hover != null ? pts[hover] : null;
+  return (
+    <div ref={ref} className="relative select-none" style={{ height }}>
+      {width > 0 && (
+        <svg width={width} height={height} role="img" aria-label="Running total this period against last period" onMouseMove={onMove} onTouchStart={onMove} onTouchMove={onMove} onMouseLeave={() => setHover(null)} onTouchEnd={() => setHover(null)} style={{ touchAction: 'pan-y' }}>
+          {ticks.map((t) => (
+            <g key={t}>
+              <line x1={pad.left} x2={width - pad.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? 'var(--fin-axis)' : 'var(--fin-grid)'} />
+              <text x={pad.left - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--fin-muted)" className="fin-num">{compact(t)}</text>
+            </g>
+          ))}
+          {pts[0].even != null && <path d={path('even')} fill="none" stroke="var(--fin-compare)" strokeWidth="1.5" strokeDasharray="4 4" />}
+          <path d={path('prev')} fill="none" stroke="var(--fin-compare)" strokeWidth="1.75" strokeLinejoin="round" />
+          {area && <path d={area} fill={color} opacity="0.06" />}
+          {curPath && <path d={curPath} fill="none" stroke={color} strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />}
+          {last && pace.projected != null && !pace.complete && (
+            <path d={`M${x(last.i)},${y(last.cur)}L${x(n - 1)},${y(pace.projected)}`} fill="none" stroke={color} strokeWidth="1.75" strokeDasharray="2 4" strokeLinecap="round" opacity="0.55" />
+          )}
+          {last && <circle cx={x(last.i)} cy={y(last.cur)} r="4" fill={color} stroke="var(--fin-surface)" strokeWidth="2" />}
+          {labelIdx.map((i) => (
+            <text key={i} x={x(i)} y={height - 7} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'} fontSize="11" fill={last && i === last.i ? 'var(--fin-ink)' : 'var(--fin-muted)'}>{pts[i].label}</text>
+          ))}
+          {h && <line x1={x(hover)} x2={x(hover)} y1={pad.top} y2={pad.top + ih} stroke="var(--fin-axis)" />}
+        </svg>
+      )}
+      {h && (
+        <div className="fin-tooltip" style={{ left: Math.min(Math.max(0, x(hover) - 80), Math.max(0, width - 180)), top: 0 }}>
+          <p className="mb-1.5 font-semibold">{pace.unit === 'week' ? h.label : `Day ${h.day}`}</p>
+          <Row color={color} label="This period" value={h.cur == null ? '—' : aed(h.cur, { decimals: 0 })} />
+          <Row color="var(--fin-compare)" label="Last period" value={aed(h.prev, { decimals: 0 })} />
+          {h.even != null && <Row color="var(--fin-compare)" label="Typical pace" value={aed(h.even, { decimals: 0 })} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Six tiny columns: the last six months of one category, for a row. */
+export function Spark({ values, now, width = 56, height = 18 }) {
+  const all = [...values, now ?? 0];
+  const max = Math.max(1, ...all);
+  const bw = width / all.length - 2;
+  return (
+    <svg width={width} height={height} aria-hidden className="shrink-0">
+      {all.map((v, i) => {
+        const h = Math.max(1.5, (v / max) * height);
+        return <rect key={i} x={i * (bw + 2)} y={height - h} width={bw} height={h} rx="1" fill={i === all.length - 1 ? 'var(--fin-ink)' : 'var(--fin-bar-soft)'} />;
+      })}
+    </svg>
   );
 }

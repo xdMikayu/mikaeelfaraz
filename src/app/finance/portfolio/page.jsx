@@ -4,6 +4,7 @@ import { Plus, Trash as Trash2, X } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from '../_components/FinanceShell';
 import { NetWorthLine } from '../_components/charts';
 import { aed, relative } from '../_components/format';
+import { typicalMonth } from '@/lib/finance/analytics.mjs';
 import { KARATS } from '@/lib/finance/gold.mjs';
 import { valuePortfolio, cardLiabilities, KIND_ORDER, ASSET_KINDS, CASH_CURRENCIES, CRYPTO, AED_PER_USD } from '@/lib/finance/portfolio.mjs';
 
@@ -113,7 +114,10 @@ function usePortfolio() {
     snapshot();
   };
 
-  return { holdings, history, prices, gold, liabilities, setup, error, save, remove, demo: f.demo };
+  // What a normal month of spending costs, for "how long would my cash last".
+  const monthlySpend = useMemo(() => typicalMonth(f.transactions, new Date()).total, [f.transactions]);
+
+  return { holdings, history, prices, gold, liabilities, monthlySpend, setup, error, save, remove, demo: f.demo };
 }
 
 // ---------- page ----------
@@ -217,7 +221,7 @@ export default function Portfolio() {
               {KIND_ORDER.filter((k) => v.byKind[k]).map((k) => (
                 <div key={k}>
                   <dt className="fin-chip"><span className="fin-dot" style={{ background: KIND_COLOR[k] }} />{ASSET_KINDS[k].plural}</dt>
-                  <dd className="fin-num mt-0.5 text-sm font-semibold">{money(v.byKind[k].value)}</dd>
+                  <dd className="fin-num mt-0.5 text-sm font-semibold">{money(v.byKind[k].value)} <span className="font-normal fin-muted">{Math.round((v.byKind[k].value / v.assets) * 100)}%</span></dd>
                 </div>
               ))}
               {v.owed > 0 && (
@@ -230,6 +234,8 @@ export default function Portfolio() {
           </div>
         )}
       </section>
+
+      {v && v.assets > 0 && <WorthNotes v={v} history={p.history} monthlySpend={p.monthlySpend} money={money} />}
 
       {/* Holdings by kind */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -277,6 +283,36 @@ export default function Portfolio() {
   );
 }
 
+/** Three notes that put the total in context: cash runway, this month's change, the biggest slice. */
+function WorthNotes({ v, history, monthlySpend, money }) {
+  const notes = [];
+  const cash = v.byKind.cash?.value || 0;
+  if (cash > 0 && monthlySpend > 0) {
+    const months = cash / monthlySpend;
+    notes.push({ key: 'runway', label: 'Cash runway', headline: months >= 24 ? `${Math.round(months / 12)} years` : `${months.toFixed(1)} months`, detail: `${money(cash)} in the bank covers that long at your typical ${money(monthlySpend)} a month.`, tone: months < 3 ? 'bad' : null });
+  }
+  const monthStart = new Date().toISOString().slice(0, 8) + '01';
+  const base = history.filter((h) => h.day < monthStart).at(-1) || history.find((h) => h.day >= monthStart);
+  if (base && base.day !== new Date().toISOString().slice(0, 10)) {
+    const d = v.total - base.total;
+    notes.push({ key: 'month', label: 'This month', headline: `${d >= 0 ? '+' : '−'}${money(Math.abs(d))}`, detail: `Since ${new Date(base.day).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, when you were at ${money(base.total)}.`, tone: d >= 0 ? 'good' : 'bad' });
+  }
+  const top = Object.entries(v.byKind).sort((a, b) => b[1].value - a[1].value)[0];
+  if (top) notes.push({ key: 'mix', label: 'Biggest share', headline: `${ASSET_KINDS[top[0]].plural} ${Math.round((top[1].value / v.assets) * 100)}%`, detail: v.owed > 0 ? `Cards owe ${money(v.owed)}, ${Math.round((v.owed / v.assets) * 100)}% of what you own.` : 'Nothing owed on the cards right now.' });
+  if (!notes.length) return null;
+  return (
+    <section className={`fin-card grid divide-y sm:divide-x sm:divide-y-0 ${notes.length === 3 ? 'sm:grid-cols-3' : notes.length === 2 ? 'sm:grid-cols-2' : ''}`} style={{ borderColor: 'var(--fin-border)' }}>
+      {notes.map((n) => (
+        <div key={n.key} className="p-5" style={{ borderColor: 'var(--fin-border)' }}>
+          <p className="text-xs fin-muted">{n.label}</p>
+          <p className="mt-1.5 text-lg font-semibold tracking-tight" style={n.tone ? { color: `var(--fin-${n.tone})` } : undefined}>{n.headline}</p>
+          <p className="mt-1 text-[13px] leading-snug fin-ink-2">{n.detail}</p>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 const EMPTY = {
   cash: 'Add Mashreq, Emirates NBD, Bank Alfalah — any currency.',
   stock: 'Add a DFM symbol and how many shares you hold.',
@@ -318,7 +354,7 @@ function HoldingList({ kind, rows, money, prices, gold, onAdd, onEdit }) {
                 <span className="shrink-0 text-right">
                   <span className="block fin-num text-sm font-semibold">{h.value != null ? money(h.value) : '—'}</span>
                   {h.gain != null ? (
-                    <span className="block fin-num text-xs" style={{ color: h.gain >= 0 ? 'var(--fin-good)' : 'var(--fin-bad)' }}>{money(h.gain, { sign: true })}</span>
+                    <span className="block fin-num text-xs" style={{ color: h.gain >= 0 ? 'var(--fin-good)' : 'var(--fin-bad)' }}>{money(h.gain, { sign: true })} · {h.gain >= 0 ? '+' : '−'}{Math.abs((h.gain / h.cost) * 100).toFixed(1)}%</span>
                   ) : h.dayChangePct ? (
                     <span className="block fin-num text-xs" style={{ color: h.dayChangePct >= 0 ? 'var(--fin-good)' : 'var(--fin-bad)' }}>{h.dayChangePct >= 0 ? '+' : '−'}{Math.abs(h.dayChangePct).toFixed(1)}% today</span>
                   ) : null}

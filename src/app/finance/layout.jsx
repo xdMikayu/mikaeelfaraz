@@ -3,9 +3,9 @@ import { Schibsted_Grotesk, IBM_Plex_Mono } from 'next/font/google';
 import FinanceShell from './_components/FinanceShell';
 import './finance.css';
 
-// A newspaper grotesk for words and a mono for money, like a bank statement.
-const sans = Schibsted_Grotesk({ subsets: ['latin'], display: 'swap', weight: ['400', '500', '600', '700'], variable: '--font-fin' });
-const mono = IBM_Plex_Mono({ subsets: ['latin'], display: 'swap', weight: ['400', '500', '600'], variable: '--font-money' });
+// One grotesk throughout (tabular figures for money); a mono only for codes and tokens.
+const sans = Schibsted_Grotesk({ subsets: ['latin'], display: 'swap', variable: '--font-fin' }); // variable: in-between weights (450, 550)
+const mono = IBM_Plex_Mono({ subsets: ['latin'], display: 'swap', weight: ['400', '500'], variable: '--font-money' }); // codes and tokens only
 
 export const metadata = {
   title: 'Mifolio',
@@ -22,8 +22,8 @@ export const metadata = {
 
 export const viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f3f0e8' },
-    { media: '(prefers-color-scheme: dark)', color: '#131210' },
+    { media: '(prefers-color-scheme: light)', color: '#f6f6f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0b0c' },
   ],
 };
 

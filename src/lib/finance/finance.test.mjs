@@ -500,3 +500,34 @@ test('week comparison: day by day and the categories that moved', async () => {
   assert.equal(w.movers[0].category, 'Groceries');
   assert.equal(w.movers[0].delta, 70);
 });
+
+test('pace, typical month, category context and recurring charges', async () => {
+  const { paceSeries, typicalMonth, categoryContext, recurringCharges } = await import('./analytics.mjs');
+  const tx = (id, at, amt, category, merchant = 'M') => ({ id, occurred_at: at, amount_aed: amt, direction: 'debit', excluded: false, merchant, category });
+  const rows = [];
+  // Six prior months: 3000, 3000, 3000, 3000, 3000 and a 9000 trip month.
+  ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'].forEach((ym, k) => {
+    rows.push(tx(`a${k}`, `${ym}-10T08:00:00Z`, k === 5 ? 9000 : 3000, 'Shopping'));
+    rows.push(tx(`n${k}`, `${ym}-05T08:00:00Z`, 56, 'Subscriptions', 'Netflix'));
+  });
+  rows.push(tx('s1', '2026-09-02T08:00:00Z', 600, 'Groceries'));
+  rows.push(tx('s2', '2026-09-09T08:00:00Z', 900, 'Shopping'));
+  const now = new Date('2026-09-10T10:00:00Z'); // 10 days into a 30-day month
+  const period = getPeriod('this_month', now);
+  assert.equal(typicalMonth(rows, period.start).total, 3056); // median ignores the trip month
+  const pace = paceSeries(rows, period, now);
+  assert.equal(pace.days, 30);
+  assert.equal(pace.elapsed, 10);
+  assert.equal(pace.spent, 1500);
+  assert.equal(pace.projected, 4500);
+  assert.equal(pace.points[9].cur, 1500);
+  assert.equal(pace.points[10].cur, null);
+  assert.equal(pace.prevTotal, 9056);
+  assert.ok(pace.aheadOfTypical > 0); // 1500 vs an even 1018.7
+  assert.equal(paceSeries(rows, getPeriod('6m', now), now), null);
+  const ctx = categoryContext(rows, period);
+  assert.equal(ctx.get('Shopping').usual, 3000);
+  assert.deepEqual(ctx.get('Shopping').trail, [3000, 3000, 3000, 3000, 3000, 9000]);
+  const rec = recurringCharges(rows, period.start);
+  assert.deepEqual(rec.map((r) => [r.merchant, r.monthly]), [['Netflix', 56]]);
+});

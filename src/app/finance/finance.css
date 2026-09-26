@@ -1,128 +1,129 @@
 /* Mifolio — design tokens and components.
-   Paper and ink: a warm off-white page (light) or warm near-black (dark), ink for text and
-   controls, and colour only where it means something — each card's own brand colour, green
-   and red for up and down. Words in Schibsted Grotesk, money in IBM Plex Mono. No gradients,
-   glows or pill-everything. Card colours (--fin-c-*: SIB blue, Mashreq orange, Tabby green,
+   Monochrome surfaces — a soft neutral white (light) or near-black (dark), text never pure
+   white — with ink for controls and colour only where it carries data: each card's own
+   colour, green and rose for up and down. Data colours are picked in OKLCH at even
+   lightness so they read vivid without going muddy. Schibsted Grotesk throughout. No gradients, glows or pill-everything. Card colours (--fin-c-*: SIB blue, Mashreq orange, Tabby green,
    noon gold, Neo magenta), asset colours (--fin-a-*: cash, stocks, gold, crypto, in that
    stack order) and category ring colours (--fin-k1–k6, by rank) are validated as sets (lightness band, CVD separation, contrast) against the
    card surface of each mode. Dark values apply when <html> has .dark (set by FinanceShell). */
 
 .fin-root {
   color-scheme: light;
-  --fin-page: #f3f0e8;
-  --fin-surface: #fbfaf6;
-  --fin-surface-2: #efebe2;
-  --fin-surface-3: #e5e0d5;
-  --fin-ink: #1a1916;
-  --fin-ink-2: #56524a;
-  --fin-muted: #857f73;
-  --fin-grid: #e9e5dc;
-  --fin-axis: #d3cec2;
-  --fin-border: rgba(26, 25, 22, 0.1);
-  --fin-border-strong: rgba(26, 25, 22, 0.18);
+  --fin-page: #f6f6f4;
+  --fin-surface: #ffffff;
+  --fin-surface-2: #f2f1ef;
+  --fin-surface-3: #e8e7e4;
+  --fin-ink: #121214;
+  --fin-ink-2: #56565e;
+  --fin-muted: #8a8a93;
+  --fin-grid: #efeeeb;
+  --fin-axis: #dcdbd7;
+  --fin-border: rgba(18, 18, 20, 0.08);
+  --fin-border-strong: rgba(18, 18, 20, 0.15);
   --fin-shadow: none;
-  --fin-accent: #1a1916;
-  --fin-accent-2: #1a1916;
-  --fin-accent-soft: rgba(26, 25, 22, 0.07);
-  --fin-accent-ink: #fbfaf6;
-  --fin-bar: #4a463e;
-  --fin-bar-soft: #d6d0c3;
-  --fin-good: #1f7a48;
-  --fin-good-soft: rgba(31, 122, 72, 0.1);
-  --fin-bad: #b5382a;
-  --fin-bad-soft: rgba(181, 56, 42, 0.09);
-  --fin-warn: #9a6200;
-  --fin-compare: #b9b3a6;
+  --fin-accent: #121214;
+  --fin-accent-2: #121214;
+  --fin-accent-soft: rgba(18, 18, 20, 0.06);
+  --fin-accent-ink: #ffffff;
+  --fin-bar: #3a3a41;
+  --fin-bar-soft: #dfded9;
+  --fin-good: #108846;
+  --fin-good-soft: rgba(16, 136, 70, 0.1);
+  --fin-bad: #d33949;
+  --fin-bad-soft: rgba(211, 57, 73, 0.09);
+  --fin-warn: #b7791f;
+  --fin-compare: #c4c3be;
   --fin-glow: none;
   --fin-side-bg: var(--fin-page);
   --fin-side-ink: var(--fin-ink-2);
   --fin-side-ink-strong: var(--fin-ink);
-  --fin-side-hover: rgba(26, 25, 22, 0.05);
-  --fin-side-active: rgba(26, 25, 22, 0.08);
+  --fin-side-hover: rgba(18, 18, 20, 0.04);
+  --fin-side-active: rgba(18, 18, 20, 0.07);
   --fin-side-border: var(--fin-border);
-  --fin-c-sib: #2f6fe4;
-  --fin-c-mashreq: #ea6a12;
-  --fin-c-tabby: #12a07a;
-  --fin-c-enbd: #ad8500;
-  --fin-c-neo: #b4389c;
+  --fin-c-sib: #217bf4;
+  --fin-c-mashreq: #f46622;
+  --fin-c-tabby: #00bc85;
+  --fin-c-enbd: #e3a500;
+  --fin-c-neo: #e2348d;
   --fin-gold: var(--fin-c-enbd);
-  --fin-a-cash: #00879b;
-  --fin-a-stock: #3f5bd0;
-  --fin-a-gold: #ad8500;
-  --fin-a-crypto: #a23fb0;
-  --fin-k1: #3f5bd0;
-  --fin-k2: #d4572a;
-  --fin-k3: #0f8f7f;
-  --fin-k4: #b07d00;
-  --fin-k5: #a8409d;
-  --fin-k6: #6f7f10;
-  --fin-k-other: #b3ada0;
-  --fin-s1: #00879b;
-  --fin-s2: #3f5bd0;
-  --fin-s3: #ad8500;
-  --fin-s4: #a23fb0;
-  --fin-s5: #12a07a;
-  --fin-s6: #e0662b;
-  --fin-s7: #6b6457;
-  --fin-s8: #8a6a5c;
+  --fin-a-cash: #00a6b5;
+  --fin-a-stock: #4668e2;
+  --fin-a-gold: #e2a520;
+  --fin-a-crypto: #9d57de;
+  --fin-k1: #3a74e3;
+  --fin-k2: #ee6951;
+  --fin-k3: #00aca6;
+  --fin-k4: #e3a924;
+  --fin-k5: #d84497;
+  --fin-k6: #73bb43;
+  --fin-k-other: #c9c8c3;
+  --fin-s1: #00a6b5;
+  --fin-s2: #4668e2;
+  --fin-s3: #e2a520;
+  --fin-s4: #9d57de;
+  --fin-s5: #00bc85;
+  --fin-s6: #ee6951;
+  --fin-s7: #8a8a93;
+  --fin-s8: #a58576;
   --fin-radius: 16px;
   --fin-radius-sm: 11px;
   background: var(--fin-page);
   color: var(--fin-ink);
   min-height: 100vh;
   font-family: var(--font-fin, 'Schibsted Grotesk'), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 440;
   -webkit-font-smoothing: antialiased;
 }
 .dark .fin-root {
   color-scheme: dark;
-  --fin-page: #131210;
-  --fin-surface: #1b1a17;
-  --fin-surface-2: #24221e;
-  --fin-surface-3: #2e2b26;
-  --fin-ink: #eeeae1;
-  --fin-ink-2: #b4aea2;
-  --fin-muted: #7f796e;
-  --fin-grid: #27251f;
-  --fin-axis: #3a362f;
-  --fin-border: rgba(238, 234, 225, 0.09);
-  --fin-border-strong: rgba(238, 234, 225, 0.16);
-  --fin-accent: #eeeae1;
-  --fin-accent-2: #eeeae1;
-  --fin-accent-soft: rgba(238, 234, 225, 0.08);
-  --fin-accent-ink: #131210;
-  --fin-bar: #cbc4b6;
-  --fin-bar-soft: #3d3a33;
-  --fin-good: #5cbc85;
-  --fin-good-soft: rgba(92, 188, 133, 0.12);
-  --fin-bad: #ea7a66;
-  --fin-bad-soft: rgba(234, 122, 102, 0.12);
-  --fin-warn: #e0a64a;
-  --fin-compare: #57524a;
-  --fin-side-hover: rgba(238, 234, 225, 0.05);
-  --fin-side-active: rgba(238, 234, 225, 0.08);
-  --fin-c-sib: #4a82ee;
-  --fin-c-mashreq: #e56d18;
-  --fin-c-tabby: #17a17d;
-  --fin-c-enbd: #b08a0a;
-  --fin-c-neo: #c64a9e;
-  --fin-a-cash: #0f97a8;
-  --fin-a-stock: #5d74e6;
-  --fin-a-gold: #b08a0a;
-  --fin-a-crypto: #b858c0;
-  --fin-k1: #5d74e6;
-  --fin-k2: #e0663a;
-  --fin-k3: #16a08f;
-  --fin-k4: #b58a10;
-  --fin-k5: #bf55b3;
-  --fin-k6: #879a1c;
-  --fin-k-other: #5a554c;
-  --fin-s1: #0f97a8;
-  --fin-s2: #5d74e6;
-  --fin-s3: #b08a0a;
-  --fin-s4: #b858c0;
-  --fin-s5: #17a17d;
-  --fin-s6: #e07a3f;
-  --fin-s7: #8f887a;
+  --fin-page: #0b0b0c;
+  --fin-surface: #141416;
+  --fin-surface-2: #1c1c1f;
+  --fin-surface-3: #27272b;
+  --fin-ink: #ededf0;
+  --fin-ink-2: #a3a3ab;
+  --fin-muted: #6e6e77;
+  --fin-grid: #1f1f23;
+  --fin-axis: #34343a;
+  --fin-border: rgba(237, 237, 240, 0.08);
+  --fin-border-strong: rgba(237, 237, 240, 0.15);
+  --fin-accent: #ededf0;
+  --fin-accent-2: #ededf0;
+  --fin-accent-soft: rgba(237, 237, 240, 0.08);
+  --fin-accent-ink: #0b0b0c;
+  --fin-bar: #d2d2d8;
+  --fin-bar-soft: #34343a;
+  --fin-good: #3ec27a;
+  --fin-good-soft: rgba(62, 194, 122, 0.12);
+  --fin-bad: #f0616e;
+  --fin-bad-soft: rgba(240, 97, 110, 0.12);
+  --fin-warn: #e8a33d;
+  --fin-compare: #4a4a52;
+  --fin-side-hover: rgba(237, 237, 240, 0.05);
+  --fin-side-active: rgba(237, 237, 240, 0.08);
+  --fin-c-sib: #3789fd;
+  --fin-c-mashreq: #eb681d;
+  --fin-c-tabby: #00ae7b;
+  --fin-c-enbd: #bc8800;
+  --fin-c-neo: #e33f8f;
+  --fin-a-cash: #009fac;
+  --fin-a-stock: #5b7deb;
+  --fin-a-gold: #bb881a;
+  --fin-a-crypto: #a464e3;
+  --fin-k1: #4d84ee;
+  --fin-k2: #e66a53;
+  --fin-k3: #10a49e;
+  --fin-k4: #b98918;
+  --fin-k5: #d84d99;
+  --fin-k6: #68a63f;
+  --fin-k-other: #46464d;
+  --fin-s1: #009fac;
+  --fin-s2: #5b7deb;
+  --fin-s3: #bb881a;
+  --fin-s4: #a464e3;
+  --fin-s5: #00ae7b;
+  --fin-s6: #e66a53;
+  --fin-s7: #8e8e97;
   --fin-s8: #a58576;
 }
 
@@ -136,7 +137,8 @@
 /* ---------- type ---------- */
 .fin-muted { color: var(--fin-muted); }
 .fin-ink-2 { color: var(--fin-ink-2); }
-.fin-num, .fin-money { font-family: var(--font-money, 'IBM Plex Mono'), ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.fin-num, .fin-money { font-variant-numeric: lining-nums proportional-nums; letter-spacing: -0.01em; } /* Schibsted's tabular comma is digit-wide */
+.fin-mono { font-family: var(--font-money, 'IBM Plex Mono'), ui-monospace, SFMono-Regular, Menlo, monospace; }
 .fin-display { font-family: var(--font-fin), system-ui, sans-serif; }
 .fin-eyebrow { font-size: 13px; font-weight: 500; color: var(--fin-muted); }
 .fin-h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; }
@@ -189,7 +191,7 @@
 .fin-chipbtn[aria-pressed='true'], .fin-chipbtn[data-active='true'] { background: var(--fin-ink); color: var(--fin-accent-ink); border-color: var(--fin-ink); }
 
 /* Status tags: small, square-ish, quiet. */
-.fin-pill { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border-radius: 6px; font-size: 12.5px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.fin-pill { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border-radius: 6px; font-size: 12.5px; font-weight: 600; line-height: 1; }
 .fin-pill-good { background: var(--fin-good-soft); color: var(--fin-good); }
 .fin-pill-bad { background: var(--fin-bad-soft); color: var(--fin-bad); }
 .fin-pill-neutral { background: var(--fin-surface-2); color: var(--fin-ink-2); }
