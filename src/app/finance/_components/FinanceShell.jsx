@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Moon, Sun, LogOut, LayoutDashboard, ReceiptText, Settings2, TrendingUp, Lock } from 'lucide-react';
+import { Moon, Sun, SignOut as LogOut, House as LayoutDashboard, Receipt as ReceiptText, SlidersHorizontal as Settings2, TrendUp as TrendingUp, Lock } from '@phosphor-icons/react';
 import { getSupabase, supabaseConfigured } from '@/lib/finance/supabase-browser';
 import { DEFAULT_ACCOUNTS } from '@/lib/finance/accounts.mjs';
 import { demoData } from './demo';
@@ -14,9 +14,9 @@ const HISTORY_MONTHS = 72; // enough for "All time" back to the first imported s
 const PAGE = 1000;
 
 const NAV = [
-  { href: '/finance', label: 'Overview', icon: LayoutDashboard },
+  { href: '/finance', label: 'Spending', icon: LayoutDashboard },
   { href: '/finance/transactions', label: 'Activity', icon: ReceiptText },
-  { href: '/finance/portfolio', label: 'Portfolio', icon: TrendingUp },
+  { href: '/finance/portfolio', label: 'Net worth', icon: TrendingUp },
   { href: '/finance/setup', label: 'Setup', icon: Settings2 },
 ];
 
@@ -50,14 +50,16 @@ async function fetchAll(query) {
   }
 }
 
+// Wordmark with a small fanned stack of three cards in their own colours (SIB, Mashreq, Tabby).
 function Logo() {
   return (
-    <span className="flex items-center gap-2.5">
-      <span className="fin-display grid h-8 w-8 place-items-center rounded-full text-[15px] font-bold"
-        style={{ background: 'linear-gradient(135deg, #b28cff, #6b00f5)', color: '#fff', boxShadow: '0 4px 14px -4px rgba(107, 0, 245, 0.6), inset 0 1px 0 rgba(255,255,255,0.25)' }}>M</span>
-      <span className="fin-display text-[17px] font-bold tracking-tight">
-        Mi<span style={{ background: 'linear-gradient(135deg, #b28cff, var(--fin-accent))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>folio</span>
-      </span>
+    <span className="flex items-center gap-2">
+      <svg width="22" height="18" viewBox="0 0 22 18" aria-hidden>
+        <rect x="1" y="6" width="14" height="10" rx="2" fill="var(--fin-c-tabby)" transform="rotate(-12 8 11)" />
+        <rect x="4" y="4" width="14" height="10" rx="2" fill="var(--fin-c-mashreq)" transform="rotate(-4 11 9)" />
+        <rect x="7" y="2" width="14" height="10" rx="2" fill="var(--fin-c-sib)" transform="rotate(5 14 7)" />
+      </svg>
+      <span className="text-[18px] font-bold tracking-[-0.03em]">mifolio</span>
     </span>
   );
 }
@@ -176,19 +178,19 @@ export default function FinanceShell({ children }) {
           <nav className="flex flex-col gap-1">
             {NAV.map(({ href: h, label, icon: Icon }) => (
               <Link key={h} href={href(h)} className="fin-nav-item" aria-current={isActive(h) ? 'page' : undefined}>
-                <Icon size={18} strokeWidth={1.9} /> {label}
+                <Icon size={18} /> {label}
               </Link>
             ))}
           </nav>
           <div className="mt-auto flex flex-col gap-1">
-            {demo && <p className="mb-2 rounded-full px-3 py-1.5 text-xs" style={{ background: 'var(--fin-side-hover)', color: 'var(--fin-side-ink)' }}>Demo data</p>}
+            {demo && <p className="mb-2 px-2.5 text-xs fin-muted">Showing demo data</p>}
             <button className="fin-nav-item" onClick={toggleTheme}>{dark ? <Sun size={18} /> : <Moon size={18} />} {dark ? 'Light mode' : 'Dark mode'}</button>
             {!demo && <button className="fin-nav-item" onClick={() => supabase.auth.signOut()}><LogOut size={18} /> Sign out</button>}
           </div>
         </aside>
       )}
 
-      <div className={signedIn ? 'lg:pl-[248px]' : ''}>
+      <div className={signedIn ? 'lg:pl-[232px]' : ''}>
         <header className="fin-topbar">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
             <Link href={href('/finance')}><Logo /></Link>
@@ -203,8 +205,8 @@ export default function FinanceShell({ children }) {
 
         <main className="mx-auto max-w-6xl px-4 pb-32 pt-5 sm:px-6 lg:px-10 lg:pb-16 lg:pt-10">
           {demo && (
-            <div className="fin-card mb-5 flex items-start gap-3 px-4 py-3 text-sm fin-ink-2">
-              <span className="fin-pill fin-pill-accent shrink-0">Demo</span>
+            <div className="mb-6 flex items-start gap-3 border-b pb-4 text-sm fin-ink-2" style={{ borderColor: 'var(--fin-border)' }}>
+              <span className="shrink-0 font-semibold" style={{ color: 'var(--fin-ink)' }}>Demo</span>
               <span>
                 {supabaseConfigured()
                   ? 'You’re looking at made-up data.'
@@ -233,7 +235,7 @@ export default function FinanceShell({ children }) {
         <nav className="fin-tabbar" aria-label="Sections">
           {NAV.map(({ href: h, label, icon: Icon }) => (
             <Link key={h} href={href(h)} aria-current={isActive(h) ? 'page' : undefined}>
-              <Icon size={20} strokeWidth={isActive(h) ? 2.2 : 1.8} />
+              <Icon size={20} />
               {label}
             </Link>
           ))}

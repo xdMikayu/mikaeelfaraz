@@ -1,14 +1,14 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, Tags, ArrowUpRight, ArrowDownRight, Minus, ChevronRight, X } from 'lucide-react';
+import { Sparkle as Sparkles, Tag as Tags, ArrowUpRight, ArrowDownRight, Minus, CaretRight as ChevronRight, X } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from './_components/FinanceShell';
-import { PeriodBars, SpendBars, HBar } from './_components/charts';
+import { PeriodBars, SpendBars, HBar, CategoryRing, ringSlices, WeekBars } from './_components/charts';
 import TransactionEditor from './_components/TransactionEditor';
-import { CategoryAvatar } from './_components/icons';
+import { CategoryAvatar, CategoryIcon } from './_components/icons';
 import { aed, pct, dateTime, relative } from './_components/format';
 import { PERIODS, getPeriod, monthPeriod, rangePeriod } from '@/lib/finance/periods.mjs';
-import { summarize, monthlySeries, periodBars, monthlyContext, spendOf } from '@/lib/finance/analytics.mjs';
+import { summarize, monthlySeries, periodBars, monthlyContext, spendOf, weekCompare } from '@/lib/finance/analytics.mjs';
 import { accountColorVar } from '@/lib/finance/accounts.mjs';
 import { dubaiParts } from '@/lib/finance/parse.mjs';
 
@@ -23,7 +23,7 @@ function DeltaPill({ change, label }) {
   const cls = up ? 'fin-pill-bad' : down ? 'fin-pill-good' : 'fin-pill-neutral';
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <span className={`fin-pill ${cls}`}><Icon size={13} strokeWidth={2.4} />{pct(Math.abs(change)).replace(/^[+−]/, '')}</span>
+      <span className={`fin-pill ${cls}`}><Icon size={13} />{pct(Math.abs(change)).replace(/^[+−]/, '')}</span>
       <span className="text-sm fin-ink-2">{up ? 'more' : down ? 'less' : 'same'} than {label}</span>
     </span>
   );
@@ -55,6 +55,7 @@ export default function Overview() {
   const [editing, setEditing] = useState(null);
   const [insight, setInsight] = useState({ busy: false, text: null, error: null });
   const [catBusy, setCatBusy] = useState(null);
+  const [ringSel, setRingSel] = useState(null);
 
   // Drill-down: tap a card tile to focus on that card, a month or week bar to open it.
   const [focusAccount, setFocusAccount] = useState(null);
@@ -74,10 +75,12 @@ export default function Overview() {
   const months = useMemo(() => monthlySeries(txs, 12), [txs]);
   const bars = useMemo(() => periodBars(txs, period), [txs, period]);
   const context = useMemo(() => monthlyContext(txs, period), [txs, period]);
+  const week = useMemo(() => weekCompare(txs), [txs]);
+  const slices = useMemo(() => ringSlices(s.categories), [s.categories]);
   const recent = txs.slice(0, 6);
   const scopeLabel = focused ? `${focused.name} · ${period.label}` : period.label;
   // A summary belongs to the view it was asked for.
-  useEffect(() => setInsight({ busy: false, text: null, error: null }), [period.key, focusAccount]);
+  useEffect(() => { setInsight({ busy: false, text: null, error: null }); setRingSel(null); }, [period.key, focusAccount]);
   const openBucket = (b) => {
     const p = dubaiParts(b.start);
     if (bars.unit === 'month') setRange({ kind: 'month', y: p.y, m: p.m });
@@ -140,27 +143,27 @@ export default function Overview() {
   return (
     <div className="fin-fade-in space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div className="shrink-0">
-          <p className="fin-eyebrow">{greeting()}</p>
-          <h1 className="fin-h1 mt-1 whitespace-nowrap">Your spending</h1>
-        </div>
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="fin-seg" role="group" aria-label="Period">
-            {PERIODS.map((p) => (
-              <button key={p.key} aria-pressed={!range && periodKey === p.key} onClick={() => { setRange(null); setPeriodKey(p.key); }}>{p.label}</button>
-            ))}
+      <div className="space-y-4">
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="fin-eyebrow">{greeting()}</p>
+            <h1 className="fin-h1 mt-1">Your spending</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2">
             {totalUncategorized > 0 && (
               <button className="fin-btn" onClick={categorize} disabled={catBusy === 'Categorizing…'}>
-                <Tags size={15} /> Sort {totalUncategorized}
+                <Tags size={16} /> <span className="hidden sm:inline">Sort</span> {totalUncategorized}
               </button>
             )}
             <button className="fin-btn" onClick={askClaude} disabled={insight.busy}>
-              <Sparkles size={15} /> {insight.busy ? 'Thinking…' : 'Insights'}
+              <Sparkles size={16} /> {insight.busy ? 'Thinking…' : 'Insights'}
             </button>
           </div>
+        </div>
+        <div className="fin-seg w-full" role="group" aria-label="Period">
+          {PERIODS.map((p) => (
+            <button key={p.key} aria-pressed={!range && periodKey === p.key} onClick={() => { setRange(null); setPeriodKey(p.key); }}>{p.label}</button>
+          ))}
         </div>
       </div>
       {catBusy && catBusy !== 'Categorizing…' && <p className="text-sm fin-ink-2">{catBusy}</p>}
@@ -202,7 +205,7 @@ export default function Overview() {
           (leaving a gap above the chart), so they move into a row underneath instead. */}
       <div className={`grid gap-5 ${wideTiles ? '' : 'lg:grid-cols-3'}`}>
         <section className={`fin-card fin-card-hero flex flex-col p-5 sm:p-7 ${wideTiles ? '' : 'lg:col-span-2'}`}
-          style={focused ? { '--fin-glow': `radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, ${accountColorVar(focused.slug, f.accounts)} 18%, transparent), transparent 60%)`, borderColor: `color-mix(in srgb, ${accountColorVar(focused.slug, f.accounts)} 30%, var(--fin-border))` } : undefined}>
+          style={focused ? { borderColor: `color-mix(in srgb, ${accountColorVar(focused.slug, f.accounts)} 45%, var(--fin-border))` } : undefined}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="fin-eyebrow">Spent · {scopeLabel}</p>
@@ -220,13 +223,62 @@ export default function Overview() {
           </div>
         </section>
 
-        <div className={`grid gap-4 ${!wideTiles ? 'sm:grid-cols-3 lg:grid-cols-1' : tiles.length === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5'}`}>
+        <div className={`grid gap-3 sm:gap-4 ${!wideTiles ? 'sm:grid-cols-3 lg:grid-cols-1' : tiles.length === 4 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5'}`}>
           {tiles.map((b) => (
             <CardTile key={b.account.id} b={b} accounts={f.accounts} selected={focusAccount === b.account.id} dimmed={Boolean(focusAccount) && focusAccount !== b.account.id}
               onClick={() => setFocusAccount((cur) => (cur === b.account.id ? null : b.account.id))} />
           ))}
         </div>
       </div>
+
+      {/* The week so far against last week */}
+      {!period.week && !range && (
+        <Panel
+          title="This week"
+          subtitle={`Monday to today${focused ? ` · ${focused.name}` : ''}`}
+          action={<button className="fin-link text-xs" onClick={() => { setRange(null); setPeriodKey('last_week'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Open last week</button>}
+        >
+          <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+            <div>
+              <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-3xl font-semibold tracking-tight fin-num">{aed(week.total, { decimals: 0 })}</span>
+                <span className="text-sm fin-ink-2">
+                  vs {aed(week.prevSameTotal, { decimals: 0 })} by this point last week
+                  {week.change != null && Math.abs(week.change) >= 0.005 && (
+                    <span className="ml-1.5" style={{ color: week.change > 0 ? 'var(--fin-bad)' : 'var(--fin-good)' }}>({pct(week.change)})</span>
+                  )}
+                </span>
+              </div>
+              <WeekBars days={week.days} />
+              <p className="mt-2 flex items-center gap-4 text-xs fin-muted">
+                <span className="fin-chip"><span className="fin-dot" style={{ background: 'var(--fin-bar)' }} />This week</span>
+                <span className="fin-chip"><span className="fin-dot" style={{ background: 'var(--fin-bar-soft)' }} />Last week · {aed(week.prevWeekTotal, { decimals: 0 })} in all</span>
+              </p>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-semibold">Biggest changes</p>
+              {week.movers.length === 0 ? (
+                <p className="text-sm fin-muted">Nothing to compare yet.</p>
+              ) : (
+                <ul className="divide-y" style={{ borderColor: 'var(--fin-border)' }}>
+                  {week.movers.map((m) => (
+                    <li key={m.category} className="flex items-center gap-3 py-2.5" style={{ borderColor: 'var(--fin-border)' }}>
+                      <CategoryAvatar category={m.category} small />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{m.category}</span>
+                        <span className="block text-xs fin-muted fin-num">{aed(m.prev, { decimals: 0 })} → {aed(m.total, { decimals: 0 })}</span>
+                      </span>
+                      <span className="fin-num text-sm font-semibold" style={{ color: m.delta > 0 ? 'var(--fin-bad)' : 'var(--fin-good)' }}>
+                        {m.delta > 0 ? '+' : '−'}{Math.round(Math.abs(m.delta)).toLocaleString('en-US')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </Panel>
+      )}
 
       {/* Categories + merchants */}
       <div className="grid gap-5 lg:grid-cols-3">
@@ -236,13 +288,43 @@ export default function Overview() {
           subtitle={`${period.label}${period.noCompare ? '' : ` · change vs ${period.prevLabel}`}${f.budgets.length ? ' · marker = budget' : ''}`}
         >
           {s.categories.length === 0 && <Empty text="No spending in this period yet." />}
+          {slices.length > 0 && (
+            <div className="mb-6 flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+              <CategoryRing
+                slices={slices}
+                selected={ringSel}
+                onSelect={setRingSel}
+                center={(sl) => sl ? (
+                  <div className="px-6">
+                    <span className="mx-auto mb-1 grid place-items-center fin-ink-2">{sl.key === '__rest' ? null : <CategoryIcon category={sl.key} size={20} />}</span>
+                    <p className="text-2xl font-semibold tracking-tight fin-num">{aed(sl.total, { decimals: 0 })}</p>
+                    <p className="mt-0.5 text-xs fin-ink-2">{sl.label}</p>
+                    <p className="text-xs fin-muted">{Math.round((sl.total / (s.total || 1)) * 100)}% · {sl.count} {sl.count === 1 ? 'purchase' : 'purchases'}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs fin-muted">Spent</p>
+                    <p className="text-2xl font-semibold tracking-tight fin-num">{aed(s.total, { decimals: 0 })}</p>
+                    <p className="text-xs fin-muted">{s.categories.filter((c) => c.total > 0).length} categories</p>
+                  </div>
+                )}
+              />
+              <div className="flex flex-1 flex-wrap justify-center gap-2 sm:justify-start">
+                {slices.map((sl) => (
+                  <button key={sl.key} className="fin-chipbtn" aria-pressed={ringSel === sl.key} onClick={() => setRingSel(ringSel === sl.key ? null : sl.key)}>
+                    <span className="fin-dot" style={{ background: sl.color }} />{sl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <ul className="space-y-1">
             {s.categories.map((c) => {
               const share = s.total > 0 ? c.total / s.total : 0;
               const up = c.change != null && c.change > 0.005;
               const down = c.change != null && c.change < -0.005;
               return (
-                <li key={c.category}>
+                <li key={c.category} style={{ opacity: ringSel && !(ringSel === c.category || (ringSel === '__rest' && slices.find((x) => x.key === '__rest')?.members.includes(c.category))) ? 0.35 : 1, transition: 'opacity 0.15s' }}>
                   <Link href={f.href(`/finance/transactions?category=${encodeURIComponent(c.category)}&period=${periodKey}`)} className="fin-row">
                     <CategoryAvatar category={c.category} />
                     <span className="min-w-0 flex-1">
@@ -346,23 +428,21 @@ function CardTile({ b, accounts, selected, dimmed, onClick }) {
   const change = b.prevTotal ? (b.total - b.prevTotal) / b.prevTotal : null;
   return (
     <button type="button" onClick={onClick} aria-pressed={selected}
-      className="fin-card relative flex w-full flex-col justify-start overflow-hidden p-5 text-left transition-[opacity,box-shadow] duration-150"
+      className="fin-card relative flex w-full min-w-0 flex-col justify-start overflow-hidden p-4 text-left sm:p-5 transition-[opacity,box-shadow] duration-150"
       style={{
         opacity: dimmed ? 0.5 : 1,
-        boxShadow: selected ? `0 0 0 2px ${color}, var(--fin-shadow)` : undefined,
-        // A soft wash of the card's brand colour (SIB blue, Mashreq orange, Tabby green…).
-        background: `radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, ${color} 16%, transparent), transparent 62%), var(--fin-surface)`,
-        borderColor: `color-mix(in srgb, ${color} 22%, var(--fin-border))`,
+        boxShadow: selected ? `0 0 0 1px ${color}` : undefined,
+        borderColor: selected ? color : undefined,
       }}>
-      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 55%, transparent))` }} aria-hidden />
+      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: color }} aria-hidden />
       <div className="flex items-center justify-between gap-2">
-        <span className="fin-chip text-[13px] font-medium" style={{ color: 'var(--fin-ink)' }}>
+        <span className="fin-chip min-w-0 text-[13px] font-medium" style={{ color: 'var(--fin-ink)' }}>
           <span className="fin-dot" style={{ background: color }} />
-          {b.account.name}
+          <span className="truncate">{b.account.name}</span>
         </span>
-        {b.account.last4 && <span className="fin-num text-xs fin-muted">•• {b.account.last4}</span>}
+        {b.account.last4 && <span className="fin-num hidden text-xs fin-muted sm:inline">•• {b.account.last4}</span>}
       </div>
-      <p className="fin-num mt-3 text-2xl font-semibold tracking-tight">{aed(b.total, { decimals: 0 })}</p>
+      <p className="fin-num mt-3 text-lg font-semibold tracking-tight sm:text-2xl">{aed(b.total, { decimals: 0 })}</p>
       <p className="mt-0.5 text-xs fin-muted">
         {b.count} {b.count === 1 ? 'purchase' : 'purchases'}
         {change != null && <> · <span style={{ color: change > 0.005 ? 'var(--fin-bad)' : change < -0.005 ? 'var(--fin-good)' : undefined }}>{pct(change)}</span></>}

@@ -11,7 +11,7 @@ export const ASSET_KINDS = {
   crypto: { label: 'Crypto', plural: 'Crypto' },
   gold: { label: 'Gold', plural: 'Gold' },
 };
-export const KIND_ORDER = ['cash', 'stock', 'crypto', 'gold'];
+export const KIND_ORDER = ['cash', 'stock', 'gold', 'crypto']; // also the net worth stack order (colours validated in this order)
 
 export const CASH_CURRENCIES = ['AED', 'USD', 'PKR', 'EUR', 'GBP', 'SAR', 'INR'];
 export const CRYPTO = { SOL: 'Solana', BTC: 'Bitcoin', ETH: 'Ethereum' };

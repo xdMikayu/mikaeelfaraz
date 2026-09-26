@@ -132,13 +132,14 @@ function weekEdges(start, end) {
 export function periodBars(transactions, period, now = new Date()) {
   const single = isSingleMonth(period);
   const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
-  const isRange = period.key.startsWith('range:');
+  const isRange = period.key.startsWith('range:') || Boolean(period.week);
   const unit = single || isRange ? 'day' : period.key === 'all' ? 'month' : 'week';
   let edges;
   if (isRange) {
     edges = [period.start];
-    for (let next = new Date(dubaiDay(period.start).getTime() + DAY); next < period.end; next = new Date(next.getTime() + DAY)) edges.push(next);
-    edges.push(period.end);
+    const last = period.barsEnd || period.end; // this week: the whole week, days ahead left empty
+    for (let next = new Date(dubaiDay(period.start).getTime() + DAY); next < last; next = new Date(next.getTime() + DAY)) edges.push(next);
+    edges.push(last);
   } else if (single) {
     const { y, m } = dubaiParts(period.start);
     edges = Array.from({ length: daysInMonth(y, m) + 1 }, (_, i) => dubaiDate(y, m, 1 + i));
@@ -179,12 +180,14 @@ export function periodBars(transactions, period, now = new Date()) {
   });
 
   // Reference line: what a typical day/week looked like in the comparison period.
-  const prevEnd = period.key === 'this_month' ? period.start : period.prevEnd;
+  const prevEnd = period.key === 'this_month' ? period.start : period.week ? new Date(period.prevStart.getTime() + 7 * DAY) : period.prevEnd;
   const prevTotal = transactions.filter((t) => inRange(t, period.prevStart, prevEnd)).reduce((sum, t) => sum + spendOf(t), 0);
   const prevDays = (prevEnd - period.prevStart) / DAY;
   const average = prevTotal > 0 ? prevTotal / (unit === 'day' ? prevDays : prevDays / 7) : null;
   const { y } = dubaiParts(period.start);
-  const averageLabel = isRange
+  const averageLabel = period.week
+    ? `${period.key === 'this_week' ? 'Last week' : 'Week before'} average`
+    : isRange
     ? 'Before this average'
     : single
     ? `${SHORT[dubaiParts(period.prevStart).m]} average`
@@ -198,4 +201,41 @@ export function monthlyContext(transactions, period, now = new Date()) {
   const end = new Date(Math.min(period.end.getTime(), now.getTime() + 60 * 1000));
   const highlight = buckets.flatMap((mo, i) => (mo.end > period.start && mo.start < end ? [i] : []));
   return { buckets, highlight, average: buckets.reduce((sum, b) => sum + b.total, 0) / buckets.length };
+}
+
+/**
+ * This week (Monday to now) against last week, day by day, plus the categories that moved
+ * most versus the same point last week.
+ */
+export function weekCompare(transactions, now = new Date()) {
+  const p = dubaiParts(now);
+  const monday = dubaiDate(p.y, p.m, p.d - ((p.dow + 6) % 7));
+  const lastMonday = new Date(monday.getTime() - 7 * DAY);
+  const sinceMonday = now.getTime() - monday.getTime();
+  const spend = (from, to) => transactions.filter((t) => !t.excluded && inRange(t, from, to));
+  const sum = (rows) => rows.reduce((s, t) => s + spendOf(t), 0);
+  const todayIdx = (p.dow + 6) % 7;
+  const days = WEEKDAY.slice(1).concat(WEEKDAY[0]).map((label, i) => {
+    const from = new Date(monday.getTime() + i * DAY);
+    const prevFrom = new Date(lastMonday.getTime() + i * DAY);
+    return {
+      label, today: i === todayIdx, future: i > todayIdx,
+      total: i > todayIdx ? 0 : sum(spend(from, new Date(Math.min(from.getTime() + DAY, now.getTime() + 60000)))),
+      prev: sum(spend(prevFrom, new Date(prevFrom.getTime() + DAY))),
+    };
+  });
+  const cur = spend(monday, new Date(now.getTime() + 60000));
+  const prevSame = spend(lastMonday, new Date(lastMonday.getTime() + sinceMonday));
+  const byCat = (rows) => rows.reduce((m, t) => m.set(t.category || 'Uncategorized', (m.get(t.category || 'Uncategorized') || 0) + spendOf(t)), new Map());
+  const a = byCat(cur);
+  const b = byCat(prevSame);
+  const movers = [...new Set([...a.keys(), ...b.keys()])]
+    .map((category) => ({ category, total: a.get(category) || 0, prev: b.get(category) || 0 }))
+    .map((c) => ({ ...c, delta: c.total - c.prev }))
+    .filter((c) => Math.abs(c.delta) >= 1)
+    .sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta))
+    .slice(0, 4);
+  const total = sum(cur);
+  const prevSameTotal = sum(prevSame);
+  return { days, total, prevSameTotal, prevWeekTotal: sum(spend(lastMonday, monday)), change: pctChange(total, prevSameTotal), movers, count: cur.length };
 }

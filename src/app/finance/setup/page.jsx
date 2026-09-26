@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Copy, Check, Trash2, RefreshCw, MessageSquareText, BellRing, Mail, ChevronDown, CreditCard, Target, Wand2, Activity, FlaskConical, KeyRound } from 'lucide-react';
+import { Copy, Check, Trash as Trash2, ArrowClockwise as RefreshCw, ChatText as MessageSquareText, Bell as BellRing, Envelope as Mail, CaretDown as ChevronDown, CreditCard, Target, MagicWand as Wand2, Pulse as Activity, Flask as FlaskConical, Key as KeyRound } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from '../_components/FinanceShell';
 import { CategoryIcon } from '../_components/icons';
 import { CATEGORIES } from '@/lib/finance/categories.mjs';

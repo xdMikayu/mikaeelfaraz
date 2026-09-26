@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { X } from '@phosphor-icons/react';
 import { CATEGORIES } from '@/lib/finance/categories.mjs';
 import { merchantKey, ruleCategory } from '@/lib/finance/categories.mjs';
 import { normalizeMerchant, toAed } from '@/lib/finance/parse.mjs';
