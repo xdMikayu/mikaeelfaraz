@@ -1,10 +1,11 @@
 import { Suspense } from 'react';
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { Schibsted_Grotesk, IBM_Plex_Mono } from 'next/font/google';
 import FinanceShell from './_components/FinanceShell';
 import './finance.css';
 
-const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-fin' });
-const display = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap', weight: ['500', '600', '700'], variable: '--font-display' });
+// One grotesk throughout (tabular figures for money); a mono only for codes and tokens.
+const sans = Schibsted_Grotesk({ subsets: ['latin'], display: 'swap', variable: '--font-fin' }); // variable: in-between weights (450, 550)
+const mono = IBM_Plex_Mono({ subsets: ['latin'], display: 'swap', weight: ['400', '500'], variable: '--font-money' }); // codes and tokens only
 
 export const metadata = {
   title: 'Mifolio',
@@ -19,11 +20,16 @@ export const metadata = {
   appleWebApp: { title: 'Mifolio' },
 };
 
-export const viewport = { themeColor: '#0b0a10' };
+export const viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f6f6f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0b0c' },
+  ],
+};
 
 export default function FinanceLayout({ children }) {
   return (
-    <div className={`${inter.variable} ${display.variable}`}>
+    <div className={`${sans.variable} ${mono.variable}`}>
       <Suspense>
         <FinanceShell>{children}</FinanceShell>
       </Suspense>

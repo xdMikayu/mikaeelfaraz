@@ -1,7 +1,4 @@
-import {
-  ShoppingBasket, UtensilsCrossed, Bike, Car, Fuel, ShoppingBag, Repeat, Zap, Landmark, HeartPulse,
-  Clapperboard, Plane, Dumbbell, GraduationCap, ArrowLeftRight, CircleDot, CircleHelp,
-} from 'lucide-react';
+import { Basket as ShoppingBasket, ForkKnife as UtensilsCrossed, Moped as Bike, Car, GasPump as Fuel, ShoppingBag, Repeat, Lightning as Zap, Bank as Landmark, Heartbeat as HeartPulse, FilmSlate as Clapperboard, AirplaneTilt as Plane, Barbell as Dumbbell, GraduationCap, ArrowsLeftRight as ArrowLeftRight, DotsThreeCircle as CircleDot, Question as CircleHelp } from '@phosphor-icons/react';
 
 const ICONS = {
   Groceries: ShoppingBasket,
@@ -24,7 +21,7 @@ const ICONS = {
 
 export function CategoryIcon({ category, size = 17 }) {
   const Icon = ICONS[category] || CircleHelp;
-  return <Icon size={size} strokeWidth={1.9} />;
+  return <Icon size={size} />;
 }
 
 /** Rounded tile with the category glyph; colour stays neutral so it never competes with chart series. */

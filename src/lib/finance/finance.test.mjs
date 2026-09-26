@@ -423,3 +423,111 @@ test('gold: Malabar rate widget, spot conversion and holding values', async () =
   assert.equal(v.gain, 20 * 367.25 - 7000);
   assert.equal(v.cost, 7000);
 });
+
+test('portfolio: every kind of holding valued in AED, minus card balances', async () => {
+  const { valuePortfolio, parseDfmStocks, cardLiabilities, aedPer } = await import('./portfolio.mjs');
+  const stocks = parseDfmStocks([{ id: 'EMAAR', p: 14.2, c: 0.1, cp: 0.71 }, { id: 'DEAD', p: 0, c: 0, cp: 0 }]);
+  assert.deepEqual(Object.keys(stocks), ['EMAAR']);
+  assert.equal(aedPer('PKR', { PKR: 80 }), 1 / 80);
+  assert.equal(aedPer('USD', {}), 3.6725);
+  const holdings = [
+    { id: 1, asset: 'cash', name: 'Bank A', currency: 'AED', quantity: 1000 },
+    { id: 2, asset: 'cash', name: 'Bank B', currency: 'PKR', quantity: 80000 },
+    { id: 3, asset: 'stock', symbol: 'emaar', quantity: 100, cost_aed: 1200 },
+    { id: 4, asset: 'crypto', symbol: 'SOL', quantity: 2 },
+    { id: 5, asset: 'gold', karat: 24, grams: 10 },
+  ];
+  const v = valuePortfolio(holdings, { stocks, crypto: { SOL: { usd: 100, change24h: 2 } }, fx: { PKR: 80 }, gold: { 24: 500, 22: 458 } }, [{ owed: 300 }]);
+  assert.equal(v.rows[1].value, 1000);
+  assert.equal(v.rows[2].value, 1420);
+  assert.equal(v.rows[2].gain, 220);
+  assert.equal(v.rows[3].value, 734.5);
+  assert.equal(v.rows[4].value, 5000);
+  assert.equal(v.assets, 1000 + 1000 + 1420 + 734.5 + 5000);
+  assert.equal(v.total, v.assets - 300);
+  assert.equal(v.byKind.cash.value, 2000);
+  assert.equal(v.missing, false);
+  assert.equal(valuePortfolio([{ id: 9, asset: 'stock', symbol: 'NOPE', quantity: 1 }], { stocks }).missing, true);
+  const owed = cardLiabilities(
+    [{ id: 'a', kind: 'credit', credit_limit: 10000, slug: 'x', name: 'X' }, { id: 'b', kind: 'credit', credit_limit: null }, { id: 'c', kind: 'debit' }],
+    { a: 8765.5, b: 100, c: 5 }
+  );
+  assert.deepEqual(owed.map((l) => [l.account_id, l.owed]), [['a', 1234.5]]);
+});
+
+test('this week and last week run Monday to Sunday in Dubai', () => {
+  const now = new Date('2026-09-24T10:00:00Z'); // Thursday, 14:00 Dubai
+  const tw = getPeriod('this_week', now);
+  assert.equal(tw.start.toISOString(), '2026-09-20T20:00:00.000Z'); // Mon 21 Sep, 00:00 Dubai
+  assert.equal(tw.barsEnd.toISOString(), '2026-09-27T20:00:00.000Z');
+  assert.equal(tw.prevStart.toISOString(), '2026-09-13T20:00:00.000Z');
+  const lw = getPeriod('last_week', now);
+  assert.equal(lw.start.toISOString(), '2026-09-13T20:00:00.000Z');
+  assert.equal(lw.end.toISOString(), '2026-09-20T20:00:00.000Z');
+  const txs = [
+    { id: 1, occurred_at: '2026-09-22T08:00:00Z', amount_aed: 50, direction: 'debit', excluded: false, merchant: 'A' },
+    { id: 2, occurred_at: '2026-09-15T08:00:00Z', amount_aed: 70, direction: 'debit', excluded: false, merchant: 'B' },
+  ];
+  const bars = periodBars(txs, tw, now);
+  assert.equal(bars.unit, 'day');
+  assert.equal(bars.buckets.length, 7);
+  assert.equal(bars.buckets[1].total, 50); // Tuesday
+  assert.equal(bars.buckets[6].future, true); // Sunday hasn't happened
+  assert.equal(bars.averageLabel, 'Last week average');
+  assert.equal(Math.round(bars.average), 10); // 70 over last week's 7 days
+  // Sunday counts as the end of the week, not the start of a new one.
+  assert.equal(getPeriod('this_week', new Date('2026-09-27T10:00:00Z')).start.toISOString(), '2026-09-20T20:00:00.000Z');
+});
+
+test('week comparison: day by day and the categories that moved', async () => {
+  const { weekCompare } = await import('./analytics.mjs');
+  const now = new Date('2026-09-23T10:00:00Z'); // Wednesday 14:00 Dubai
+  const tx = (id, at, amt, category) => ({ id, occurred_at: at, amount_aed: amt, direction: 'debit', excluded: false, merchant: 'M', category });
+  const w = weekCompare([
+    tx(1, '2026-09-21T08:00:00Z', 100, 'Groceries'), // Mon this week
+    tx(2, '2026-09-23T06:00:00Z', 40, 'Transport'), // Wed this week, before now
+    tx(3, '2026-09-14T08:00:00Z', 30, 'Groceries'), // Mon last week
+    tx(4, '2026-09-18T08:00:00Z', 500, 'Travel'), // Fri last week, after "same point"
+  ], now);
+  assert.deepEqual(w.days.map((d) => d.label), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+  assert.equal(w.days[0].total, 100);
+  assert.equal(w.days[0].prev, 30);
+  assert.equal(w.days[2].today, true);
+  assert.equal(w.days[4].prev, 500);
+  assert.equal(w.total, 140);
+  assert.equal(w.prevSameTotal, 30);
+  assert.equal(w.prevWeekTotal, 530);
+  assert.equal(w.movers[0].category, 'Groceries');
+  assert.equal(w.movers[0].delta, 70);
+});
+
+test('pace, typical month, category context and recurring charges', async () => {
+  const { paceSeries, typicalMonth, categoryContext, recurringCharges } = await import('./analytics.mjs');
+  const tx = (id, at, amt, category, merchant = 'M') => ({ id, occurred_at: at, amount_aed: amt, direction: 'debit', excluded: false, merchant, category });
+  const rows = [];
+  // Six prior months: 3000, 3000, 3000, 3000, 3000 and a 9000 trip month.
+  ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'].forEach((ym, k) => {
+    rows.push(tx(`a${k}`, `${ym}-10T08:00:00Z`, k === 5 ? 9000 : 3000, 'Shopping'));
+    rows.push(tx(`n${k}`, `${ym}-05T08:00:00Z`, 56, 'Subscriptions', 'Netflix'));
+  });
+  rows.push(tx('s1', '2026-09-02T08:00:00Z', 600, 'Groceries'));
+  rows.push(tx('s2', '2026-09-09T08:00:00Z', 900, 'Shopping'));
+  const now = new Date('2026-09-10T10:00:00Z'); // 10 days into a 30-day month
+  const period = getPeriod('this_month', now);
+  assert.equal(typicalMonth(rows, period.start).total, 3056); // median ignores the trip month
+  const pace = paceSeries(rows, period, now);
+  assert.equal(pace.days, 30);
+  assert.equal(pace.elapsed, 10);
+  assert.equal(pace.spent, 1500);
+  assert.equal(pace.projected, 4500);
+  assert.equal(pace.points[9].cur, 1500);
+  assert.equal(pace.points[10].cur, null);
+  assert.equal(pace.prevTotal, 9056);
+  assert.ok(pace.aheadOfTypical > 0); // 1500 vs an even 1018.7
+  assert.equal(paceSeries(rows, getPeriod('6m', now), now), null);
+  const ctx = categoryContext(rows, period);
+  assert.equal(ctx.get('Shopping').usual, 3000);
+  assert.deepEqual(ctx.get('Shopping').trail, [3000, 3000, 3000, 3000, 3000, 9000]);
+  const rec = recurringCharges(rows, period.start);
+  assert.deepEqual(rec.map((r) => [r.merchant, r.monthly]), [['Netflix', 56]]);
+});

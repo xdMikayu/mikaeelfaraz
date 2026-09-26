@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Upload, Download, Inbox, Search, X, ChevronDown, RefreshCw, Copy, Check } from 'lucide-react';
+import { Plus, UploadSimple as Upload, DownloadSimple as Download, Tray as Inbox, MagnifyingGlass as Search, X, CaretDown as ChevronDown, ArrowClockwise as RefreshCw, Copy, Check } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from '../_components/FinanceShell';
 import TransactionEditor from '../_components/TransactionEditor';
 import { CategoryAvatar } from '../_components/icons';
@@ -94,8 +94,8 @@ export default function Transactions() {
           <p className="fin-num mt-1 text-sm fin-ink-2">{aed(total)} total</p>
         </div>
         <div className="flex gap-2">
-          <button className="fin-btn fin-icon-btn sm:w-auto sm:px-3.5" onClick={() => setShowImport((v) => !v)} aria-label="Import"><Upload size={15} /><span className="hidden sm:inline">Import</span></button>
-          <button className="fin-btn fin-icon-btn sm:w-auto sm:px-3.5" onClick={exportCsv} aria-label="Export CSV"><Download size={15} /><span className="hidden sm:inline">Export</span></button>
+          <button className="fin-btn fin-btn-collapse" onClick={() => setShowImport((v) => !v)} aria-label="Import"><Upload size={15} /><span className="hidden sm:inline">Import</span></button>
+          <button className="fin-btn fin-btn-collapse" onClick={exportCsv} aria-label="Export CSV"><Download size={15} /><span className="hidden sm:inline">Export</span></button>
           <button className="fin-btn fin-btn-primary" onClick={() => setEditing('new')}><Plus size={16} /> Add</button>
         </div>
       </div>

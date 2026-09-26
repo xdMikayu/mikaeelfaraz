@@ -5,6 +5,8 @@ import { dubaiDate, dubaiParts } from './parse.mjs';
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const PERIODS = [
+  { key: 'this_week', label: 'This week' },
+  { key: 'last_week', label: 'Last week' },
   { key: 'this_month', label: 'This month' },
   { key: 'last_month', label: 'Last month' },
   { key: '3m', label: 'Last 3 months' },
@@ -27,7 +29,25 @@ export function getPeriod(key, now = new Date(), earliest = null) {
     const start = dubaiDate(y, m - n, d, hh, mi);
     return { start, end, prevStart: dubaiDate(y, m - 2 * n, d, hh, mi), prevEnd: start, prevLabel: `previous ${n} months`, months: n };
   };
+  // Weeks run Monday to Sunday (the UAE working week).
+  const monday = dubaiDate(y, m, d - ((dubaiParts(now).dow + 6) % 7));
+  const WEEK = 7 * 86400000;
   switch (key) {
+    case 'this_week': {
+      const prevStart = new Date(monday.getTime() - WEEK);
+      return {
+        key, label: 'This week', start: monday, end, barsEnd: new Date(monday.getTime() + WEEK),
+        prevStart, prevEnd: new Date(prevStart.getTime() + (end.getTime() - monday.getTime())),
+        prevLabel: 'same point last week', months: (end - monday) / (30.44 * 86400000), days: 7, week: true,
+      };
+    }
+    case 'last_week': {
+      const start = new Date(monday.getTime() - WEEK);
+      return {
+        key, label: 'Last week', start, end: monday, prevStart: new Date(start.getTime() - WEEK), prevEnd: start,
+        prevLabel: 'the week before', months: 7 / 30.44, days: 7, week: true,
+      };
+    }
     case 'last_month': {
       return {
         key, label: monthLabel(y, m - 1),
