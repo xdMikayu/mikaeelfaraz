@@ -423,3 +423,34 @@ test('gold: Malabar rate widget, spot conversion and holding values', async () =
   assert.equal(v.gain, 20 * 367.25 - 7000);
   assert.equal(v.cost, 7000);
 });
+
+test('portfolio: every kind of holding valued in AED, minus card balances', async () => {
+  const { valuePortfolio, parseDfmStocks, cardLiabilities, aedPer } = await import('./portfolio.mjs');
+  const stocks = parseDfmStocks([{ id: 'EMAAR', p: 14.2, c: 0.1, cp: 0.71 }, { id: 'DEAD', p: 0, c: 0, cp: 0 }]);
+  assert.deepEqual(Object.keys(stocks), ['EMAAR']);
+  assert.equal(aedPer('PKR', { PKR: 80 }), 1 / 80);
+  assert.equal(aedPer('USD', {}), 3.6725);
+  const holdings = [
+    { id: 1, asset: 'cash', name: 'Bank A', currency: 'AED', quantity: 1000 },
+    { id: 2, asset: 'cash', name: 'Bank B', currency: 'PKR', quantity: 80000 },
+    { id: 3, asset: 'stock', symbol: 'emaar', quantity: 100, cost_aed: 1200 },
+    { id: 4, asset: 'crypto', symbol: 'SOL', quantity: 2 },
+    { id: 5, asset: 'gold', karat: 24, grams: 10 },
+  ];
+  const v = valuePortfolio(holdings, { stocks, crypto: { SOL: { usd: 100, change24h: 2 } }, fx: { PKR: 80 }, gold: { 24: 500, 22: 458 } }, [{ owed: 300 }]);
+  assert.equal(v.rows[1].value, 1000);
+  assert.equal(v.rows[2].value, 1420);
+  assert.equal(v.rows[2].gain, 220);
+  assert.equal(v.rows[3].value, 734.5);
+  assert.equal(v.rows[4].value, 5000);
+  assert.equal(v.assets, 1000 + 1000 + 1420 + 734.5 + 5000);
+  assert.equal(v.total, v.assets - 300);
+  assert.equal(v.byKind.cash.value, 2000);
+  assert.equal(v.missing, false);
+  assert.equal(valuePortfolio([{ id: 9, asset: 'stock', symbol: 'NOPE', quantity: 1 }], { stocks }).missing, true);
+  const owed = cardLiabilities(
+    [{ id: 'a', kind: 'credit', credit_limit: 10000, slug: 'x', name: 'X' }, { id: 'b', kind: 'credit', credit_limit: null }, { id: 'c', kind: 'debit' }],
+    { a: 8765.5, b: 100, c: 5 }
+  );
+  assert.deepEqual(owed.map((l) => [l.account_id, l.owed]), [['a', 1234.5]]);
+});
