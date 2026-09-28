@@ -13,11 +13,14 @@
  *      today. Watch progress in Executions; backfillStatus() prints where it is.
  *
  * Both the Cashback (credit) card and the debit card send these alerts; the site files
- * each under its own account. Only messages newer than the last one sent go out on each
+ * each under its own account. Account emails ("Your AC No: …1234 is credited with AED …
+ * for Salary") go too: they update that bank balance on the Net worth page. Only messages newer than the last one sent go out on each
  * sync, and the server ignores re-sent Gmail message ids, so re-running is safe.
  * No secrets live in this file — keep the token in Script Properties.
  */
-var SENDER = 'MashreqAlerts@mashreq.com';
+// Card alerts come from MashreqAlerts@, account emails (salary, transfers) from other Mashreq
+// addresses, so search the whole domain; isAlert_ decides what gets sent.
+var SENDER = 'mashreq.com';
 var BATCH = 5; // small batches: the site's functions stop after ~10 seconds
 
 function setup() {
@@ -97,7 +100,9 @@ function ensureBackfillTrigger_(on) {
 }
 
 function isAlert_(m) {
-  return /mashreq/i.test(m.getFrom()) && /was used for a purchase/i.test(m.getPlainBody());
+  if (!/mashreq/i.test(m.getFrom())) return false;
+  var body = m.getPlainBody();
+  return /was used for a purchase/i.test(body) || /(?:is|has been|was) (?:credited|debited) (?:with|by|for)/i.test(body);
 }
 
 function send_(messages) {

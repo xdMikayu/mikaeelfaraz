@@ -8,6 +8,7 @@ import { CATEGORIES, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepaym
 import { DEFAULT_ACCOUNTS } from './accounts.mjs';
 import { STATEMENT_WINDOW_MS, isStatementTwin, planDuplicateMerges, planRenames } from './dedupe.mjs';
 import { aiEnabled, categorizeMerchants } from './ai.mjs';
+import { applyCashMove, applyCardBalance } from './portfolio.mjs';
 
 // A Wallet notification and a bank email/SMS for the same purchase can arrive
 // minutes apart; within this window, same card + same amount = same purchase.
@@ -151,6 +152,36 @@ export async function reconcileTabby(db, userId, accounts) {
   return { updated: updates.length };
 }
 
+/** Apply a Mashreq account email to the cash account on the Net worth page ending in its digits. */
+async function applyCashEmail(db, userId, move) {
+  const { data, error } = await db.from('fin_holdings').select('id, name, currency, quantity, balance_at')
+    .eq('user_id', userId).eq('asset', 'cash').eq('last4', move.last4).limit(2);
+  if (error) {
+    const reason = /last4|balance_at|column|schema cache|fin_holdings/.test(error.message) ? 'Run the cash-sync migration (supabase/migrations/20260928000000_cash_sync.sql), then Try again' : error.message;
+    return { status: 'unparsed', reason };
+  }
+  const what = `${move.direction === 'credit' ? '+' : '−'}${move.currency} ${move.amount.toFixed(2)}${move.memo ? ` (${move.memo})` : ''}`;
+  if (!data.length) return { status: 'unparsed', reason: `${what} on account ending ${move.last4}: add that account on the Net worth page with those digits, then Try again` };
+  const h = data[0];
+  const r = applyCashMove(h, move);
+  if (r.skip) return { status: 'ignored', reason: `${what}: ${r.skip}` };
+  const { error: e2 } = await db.from('fin_holdings').update({ quantity: r.quantity, updated_at: new Date().toISOString() }).eq('id', h.id);
+  if (e2) throw e2;
+  return { status: 'parsed', reason: `${what} → ${h.name} ${h.currency} ${r.quantity.toFixed(2)}`, account: 'cash', amount: move.amount, currency: move.currency, merchant: h.name };
+}
+
+/** A debit card alert's "available balance" is the linked bank account's balance: keep it current. */
+async function syncCardBalance(db, userId, parsed) {
+  if (parsed.availableBalance == null) return;
+  const { data, error } = await db.from('fin_holdings').select('id, quantity, balance_at')
+    .eq('user_id', userId).eq('asset', 'cash').eq('card_slug', parsed.account);
+  if (error || !data?.length) return; // not set up (or migration not run): nothing to do
+  for (const h of data) {
+    const patch = applyCardBalance(h, parsed.availableBalance, parsed.occurredAt);
+    if (patch) await db.from('fin_holdings').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', h.id);
+  }
+}
+
 async function ingestOne(db, userId, event, { accounts, rules, now }) {
   const source = String(event.source || (event.text ? 'text' : 'wallet')).slice(0, 20);
   const externalId = event.external_id ? String(event.external_id).slice(0, 200) : null;
@@ -186,6 +217,13 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
   if (!parsed.ok) {
     await finishRaw({ status: parsed.status, reason: parsed.reason });
     return { status: parsed.status, reason: parsed.reason };
+  }
+
+  // A bank account email (salary in, a transfer out) moves a cash balance, not spending.
+  if (parsed.kind === 'cash') {
+    const r = await applyCashEmail(db, userId, parsed);
+    await finishRaw({ status: r.status, reason: r.reason });
+    return r;
   }
 
   let account = accounts.get(parsed.account);
@@ -263,6 +301,7 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
       if (twin.source === 'statement') patch.source = parsed.source; // now a live-tracked purchase
     }
     await db.from('fin_transactions').update(patch).eq('id', twin.id);
+    await syncCardBalance(db, userId, parsed);
     await finishRaw({ status: 'merged', transaction_id: twin.id });
     return { status: 'merged', transaction_id: twin.id };
   }
@@ -301,6 +340,7 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
     }
     throw txErr;
   }
+  await syncCardBalance(db, userId, parsed);
   await finishRaw({ status: 'parsed', transaction_id: tx.id });
   return {
     status: 'parsed',

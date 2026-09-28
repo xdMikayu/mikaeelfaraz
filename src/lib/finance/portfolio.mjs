@@ -79,3 +79,25 @@ export function cardLiabilities(accounts, latest) {
     .map((a) => ({ account_id: a.id, slug: a.slug, name: a.name, owed: Math.max(0, Number(a.credit_limit) - Number(latest[a.id])) }))
     .filter((l) => l.owed > 0.005);
 }
+
+/**
+ * A bank email moved money in or out of a cash account ("credited with AED 14,000 for
+ * Salary"). Returns the new balance, or { skip } when it can't or shouldn't apply: a balance
+ * you typed in (or one read off a debit card alert) after the email already includes it.
+ */
+export function applyCashMove(holding, move) {
+  if ((holding.currency || 'AED') !== move.currency) return { skip: `${holding.name || 'That account'} is in ${holding.currency}, the email is in ${move.currency}` };
+  if (holding.balance_at && new Date(move.occurredAt) <= new Date(holding.balance_at)) return { skip: 'Already included in a later balance' };
+  const delta = move.direction === 'credit' ? move.amount : -move.amount;
+  return { quantity: Math.round((Number(holding.quantity || 0) + delta) * 100) / 100, delta };
+}
+
+/**
+ * A debit card alert states the account's balance outright ("Available balance is AED …").
+ * Take it when it's newer than what we know; older alerts (e.g. a backfill) are ignored.
+ */
+export function applyCardBalance(holding, balance, at) {
+  if (balance == null || Number.isNaN(Number(balance))) return null;
+  if (holding.balance_at && new Date(at) <= new Date(holding.balance_at)) return null;
+  return { quantity: Number(balance), balance_at: new Date(at).toISOString() };
+}

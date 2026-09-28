@@ -531,3 +531,35 @@ test('pace, typical month, category context and recurring charges', async () => 
   const rec = recurringCharges(rows, period.start);
   assert.deepEqual(rec.map((r) => [r.merchant, r.monthly]), [['Netflix', 56]]);
 });
+
+test('Mashreq account credits and debits (salary, transfers) are cash moves, not purchases', async () => {
+  const { parseMashreqAccount } = await import('./parse.mjs');
+  const sent = new Date('2026-09-28T05:10:00Z');
+  const salary = 'Dear Customer,\n\nThank you for banking with Mashreq.\n\nYour AC No: XXXXXXXX1234 is credited with AED 14000.00 for Salary. Login to Online Banking for details.\n\nTo view details, log in to Mashreq Mobile App or Online Banking.\n\nRegards,\nMashreq NEO';
+  const a = parseEvent({ source: 'email', text: salary }, sent);
+  assert.equal(a.ok, true);
+  assert.equal(a.kind, 'cash');
+  assert.equal(a.last4, '1234');
+  assert.equal(a.direction, 'credit');
+  assert.equal(a.amount, 14000);
+  assert.equal(a.currency, 'AED');
+  assert.equal(a.memo, 'Salary');
+  assert.equal(a.occurredAt, sent.toISOString());
+  const b = parseMashreqAccount('Thank you for banking with Mashreq. Your A/C No. XXXX9876 has been debited with AED 5,000.00 towards Transfer to own account.', sent);
+  assert.equal(b.direction, 'debit');
+  assert.equal(b.last4, '9876');
+  assert.equal(b.amount, 5000);
+  assert.equal(parseMashreqAccount('Mashreq: your card was used for a purchase of AED 5 at X on 23-SEP-2026', sent), null);
+});
+
+test('cash accounts follow account emails and debit card balances, newest wins', async () => {
+  const { applyCashMove, applyCardBalance } = await import('./portfolio.mjs');
+  const h = { name: 'Current', currency: 'AED', quantity: 1000, balance_at: '2026-09-20T10:00:00Z' };
+  assert.deepEqual(applyCashMove(h, { direction: 'credit', amount: 14000, currency: 'AED', occurredAt: '2026-09-28T05:00:00Z' }), { quantity: 15000, delta: 14000 });
+  assert.equal(applyCashMove(h, { direction: 'debit', amount: 250.5, currency: 'AED', occurredAt: '2026-09-28T05:00:00Z' }).quantity, 749.5);
+  assert.ok(applyCashMove(h, { direction: 'credit', amount: 5, currency: 'AED', occurredAt: '2026-09-19T05:00:00Z' }).skip); // before the balance was set
+  assert.ok(applyCashMove(h, { direction: 'credit', amount: 5, currency: 'USD', occurredAt: '2026-09-28T05:00:00Z' }).skip);
+  assert.deepEqual(applyCardBalance(h, 17233.4, '2026-09-27T09:00:00Z'), { quantity: 17233.4, balance_at: '2026-09-27T09:00:00.000Z' });
+  assert.equal(applyCardBalance(h, 900, '2026-09-01T09:00:00Z'), null); // an old alert
+  assert.equal(applyCardBalance(h, null, '2026-09-28T09:00:00Z'), null);
+});
