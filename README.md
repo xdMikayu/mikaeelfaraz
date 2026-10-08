@@ -1,6 +1,24 @@
 # mikaeelfaraz.com
 
-Personal site (Next.js 14, Tailwind) plus a private **card spending tracker** at `/finance`.
+Personal site (Next.js 14) plus **Mifolio**, a private card-spending tracker at `/finance`.
+
+## Portfolio
+
+Lives in the `src/app/(site)` route group so it never shares styles with Mifolio.
+
+| Path | What |
+|---|---|
+| `src/app/(site)/page.jsx` | Home: intro, selected work ledger, system map, also built, Mifolio, background |
+| `src/app/(site)/work/[slug]/page.jsx` | Case studies, statically generated |
+| `src/app/(site)/_data/work.js` | The work ledger, also-built list and earlier roles |
+| `src/app/(site)/_data/cases.js` | Case-study copy |
+| `src/app/(site)/_components/Work.jsx` | Ledger table plus the SVG system map (hover a row to light its path) |
+| `src/app/(site)/site.css` | All portfolio styles, scoped to `.site`; light and dark tokens |
+| `public/resume.pdf` | One-page CV |
+
+Design rules: Familjen Grotesk and Martian Mono (self-hosted via Fontsource), ink on paper with a
+single ledger-green accent, no gradients, no scroll animation, no stock icons. Copy has no em dashes,
+and every figure is a scale or method fact; no company revenue or customer data is published.
 
 ## Finance tracker
 

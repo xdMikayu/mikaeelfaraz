@@ -1,0 +1,198 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
+  "basics": {
+    "name": "Mikaeel Faraz",
+    "label": "Operations Strategy Analyst, qlub",
+    "email": "mikaeel2013@gmail.com",
+    "phone": "+971 58 960 6420",
+    "url": "https://www.mikaeelfaraz.com",
+    "summary": "I build the systems an operations team runs on: CRM automation, data pipelines, dashboards, integrations and the internal apps on top of them.",
+    "location": {
+      "city": "Dubai",
+      "countryCode": "AE"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "url": "https://www.linkedin.com/in/mikaeelf/",
+        "username": "mikaeelf"
+      },
+      {
+        "network": "GitHub",
+        "url": "https://github.com/xdMikayu",
+        "username": "xdMikayu"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "qlub",
+      "position": "Operations Strategy Analyst",
+      "location": "Dubai",
+      "startDate": "2025-07",
+      "summary": "QR pay-at-table fintech. I design and build the internal tools, automations and data pipelines used by account management, customer success and leadership in the UAE and Qatar.",
+      "highlights": [
+        "Designed, built and run the internal operations platform (React, Netlify Functions, Supabase/Postgres, Google sign-in): dashboards, process guides, forms and scheduled data jobs used by operations, support and leadership.",
+        "Built self-service onboarding for a new merchant vertical in 30 days: secure client links with KYC and IBAN validation, a review step, and one-click setup across the internal systems.",
+        "Built scheduled ETL from Tableau and Zoho CRM into Postgres, reconciled to Tableau's own totals, and the SQL reports behind the team's performance reviews.",
+        "Built Zoho CRM automation (Deluge) that checks every live venue daily and creates, assigns and closes account-manager tasks when thresholds are crossed.",
+        "Replaced a spreadsheet relay with a signed, idempotent webhook from production alerts to Zoho Desk tickets; built helpdesk-Trello sync and WhatsApp and Slack alerting.",
+        "Built a difference-in-differences model to measure a staff incentive programme against a control group, and a monthly report on merchants' public ratings after go-live."
+      ]
+    },
+    {
+      "name": "GetDopamine",
+      "position": "Web Development Intern",
+      "location": "Dubai",
+      "startDate": "2025-05",
+      "endDate": "2025-07",
+      "highlights": [
+        "Laravel/PHP and MySQL features, Vue.js front end, WhatsApp Business API integration."
+      ]
+    },
+    {
+      "name": "Dunkin' Donuts UAE",
+      "position": "Data Science Intern",
+      "location": "Dubai",
+      "startDate": "2024-10",
+      "endDate": "2025-04",
+      "highlights": [
+        "Demand forecasts for 80+ stores (XGBoost, Prophet) and a Next.js dashboard over a Django API for comparing models. 1st place, UOWD Innovation Fair 2025."
+      ]
+    },
+    {
+      "name": "Class Act Events (Formula 1 Abu Dhabi Grand Prix)",
+      "position": "Customer Service Supervisor",
+      "startDate": "2023",
+      "endDate": "2023"
+    },
+    {
+      "name": "Asian Street by Thai",
+      "position": "Marketing Manager",
+      "location": "Dubai",
+      "startDate": "2022-09",
+      "endDate": "2024-09",
+      "highlights": [
+        "Built the restaurant's online presence: delivery platforms, Google Business, paid social."
+      ]
+    },
+    {
+      "name": "SolPay",
+      "position": "Blockchain Developer",
+      "highlights": [
+        "Solana payment flows and a Shopify integration."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Mifolio",
+      "description": "Personal finance tracker. Reads bank SMS, email and Apple Wallet alerts, merges duplicates across channels, categorises with merchant rules plus Claude.",
+      "keywords": [
+        "Next.js",
+        "Supabase",
+        "Claude API"
+      ],
+      "url": "https://www.mikaeelfaraz.com/#mifolio"
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Wollongong in Dubai",
+      "area": "Computer Science (Big Data and AI)",
+      "studyType": "BSc",
+      "startDate": "2023-01",
+      "endDate": "2025-07",
+      "score": "Distinction"
+    }
+  ],
+  "awards": [
+    {
+      "title": "Guinness World Records title: fastest game of five cup tilt-a-cup (12.99 s, with Raania Faraz)",
+      "date": "2021-06-20",
+      "awarder": "Guinness World Records",
+      "url": "https://www.guinnessworldrecords.com/world-records/590931-fastest-game-of-five-cup-tilt-a-cup"
+    },
+    {
+      "title": "Guinness World Records titles for alphabet typing on a touchscreen phone (3.01 s) and one-handed (4.88 s), since broken",
+      "date": "2022-07",
+      "awarder": "Guinness World Records"
+    },
+    {
+      "title": "1st place, UOWD Innovation Fair",
+      "date": "2025",
+      "awarder": "University of Wollongong in Dubai"
+    }
+  ],
+  "certificates": [
+    {
+      "name": "Artificial Intelligence Fundamentals",
+      "issuer": "IBM SkillsBuild",
+      "date": "2024-06-25"
+    },
+    {
+      "name": "Fundamentals of Digital Marketing",
+      "issuer": "Google",
+      "date": "2024-05"
+    }
+  ],
+  "skills": [
+    {
+      "name": "Languages",
+      "keywords": [
+        "JavaScript / Node.js",
+        "Python",
+        "SQL",
+        "Deluge",
+        "Google Apps Script",
+        "PHP",
+        "VBA"
+      ]
+    },
+    {
+      "name": "Data",
+      "keywords": [
+        "Tableau REST and VizQL Data Service",
+        "Zoho Analytics",
+        "BigQuery",
+        "Power BI",
+        "PySpark"
+      ]
+    },
+    {
+      "name": "Platforms",
+      "keywords": [
+        "React",
+        "Next.js",
+        "Netlify Functions",
+        "Supabase / Postgres",
+        "AWS Lambda",
+        "GitHub Actions"
+      ]
+    },
+    {
+      "name": "Integrations",
+      "keywords": [
+        "Zoho CRM and Desk",
+        "Slack API",
+        "WhatsApp Cloud API",
+        "Trello",
+        "Notion",
+        "Google Workspace",
+        "Playwright"
+      ]
+    },
+    {
+      "name": "AI tools",
+      "keywords": [
+        "Claude Code",
+        "Cursor",
+        "ChatGPT"
+      ]
+    }
+  ],
+  "meta": {
+    "lastModified": "2026-10-08",
+    "canonical": "https://www.mikaeelfaraz.com/resume.json"
+  }
+}
