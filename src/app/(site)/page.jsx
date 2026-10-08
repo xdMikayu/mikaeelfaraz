@@ -89,8 +89,9 @@ export default function Home() {
               <p>
                 Each alert is parsed, matched against the same purchase arriving on another channel so it is counted
                 once, and categorised by UAE merchant rules first and Claude only for merchants the rules do not know. The
-                dashboard shows this month against last, spend per day or week, balances per card, the merchants that
-                add up, and a net-worth view across cash and investments.
+                dashboard breaks spending down by category against your usual, tracks the month’s pace against a
+                typical month, shows balances per card and the merchants that add up, and keeps a net-worth view
+                across bank accounts, stocks, gold and crypto.
               </p>
               <dl>
                 <dt>Role</dt><dd>Designer and sole engineer</dd>
@@ -101,13 +102,17 @@ export default function Home() {
               </dl>
             </div>
             <div className="shots">
-              <figure>
-                <Image src="/mifolio/overview.png" alt="Mifolio overview screen showing monthly spend, the pace chart and per-card totals, with demo data" width={1280} height={1030} />
-                <figcaption className="mono faint">Overview, demo data</figcaption>
+              <figure className="wide">
+                <Image src="/mifolio/categories.png" alt="Mifolio category breakdown: a ring chart of spending by category over the last three months, with each category’s total, share and change against usual" width={1202} height={1445} />
+                <figcaption className="mono faint">Where it went, last 3 months · demo data</figcaption>
               </figure>
               <figure>
-                <Image src="/mifolio/transactions.png" alt="Mifolio transactions list on a phone, with demo data" width={780} height={1560} />
-                <figcaption className="mono faint">Transactions on a phone</figcaption>
+                <Image src="/mifolio/overview.png" alt="Mifolio spending overview: this month’s total, pace chart against last month and a typical month, and per-card totals" width={1400} height={734} />
+                <figcaption className="mono faint">Spending pace</figcaption>
+              </figure>
+              <figure>
+                <Image src="/mifolio/networth.png" alt="Mifolio net worth: total over three months and the split across bank accounts, stocks, gold and crypto" width={1400} height={636} />
+                <figcaption className="mono faint">Net worth</figcaption>
               </figure>
             </div>
           </div>
