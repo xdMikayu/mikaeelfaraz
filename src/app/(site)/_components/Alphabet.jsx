@@ -10,6 +10,7 @@ const write = (k, v) => { try { localStorage.setItem(k, String(v)); } catch {} }
 
 // The clock starts on "a" and stops on "z". A wrong key does not advance; it is counted.
 export default function Alphabet() {
+  const card = useRef(null);
   const input = useRef(null);
   const clock = useRef(null);
   const times = useRef([]);
@@ -28,6 +29,7 @@ export default function Alphabet() {
     setDevice(d);
     setBest(read(`mf-az-best-${d}`));
     const focus = () => input.current?.focus({ preventScroll: true });
+    // Typing is the one place this page talks back; a short buzz on a wrong key on phones that support it.
     window.addEventListener('mf-az-focus', focus);
     return () => { window.removeEventListener('mf-az-focus', focus); cancelAnimationFrame(raf.current); };
   }, []);
@@ -42,6 +44,10 @@ export default function Alphabet() {
     if (clock.current) clock.current.textContent = '0.00';
     if (input.current) input.current.value = '';
   }, []);
+
+  const start = () => input.current?.focus({ preventScroll: true });
+
+  const again = () => { reset(); start(); };
 
   const tick = () => {
     const t0 = times.current[0];
@@ -62,6 +68,7 @@ export default function Alphabet() {
     const isBest = prev == null || total < prev;
     if (isBest) { write(key, total); setBest(total); }
     setResult({ total, splits, slow, misses: n, isBest });
+    if (device === 'phone') input.current?.blur();
   };
 
   const onInput = (e) => {
@@ -82,7 +89,11 @@ export default function Alphabet() {
       }
     }
     e.target.value = LETTERS.slice(0, i);
-    if (wrong) { setMiss(true); setTimeout(() => setMiss(false), 140); }
+    if (wrong) {
+      setMiss(true);
+      setTimeout(() => setMiss(false), 140);
+      if (device === 'phone') { try { navigator.vibrate?.(12); } catch {} }
+    }
     setMisses(m);
     setIdx(i);
     if (i === 26) finish(m);
@@ -96,8 +107,12 @@ export default function Alphabet() {
   const share = async () => {
     if (!result) return;
     const where = device === 'phone' ? 'on a phone' : 'on a keyboard';
-    const text = `I typed a to z in ${result.total.toFixed(2)}s ${where} at mikaeelfaraz.com/#az. His phone record was ${RECORD}s.`;
-    try { await navigator.clipboard.writeText(text); setCopied(true); } catch {}
+    const text = `I typed a to z in ${result.total.toFixed(2)}s ${where}. His phone record was ${RECORD}s.`;
+    const url = 'https://mikaeelfaraz.com/#az';
+    if (device === 'phone' && navigator.share) {
+      try { await navigator.share({ text, url }); return; } catch (e) { if (e?.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); setCopied(true); } catch {}
   };
 
   const verdict = () => {
@@ -112,8 +127,12 @@ export default function Alphabet() {
 
   const maxSplit = result ? Math.max(...result.splits) : 1;
 
+  const phone = device === 'phone';
+  const running = !result && idx > 0;
+  const missText = misses ? `${misses} wrong key${misses > 1 ? 's' : ''}` : null;
+
   return (
-    <div className={`az${focused ? ' focus' : ''}${result ? ' done' : ''}`}>
+    <div ref={card} className={`az${focused ? ' focus' : ''}${result ? ' done' : ''}${phone ? ' phone' : ''}`}>
       <div className="az-top">
         <div>
           <span className="az-clock mono" ref={clock} aria-hidden="true">0.00</span>
@@ -121,7 +140,7 @@ export default function Alphabet() {
         </div>
         <div className="az-ref mono faint">
           <span>my phone record <b>{RECORD.toFixed(2)}</b></span>
-          {best != null && <span>your best here <b>{best.toFixed(2)}</b></span>}
+          {best != null && <span>your best {phone ? 'on a phone' : 'here'} <b>{best.toFixed(2)}</b></span>}
         </div>
       </div>
 
@@ -139,7 +158,7 @@ export default function Alphabet() {
           aria-describedby="az-status"
           onInput={onInput}
           onKeyDown={onKeyDown}
-          onFocus={() => setFocused(true)}
+          onFocus={() => { setFocused(true); if (phone) setTimeout(() => card.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 250); }}
           onBlur={() => setFocused(false)}
         />
         <span className="az-letters mono" aria-hidden="true">
@@ -149,18 +168,30 @@ export default function Alphabet() {
         </span>
       </label>
 
-      <p id="az-status" className="az-status" aria-live="polite">
-        {!result && idx === 0 && (focused ? 'Go. The clock starts on a.' : device === 'phone' ? 'Tap the letters, then type a to z.' : 'Click the letters, then type a to z.')}
-        {!result && idx > 0 && <span className="faint">{misses ? `${misses} wrong key${misses > 1 ? 's' : ''}. ` : ''}Esc to restart.</span>}
+      <div id="az-status" className="az-status" aria-live="polite">
+        {!result && idx === 0 && !focused && (
+          <button type="button" className="az-go" onClick={start}>{phone ? 'Tap to start' : 'Click to start'}</button>
+        )}
+        {!result && idx === 0 && focused && <span>Go. The clock starts when you type <b>a</b>.</span>}
+        {running && (
+          <span className="az-row">
+            <span className="faint">{missText ? `${missText}. ` : ''}{phone ? '' : 'Esc to restart.'}</span>
+            <button type="button" className="copy" onPointerDown={(e) => e.preventDefault()} onClick={again}>Restart</button>
+          </span>
+        )}
         {result && (
           <>
-            <b>{result.total.toFixed(2)}s</b>{result.misses ? `, ${result.misses} wrong key${result.misses > 1 ? 's' : ''}` : ', clean'}.{' '}
-            {verdict()}{' '}
-            <button type="button" className="copy" onClick={share}>{copied ? 'copied' : 'copy result'}</button>{' '}
-            <button type="button" className="copy" onClick={() => { reset(); input.current?.focus(); }}>again</button>
+            <p className="az-line">
+              <b>{result.total.toFixed(2)}s</b>{missText ? `, ${missText}` : ', clean'}. {verdict()}
+            </p>
+            <span className="az-row">
+              <button type="button" className="az-go" onClick={again}>Go again</button>
+              <button type="button" className="copy" onClick={share}>{copied ? 'Copied' : phone ? 'Share' : 'Copy result'}</button>
+              {!phone && <span className="faint">or press a</span>}
+            </span>
           </>
         )}
-      </p>
+      </div>
 
       {result && (
         <figure className="az-splits">

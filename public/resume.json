@@ -6,7 +6,7 @@
     "email": "mikaeel2013@gmail.com",
     "phone": "+971 58 960 6420",
     "url": "https://www.mikaeelfaraz.com",
-    "summary": "I build the systems an operations team runs on: CRM automation, data pipelines, dashboards, integrations and the internal apps on top of them.",
+    "summary": "Operations strategy at a Dubai fintech. I take problems from the analysis to the decision, and build the dashboards, automations and internal tools that make it stick.",
     "location": {
       "city": "Dubai",
       "countryCode": "AE"
@@ -30,7 +30,7 @@
       "position": "Operations Strategy Analyst",
       "location": "Dubai",
       "startDate": "2025-07",
-      "summary": "QR pay-at-table fintech. I design and build the internal tools, automations and data pipelines used by account management, customer success and leadership in the UAE and Qatar.",
+      "summary": "QR pay-at-table fintech. Operations strategy across account management, customer success and leadership in the UAE and Qatar.",
       "highlights": [
         "Designed, built and run the internal operations platform (React, Netlify Functions, Supabase/Postgres, Google sign-in): dashboards, process guides, forms and scheduled data jobs used by operations, support and leadership.",
         "Built self-service onboarding for a new merchant vertical in 30 days: secure client links with KYC and IBAN validation, a review step, and one-click setup across the internal systems.",

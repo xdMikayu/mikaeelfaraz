@@ -9,10 +9,11 @@ import Palette from './_components/Palette';
 export const metadata = {
   title: { default: 'Mikaeel Faraz', template: '%s · Mikaeel Faraz' },
   description:
-    'I build the systems an operations team runs on: CRM automation, data pipelines, dashboards and internal tools. Operations Strategy Analyst at qlub, Dubai.',
+    'Operations Strategy Analyst at qlub, Dubai. Analysis, operations and the tools that make the decisions stick, plus Mifolio, a personal finance tracker I built.',
+  twitter: { card: 'summary_large_image' },
   openGraph: {
     title: 'Mikaeel Faraz',
-    description: 'CRM automation, data pipelines, dashboards and internal tools, in production at a Dubai fintech.',
+    description: 'Operations strategy, analysis and the tools behind it, at a Dubai fintech. Plus Mifolio, my own finance tracker.',
     url: 'https://www.mikaeelfaraz.com',
     locale: 'en_AE',
     type: 'website',

@@ -1,0 +1,48 @@
+// Short write-ups. Plain first person, no hype. Facts come from the Mifolio code.
+
+export const notes = [
+  {
+    slug: 'why-i-built-mifolio',
+    title: 'Why I built Mifolio',
+    date: 'October 2026',
+    short: '2026-10',
+    summary: 'A personal finance tracker for the UAE that works from the alerts banks already send.',
+    blocks: [
+      { p: 'I wanted to know what I was spending while I was spending it. My money sits across three cards and a buy-now-pay-later account, and I wanted all of it in one place.' },
+      { p: 'None of the banks I use offer an API I can connect to. What they do send is a message every time a card is used: an SMS from one bank, an email from another, a notification from Tabby, and an Apple Wallet tap on my phone. Mifolio reads those.' },
+      { h: 'What it does' },
+      { p: 'Each alert is sent to one private endpoint, parsed, and filed under the right card. When the same purchase arrives more than once, it is counted once. Merchants are put into categories by rules that know UAE names first, and the few the rules do not know go to Claude. The answer is saved as a rule, so each new merchant is only asked about once.' },
+      { p: 'The dashboard shows where the money went by category against what is usual for me, how this month is pacing against a typical month, what each card has left from its latest alert, and the merchants that add up. A net-worth page adds up bank balances, DFM stocks, gold and crypto at current prices.' },
+      { charts: true },
+      { h: 'What was harder than it looked' },
+      { p: 'Duplicates. A single coffee can reach Mifolio as a Wallet tap, a bank alert and later a statement line. Getting that right took more thought than anything else, so I wrote it up separately, with a walkthrough you can click through.', a: ['Reading bank SMS when banks have no API', '/notes/reading-bank-sms'] },
+      { p: 'Buy-now-pay-later. Purchases on the Tabby card are counted when they happen. When I later pay Tabby back from a bank card, the bank reports a charge to Tabby, and counting that too would double the spending. Mifolio looks for the matching repayment on the Tabby side, the same amount within three days, and leaves the bank charge out when it finds one. Without a match, the charge is treated as an instalment and counted.' },
+      { p: 'Dates. One bank’s SMS has no year, so Mifolio picks the most recent date that is not in the future. Times are worked out in Dubai time; the UAE has no daylight saving, which keeps that part simple.' },
+      { h: 'Where it is now' },
+      { p: 'My data lives in my own Supabase database behind row-level security, and nothing private is in the code. It is private for now, but the charts on my site run on made-up numbers if you want to see how it feels.' },
+    ],
+  },
+  {
+    slug: 'reading-bank-sms',
+    title: 'Reading bank SMS when banks have no API',
+    date: 'October 2026',
+    short: '2026-10',
+    summary: 'How Mifolio turns SMS, emails and Wallet taps into one clean list of purchases, and counts each one once.',
+    blocks: [
+      { p: 'Mifolio, my personal finance tracker, has no bank connection. It works from the messages banks already send when a card is used. This is how those messages get in, how they are read, and how one purchase that arrives three times ends up counted once.' },
+      { h: 'Getting the messages in' },
+      { p: 'Each source takes a different route to the same endpoint. For SMS, an iPhone Shortcuts automation runs when a message containing the bank’s wording arrives and posts the text. Card emails are picked up by a small Google Apps Script that checks Gmail every five minutes. Apple Wallet taps come from the Shortcuts “Transaction” automation, which sends the card, merchant and amount.' },
+      { p: 'The email script also backfills history, one month at a time. Apps Script stops any run after six minutes, so the backfill schedules itself to carry on every ten minutes until it reaches today.' },
+      { h: 'Reading them' },
+      { p: 'Every format has its own parser, written as plain functions with no network or database access. The same code runs on the server, in a tester on the setup page where I can paste a message and see what it becomes, and in the tests.' },
+      { p: 'A few things the parsers have to handle: one bank’s SMS leaves out the year, so the parser picks the most recent date that is not in the future. Declined transactions are ignored. The first alert from a card teaches Mifolio its last four digits, and later alerts for a different card from the same bank go to the right account or are ignored. Foreign currencies pegged to the dirham convert exactly; the rest are converted at a rough rate and marked as estimates.' },
+      { h: 'Store first, then parse' },
+      { p: 'Each message is saved as it arrived before anything tries to read it, keyed on its message id. That makes retries harmless, and when a bank changes its wording, the messages that failed are still there and can be retried once the parser is fixed. Messages that could not be read show up in the app as needing a look, rather than disappearing.' },
+      { h: 'One purchase, counted once' },
+      { p: 'Click through the messages below to see the checks each one goes through. The rules are the real ones; the messages are made up.' },
+      { explainer: true },
+      { h: 'What I would tell someone building the same thing' },
+      { p: 'Keep the raw messages. Write the parsers so they can be tested against real examples without a server. And make a failed parse something you can see, because banks change their wording without telling anyone.' },
+    ],
+  },
+];

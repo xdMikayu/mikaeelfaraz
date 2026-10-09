@@ -3,8 +3,10 @@ import Work from './_components/Work';
 import CopyEmail from './_components/CopyEmail';
 import ThemeToggle from './_components/ThemeToggle';
 import Alphabet from './_components/Alphabet';
+import MifolioMini from './_components/MifolioMini';
 import { PaletteButton } from './_components/Palette';
 import { alsoBuilt, earlier } from './_data/work';
+import { notes } from './_data/notes';
 
 export const dynamic = 'force-static';
 
@@ -18,6 +20,7 @@ export default function Home() {
         <nav aria-label="Sections">
           <a href="#work-h">Work</a>
           <a href="#mifolio">Mifolio</a>
+          <a href="#notes">Writing</a>
           <a href="#before">Background</a>
           <a href="#az">a–z</a>
           <a href="/resume.pdf">Résumé</a>
@@ -31,13 +34,13 @@ export default function Home() {
             <h1>Mikaeel Faraz</h1>
             <p className="role">Operations Strategy Analyst at qlub, Dubai</p>
             <p className="pitch">
-              I build the software an operations team runs on. At qlub, a pay-at-table fintech, that is the CRM
-              automation that decides which venue an account manager calls next, the pipelines that feed our dashboards,
-              and the internal platform all of it lives on.
+              I work on operations strategy at qlub, a pay-at-table fintech. Most of my work starts with a question about
+              the business, like which venues need attention this week or whether a programme is working, and ends with
+              the analysis, the decision and whatever the team needs to act on it.
             </p>
             <p className="pitch">
-              I work best inside the team that has the problem: I learn the process, find the part people do by hand,
-              and ship the whole fix, from data source to the Slack message someone acts on.
+              Often that last part is a tool I build myself: a dashboard, an automated task queue, a self-service form.
+              I like owning a problem from the first question to the moment it stops needing me.
             </p>
             <p className="links">
               <a href="/resume.pdf">Résumé (PDF)</a>
@@ -45,7 +48,7 @@ export default function Home() {
               <a href="https://www.linkedin.com/in/mikaeelf/">LinkedIn</a>
               <a href="https://github.com/xdMikayu">GitHub</a>
             </p>
-            <p className="status muted">Open to forward-deployed, solutions and internal-tools engineering roles</p>
+            <p className="status muted">Open to strategy & operations, product and analytics roles</p>
           </div>
           <Image className="photo" src="/headshot.jpg" alt="Mikaeel Faraz" width={512} height={512} priority />
         </section>
@@ -93,29 +96,39 @@ export default function Home() {
                 typical month, shows balances per card and the merchants that add up, and keeps a net-worth view
                 across bank accounts, stocks, gold and crypto.
               </p>
-              <dl>
-                <dt>Role</dt><dd>Designer and sole engineer</dd>
-                <dt>Ingest</dt><dd>SMS, email and Wallet into one authenticated endpoint</dd>
-                <dt>Data</dt><dd>Supabase with row-level security, nothing private in the repo</dd>
-                <dt>Jobs</dt><dd>Categorisation every 15 minutes on Netlify</dd>
-                <dt>Status</dt><dd>Private; demo mode on request</dd>
-              </dl>
+              <p className="links">
+                <a href="/notes/why-i-built-mifolio">Why I built it</a>
+                <a href="/notes/reading-bank-sms">How it reads bank SMS and counts each purchase once</a>
+              </p>
             </div>
-            <div className="shots">
-              <figure className="wide">
-                <Image src="/mifolio/categories.png" alt="Mifolio category breakdown: a ring chart of spending by category over the last three months, with each category’s total, share and change against usual" width={1202} height={1445} />
-                <figcaption className="mono faint">Where it went, last 3 months · demo data</figcaption>
-              </figure>
-              <figure>
-                <Image src="/mifolio/overview.png" alt="Mifolio spending overview: this month’s total, pace chart against last month and a typical month, and per-card totals" width={1400} height={734} />
-                <figcaption className="mono faint">Spending pace</figcaption>
-              </figure>
-              <figure>
-                <Image src="/mifolio/networth.png" alt="Mifolio net worth: total over three months and the split across bank accounts, stocks, gold and crypto" width={1400} height={636} />
-                <figcaption className="mono faint">Net worth</figcaption>
-              </figure>
-            </div>
+            <dl>
+              <dt>Role</dt><dd>Designer and sole engineer</dd>
+              <dt>Ingest</dt><dd>SMS, email and Wallet into one authenticated endpoint</dd>
+              <dt>Data</dt><dd>Supabase with row-level security, nothing private in the repo</dd>
+              <dt>Jobs</dt><dd>Categorisation every 15 minutes on Netlify</dd>
+              <dt>Status</dt><dd>Private; the charts below run on made-up data</dd>
+            </dl>
           </div>
+          <MifolioMini />
+          <figure className="mf-print">
+            <Image src="/mifolio/categories.png" alt="Mifolio category breakdown: a ring chart of spending by category over the last three months, with each category’s total, share and change against usual" width={1202} height={1445} />
+          </figure>
+        </section>
+
+        <section className="sec" id="notes" aria-labelledby="notes-h">
+          <div className="sec-head">
+            <h2 id="notes-h">Writing</h2>
+            <p>Notes on building Mifolio</p>
+          </div>
+          <ul className="rows notes">
+            {notes.map((n) => (
+              <li key={n.slug}>
+                <a href={`/notes/${n.slug}`}><b>{n.title}</b></a>
+                <span>{n.summary}</span>
+                <span className="mono faint">{n.short}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="sec" aria-labelledby="how-h">

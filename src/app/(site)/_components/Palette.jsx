@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { selected } from '../_data/work';
+import { notes } from '../_data/notes';
 import { EMAIL } from './CopyEmail';
 import { toggleTheme } from './ThemeToggle';
 
@@ -32,6 +33,7 @@ export default function Palette() {
     { group: 'Go to', label: 'Type the alphabet against my record', keys: 'a z typing guinness record game', run: () => goHome('az', () => window.dispatchEvent(new Event('mf-az-focus'))) },
     ...selected.map((w) => ({ group: 'Case studies', label: w.system, keys: `${w.stack} ${w.outcome}`, run: () => router.push(`/work/${w.slug}`) })),
     { group: 'Go to', label: 'Mifolio, my own product', keys: 'finance tracker', run: () => goHome('mifolio') },
+    ...notes.map((n) => ({ group: 'Writing', label: n.title, keys: n.summary, run: () => router.push(`/notes/${n.slug}`) })),
     { group: 'Go to', label: 'Background', keys: 'experience dunkin getdopamine university', run: () => goHome('before') },
     { group: 'Go to', label: 'Home', keys: 'top start', run: () => (path === '/' ? window.scrollTo(0, 0) : router.push('/')) },
     { group: 'Do', label: 'Copy email address', keys: `contact mail ${EMAIL}`, run: async () => { try { await navigator.clipboard.writeText(EMAIL); } catch {} return 'Copied ' + EMAIL; } },
