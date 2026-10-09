@@ -3,6 +3,17 @@ import { notFound } from 'next/navigation';
 import { cases } from '../../_data/cases';
 import { selected } from '../../_data/work';
 import CopyEmail from '../../_components/CopyEmail';
+import TaskLab from '../../_components/TaskLab';
+import OnboardingFlow from '../../_components/OnboardingFlow';
+import MeasureLab from '../../_components/MeasureLab';
+import SystemMap from '../../_components/SystemMap';
+
+const ARTIFACT = {
+  'crm-task-engine': [TaskLab, 'Try it: an example run with made-up numbers'],
+  'merchant-onboarding': [OnboardingFlow, 'The process, before and after'],
+  'reporting-stack': [MeasureLab, 'Why a comparison group matters, with made-up numbers'],
+  'ops-platform': [SystemMap, 'How the pieces connect. Pick a system to trace it step by step'],
+};
 
 export const dynamicParams = false;
 
@@ -39,6 +50,16 @@ export default function CaseStudy({ params }) {
         </dl>
 
         <p className="tldr">{c.tldr}</p>
+
+        {ARTIFACT[params.slug] && (() => {
+          const [Comp, label] = ARTIFACT[params.slug];
+          return (
+            <section className="case-art">
+              <p className="try mono">{label}</p>
+              <Comp />
+            </section>
+          );
+        })()}
 
         <div className="body">
           {c.sections.map((s) => (

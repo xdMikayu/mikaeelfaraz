@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { selected } from '../_data/work';
 
 // Columns: where data comes from, what processes it, where it is kept, where it ends up.
@@ -123,11 +122,10 @@ function edgePath(a, b) {
   return `M${x1} ${y1} C${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`;
 }
 
-export default function Work() {
+export default function SystemMap() {
   const [hover, setHover] = useState(null);
   const [pin, setPin] = useState(null);
   const [step, setStep] = useState(0);
-  const router = useRouter();
   const on = pin || hover;
   const trace = pin ? TRACES[pin] : null;
   const cur = trace ? trace[step] : null;
@@ -147,47 +145,7 @@ export default function Work() {
 
   return (
     <>
-      <section className="sec" aria-labelledby="work-h">
-        <div className="sec-head">
-          <h2 id="work-h">Selected work at qlub</h2>
-          <p className="hint">Hover a row to light its path in the map below</p>
-        </div>
-        <table className="ledger">
-          <thead>
-            <tr><th style={{ paddingLeft: 8 }}>System</th><th>What it does</th><th>Stack</th><th>Since</th></tr>
-          </thead>
-          <tbody>
-            {selected.map((w) => (
-              <tr
-                key={w.slug}
-                className={`row${hover === w.node ? ' on' : ''}`}
-                onMouseEnter={() => setHover(w.node)}
-                onMouseLeave={() => setHover(null)}
-                onClick={() => router.push(`/work/${w.slug}`)}
-              >
-                <td className="sys">
-                  <Link href={`/work/${w.slug}`} onFocus={() => setHover(w.node)} onBlur={() => setHover(null)}>
-                    {w.system}
-                  </Link>
-                  <span className="arrow" aria-hidden="true">→</span>
-                </td>
-                <td className="out">{w.outcome}</td>
-                <td className="stack">{w.stack}</td>
-                <td className="when mono">
-                  <span className="ok">{w.since}</span>
-                  <div className="faint" style={{ marginTop: 2 }}>{w.status}</div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="sec" aria-labelledby="map-h">
-        <div className="sec-head">
-          <h2 id="map-h">How the pieces connect</h2>
-          <p>Pick a system to trace it step by step. Simplified on purpose</p>
-        </div>
+      <div className="sysmap">
         <div className={`map${on ? ' dim' : ''}`} onKeyDown={(e) => { if (!trace) return; if (e.key === 'ArrowRight' && step < trace.length - 1) setStep(step + 1); if (e.key === 'ArrowLeft' && step > 0) setStep(step - 1); if (e.key === 'Escape') setPin(null); }}>
           <svg viewBox="0 0 886 364" role="img" aria-labelledby="map-title">
             <title id="map-title">Data flow from sources through logic and storage to the places people see the results</title>
@@ -249,7 +207,7 @@ export default function Work() {
             </ol>
           </div>
         </div>
-      </section>
+      </div>
     </>
   );
 }

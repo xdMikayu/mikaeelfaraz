@@ -13,6 +13,8 @@ export default function Alphabet() {
   const card = useRef(null);
   const input = useRef(null);
   const clock = useRef(null);
+  const track = useRef(null);
+  const ghostAt = useRef(-1);
   const times = useRef([]);
   const raf = useRef(0);
   const [idx, setIdx] = useState(0);
@@ -23,6 +25,7 @@ export default function Alphabet() {
   const [device, setDevice] = useState('keys');
   const [best, setBest] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [pick, setPick] = useState(null);
 
   useEffect(() => {
     const d = window.matchMedia('(pointer: coarse)').matches ? 'phone' : 'keys';
@@ -34,6 +37,15 @@ export default function Alphabet() {
     return () => { window.removeEventListener('mf-az-focus', focus); cancelAnimationFrame(raf.current); };
   }, []);
 
+  // A quiet marker on the letter my record pace would have reached by now.
+  const ghost = (i) => {
+    const kids = track.current?.children;
+    if (!kids || i === ghostAt.current) return;
+    if (ghostAt.current >= 0) kids[ghostAt.current]?.classList.remove('ghost');
+    if (i >= 0) kids[i]?.classList.add('ghost');
+    ghostAt.current = i;
+  };
+
   const reset = useCallback(() => {
     cancelAnimationFrame(raf.current);
     times.current = [];
@@ -41,6 +53,8 @@ export default function Alphabet() {
     setMisses(0);
     setResult(null);
     setCopied(false);
+    setPick(null);
+    ghost(-1);
     if (clock.current) clock.current.textContent = '0.00';
     if (input.current) input.current.value = '';
   }, []);
@@ -51,12 +65,17 @@ export default function Alphabet() {
 
   const tick = () => {
     const t0 = times.current[0];
-    if (clock.current && t0 != null) clock.current.textContent = ((performance.now() - t0) / 1000).toFixed(2);
+    if (clock.current && t0 != null) {
+      const el = (performance.now() - t0) / 1000;
+      clock.current.textContent = el.toFixed(2);
+      ghost(Math.min(25, Math.floor((el / RECORD) * 25)));
+    }
     raf.current = requestAnimationFrame(tick);
   };
 
   const finish = (n) => {
     cancelAnimationFrame(raf.current);
+    ghost(-1);
     const t = times.current;
     const total = (t[25] - t[0]) / 1000;
     const splits = t.slice(1).map((v, i) => (v - t[i]) / 1000);
@@ -161,7 +180,7 @@ export default function Alphabet() {
           onFocus={() => { setFocused(true); if (phone) setTimeout(() => card.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 250); }}
           onBlur={() => setFocused(false)}
         />
-        <span className="az-letters mono" aria-hidden="true">
+        <span ref={track} className="az-letters mono" aria-hidden="true">
           {LETTERS.split('').map((l, i) => (
             <span key={l} className={i < idx ? 'hit' : i === idx && !result ? 'nx' : ''}>{l}</span>
           ))}
@@ -195,13 +214,24 @@ export default function Alphabet() {
 
       {result && (
         <figure className="az-splits">
-          <div className="bars" role="img" aria-label={`Time between letters. Slowest was ${LETTERS[result.slow]} to ${LETTERS[result.slow + 1]}, ${result.splits[result.slow].toFixed(2)} seconds.`}>
+          <div className="bars" role="group" aria-label={`Time between letters. Slowest was ${LETTERS[result.slow]} to ${LETTERS[result.slow + 1]}, ${result.splits[result.slow].toFixed(2)} seconds.`}>
             {result.splits.map((s, i) => (
-              <span key={i} className={i === result.slow ? 'slow' : ''} style={{ height: `${Math.max(4, (s / maxSplit) * 100)}%` }} title={`${LETTERS[i]} to ${LETTERS[i + 1]}: ${s.toFixed(3)}s`} />
+              <button
+                type="button"
+                key={i}
+                className={`${i === result.slow ? 'slow' : ''}${pick === i ? ' pick' : ''}`}
+                style={{ height: `${Math.max(6, (s / maxSplit) * 100)}%` }}
+                aria-label={`${LETTERS[i]} to ${LETTERS[i + 1]}: ${s.toFixed(2)} seconds`}
+                onMouseEnter={() => setPick(i)}
+                onFocus={() => setPick(i)}
+                onClick={() => setPick(i)}
+              />
             ))}
           </div>
           <figcaption className="mono faint">
-            time between letters · slowest {LETTERS[result.slow]}→{LETTERS[result.slow + 1]} {result.splits[result.slow].toFixed(2)}s
+            {pick != null
+              ? <>{LETTERS[pick]}→{LETTERS[pick + 1]} {result.splits[pick].toFixed(3)}s · tap another bar</>
+              : <>time between letters · slowest {LETTERS[result.slow]}→{LETTERS[result.slow + 1]} {result.splits[result.slow].toFixed(2)}s · tap a bar</>}
           </figcaption>
         </figure>
       )}
