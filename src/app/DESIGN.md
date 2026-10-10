@@ -29,6 +29,7 @@ two earlier versions of this app shipped them.
 | Green | Points gained; players who help you in your league |
 | Grass green | Pitches |
 | Black and white | Everything else |
+| Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions): more ink means more |
 
 - Near-white kits fall back to the club's alternate colour when it has a darker one.
 - Coloured blocks get a hairline edge so white halves don't merge with the page.
@@ -47,6 +48,8 @@ two earlier versions of this app shipped them.
 - Section headings are plain bold text with the competition's logo.
 - Corners: 10 px on kit cards; 3–6 px on small things (form squares, buttons, name plates).
 - Statuses are text: "FT" in grey, "38'" in red, "20:30" in ink.
+- Fantasy plates follow the same rule: black when the player's match is over, red while it's on, an outline with
+  the kick-off time while it's still to come.
 - Tabs and the day picker are words, underlined when active.
 - The tab bar is a plain bar with a hairline top edge.
 
@@ -64,6 +67,8 @@ appear only on white discs inside kit-colour blocks.
 
 - Say where data comes from and how old it is: "Updated 14 s ago", "Our estimate", "Bonus (provisional)".
 - Times are in the viewer's own zone, named once on the page.
+- Projections always say so ("projected", "expected") and the page explains how they're made. Chances never read
+  0% or 100% while anything is left to play.
 - No marketing words, no exclamation marks, no emoji.
 
 ## Trust
