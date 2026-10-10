@@ -8,6 +8,7 @@ import { useFollow, usePrefs } from './prefs';
 import Crest from './Crest';
 import MatchRow from './MatchRow';
 import MatchCard from './MatchCard';
+import { inkOn } from './colors';
 import { Star } from './glyphs';
 
 export default function TeamView() {
@@ -28,6 +29,7 @@ export default function TeamView() {
   // Every competition the team appears in, so following it pulls in cup and European matches too.
   const leagues = [...new Set([data.league, ...results.map((m) => m.league), ...fixtures.map((m) => m.league)])].filter((s) => LEAGUE_BY_SLUG[s]);
   const following = isFollowed(team.id);
+  const kit = /^#[0-9a-f]{6}$/i.test(team.color ?? '') ? team.color : '#333333';
   const next = all ? fixtures : fixtures.slice(0, 5);
   // Only name the competition when it isn't the team's league (cups, Europe, friendlies).
   // Last five results from this team's side: W, D or L.
@@ -41,31 +43,31 @@ export default function TeamView() {
 
   return (
     <div className="sp-read" style={{ paddingTop: 0 }}>
-      <header className="sp-hero" style={{ '--home': team.color ?? '#2b3350', '--away': team.color ?? '#2b3350' }}>
+      <header style={{ background: kit, color: inkOn(kit), padding: '18px 16px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span className="sp-hero-crest"><Crest src={team.logo} size={50} light /></span>
+          <span className="sp-hero-crest"><Crest src={team.logo} size={46} light /></span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 className="sp-h1" style={{ color: '#fff' }}>{team.name}</h1>
-            <p className="sp-small" style={{ margin: '3px 0 0', opacity: 0.85 }}>{team.standing ?? ''}</p>
+            <h1 className="sp-h1">{team.name}</h1>
+            <p className="sp-small" style={{ margin: '3px 0 0', fontWeight: 650 }}>{team.standing ?? ''}</p>
           </div>
-          <button className="sp-hero-follow" style={{ height: 32, padding: '0 12px', fontSize: 13 }} aria-pressed={following} onClick={() => toggle({ id: team.id, name: team.name, logo: team.logo, leagues })}>
+          <button className="sp-hero-follow" style={{ fontSize: 13 }} aria-pressed={following} onClick={() => toggle({ id: team.id, name: team.name, logo: team.logo, leagues })}>
             <Star on={following} size={14} /> {following ? 'Following' : 'Follow'}
           </button>
         </div>
         {form.length > 0 && !(prefs.spoilers === 'all' || (prefs.spoilers === 'mine' && following)) && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 16 }}>
-            <span className="sp-small" style={{ fontWeight: 700, opacity: 0.9 }}>Form, oldest first</span>
-            <span className="sp-form">{form.map((f) => <i key={f.id} className={f.r} title={f.t}>{f.r}</i>)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+            <span className="sp-form" style={{ background: '#fff', padding: 3, borderRadius: 5 }}>{form.map((f) => <i key={f.id} className={f.r} title={f.t}>{f.r}</i>)}</span>
+            <span className="sp-small" style={{ fontWeight: 650 }}>Last {form.length}, oldest first</span>
           </div>
         )}
-        <p className="sp-tiny" style={{ margin: '12px 0 0', opacity: 0.8 }}><Freshness at={at} error={error} light /></p>
       </header>
+      <p className="sp-pad sp-tiny sp-muted" style={{ margin: '8px 0 0' }}><Freshness at={at} error={error} /></p>
 
       {fixtures[0] && (
         <section style={{ marginTop: 14 }}>
-          <h2 className="sp-h2 sp-pad" style={{ marginBottom: 10 }}>Next up</h2>
+          <h2 className="sp-h2 sp-pad" style={{ marginBottom: 8 }}>Next up</h2>
           <div className="sp-carousel">
-            {fixtures.slice(0, 3).map((m) => <MatchCard key={m.id} m={m} league={LEAGUE_BY_SLUG[m.league]?.short ?? ''} />)}
+            {fixtures.slice(0, 2).map((m) => <MatchCard key={m.id} m={m} league={LEAGUE_BY_SLUG[m.league]?.short ?? ''} />)}
           </div>
         </section>
       )}

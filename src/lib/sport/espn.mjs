@@ -487,7 +487,21 @@ export async function fetchTeam(slug, teamId, opts) {
   }
   if (!past && !next) return null;
   const team = past?.team ?? next?.team ?? {};
-  const map = (e) => normaliseMatch(e, e.league?.slug ?? slug);
+  // Schedules leave out kit colours; the league's club list has them.
+  const clubs = await get(`${SITE}/${slug}/teams`, opts).catch(() => null);
+  const kits = Object.fromEntries((clubs?.sports?.[0]?.leagues?.[0]?.teams ?? []).map(({ team: t }) => [String(t.id), { color: t.color, alt: t.alternateColor }]));
+  const paint = (side) => {
+    const k = kits[side.id];
+    if (!side.color && k?.color) side.color = `#${k.color.replace('#', '')}`;
+    if (!side.alt && k?.alt) side.alt = `#${k.alt.replace('#', '')}`;
+    return side;
+  };
+  const map = (e) => {
+    const m = normaliseMatch(e, e.league?.slug ?? slug);
+    paint(m.home);
+    paint(m.away);
+    return m;
+  };
   const results = (past?.events ?? []).map(map).filter((m) => m.status.state === 'post').sort((a, b) => new Date(b.date) - new Date(a.date));
   const fixtures = (next?.events ?? []).map(map).filter((m) => m.status.state !== 'post').sort((a, b) => new Date(a.date) - new Date(b.date));
   return {

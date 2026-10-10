@@ -187,11 +187,12 @@ function Header({ m, data, hidden, reveal, at, error }) {
   const live = m.status.state === 'in';
   const pre = m.status.state === 'pre';
   const lg = LEAGUE_BY_SLUG[m.league];
+  const kits = kitPair(m.home, m.away);
   const goals = (side) => data.events.filter((e) => ['goal', 'pen', 'og'].includes(e.kind) && e.side === side);
   const reds = (side) => data.events.filter((e) => e.kind === 'red' && e.side === side);
-  const team = (t, side) => (
-    <div className="sp-hero-team">
-      <span className="sp-hero-crest"><Crest src={t.logo} size={48} light /></span>
+  const half = (t, side, color) => (
+    <div className="sp-hero-half" style={{ background: color, color: inkOn(color) }}>
+      <span className="sp-hero-crest"><Crest src={t.logo} size={46} light /></span>
       <Link href={`/sport/team?id=${t.id}&l=${m.league}`}>{t.name}</Link>
       <button className="sp-hero-follow" onClick={() => toggle({ id: t.id, name: t.short, logo: t.logo, leagues: [m.league] })} aria-pressed={isFollowed(t.id)}>
         <Star on={isFollowed(t.id)} size={12} /> {isFollowed(t.id) ? 'Following' : 'Follow'}
@@ -200,40 +201,33 @@ function Header({ m, data, hidden, reveal, at, error }) {
     </div>
   );
   return (
-    <header className="sp-hero" style={kitPair(m.home, m.away)}>
-      <p className="sp-hero-meta" style={{ margin: 0 }}>
-        {lg?.table ? <Link href={`/sport/table/${m.league}`} style={{ textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: 'rgba(255,255,255,0.4)' }}>{m.leagueName ?? lg.name}</Link> : m.leagueName ?? lg?.name}
-        {m.round ? ` · ${m.round}` : ''} · {longDate(m.date)}
-      </p>
-      <div className="sp-hero-grid">
-        {team(m.home, 'home')}
-        <div>
+    <>
+      <header className="sp-hero">
+        {half(m.home, 'home', kits['--home'])}
+        {half(m.away, 'away', kits['--away'])}
+        <p className="sp-hero-meta" style={{ margin: 0 }}>
+          <span style={{ background: '#fff', color: '#111', padding: '2px 8px', borderRadius: 4 }}>
+            {lg?.table ? <Link href={`/sport/table/${m.league}`}>{m.leagueName ?? lg.name}</Link> : m.leagueName ?? lg?.name}
+            {m.round ? ` · ${m.round}` : ''}
+          </span>
+        </p>
+        <div className="sp-hero-plate">
           {pre ? (
-            <div className="sp-hero-score" style={{ fontSize: 34, paddingTop: 16 }}>{m.status.off ? m.status.long : kickoff(m.date)}</div>
+            <>
+              <b style={{ fontSize: 30 }}>{m.status.off ? m.status.label : kickoff(m.date)}</b>
+              <span>{until(m.date) ?? 'Starting'}</span>
+            </>
           ) : hidden ? (
-            <div style={{ textAlign: 'center', paddingTop: 16 }}>
-              <button className="sp-reveal" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', padding: '8px 14px' }} onClick={reveal}>Show score</button>
-            </div>
+            <button className="sp-reveal" style={{ position: 'relative', zIndex: 2 }} onClick={reveal}>Show score</button>
           ) : (
-            <div className="sp-hero-score">
-              {m.home.score ?? '–'}
-              <span className="sp-dash">–</span>
-              {m.away.score ?? '–'}
-            </div>
+            <>
+              <b>{m.home.score ?? '–'}–{m.away.score ?? '–'}</b>
+              <span className={live ? 'sp-on' : ''}>{live ? m.status.label : m.status.long}</span>
+              {m.home.shootout != null && <span>Pens {m.home.shootout}–{m.away.shootout}</span>}
+            </>
           )}
-          <div className="sp-hero-status">
-            {pre ? (
-              <span className="sp-pill">{until(m.date) ?? 'Starting'}</span>
-            ) : live ? (
-              <span className="sp-pill sp-pill-live"><i className="sp-dot sp-dot-live" />{hidden ? 'Live' : m.status.label}</span>
-            ) : (
-              <span className="sp-pill">{m.status.long}</span>
-            )}
-            {!hidden && m.home.shootout != null && <span className="sp-num" style={{ display: 'block', marginTop: 6, fontSize: 13 }}>Penalties {m.home.shootout}–{m.away.shootout}</span>}
-          </div>
         </div>
-        {team(m.away, 'away')}
-      </div>
+      </header>
       {!hidden && !pre && (goals('home').length > 0 || goals('away').length > 0) && (
         <div className="sp-scorers">
           {['home', 'away'].map((s) => (
@@ -241,7 +235,7 @@ function Header({ m, data, hidden, reveal, at, error }) {
               {goals(s).map((g) => (
                 <li key={g.id}>
                   {s === 'away' && <Ball size={12} own={g.kind === 'og'} />}
-                  <span>{g.players[0]} <span className="sp-num" style={{ opacity: 0.75 }}>{g.minute}{g.kind === 'pen' ? ' pen' : g.kind === 'og' ? ' og' : ''}</span></span>
+                  <span>{initialled(g.players[0])} <span className="sp-num sp-muted">{g.minute}{g.kind === 'pen' ? ' pen' : g.kind === 'og' ? ' og' : ''}</span></span>
                   {s === 'home' && <Ball size={12} own={g.kind === 'og'} />}
                 </li>
               ))}
@@ -249,10 +243,10 @@ function Header({ m, data, hidden, reveal, at, error }) {
           ))}
         </div>
       )}
-      <p style={{ margin: '14px 0 0', textAlign: 'center', opacity: 0.85 }}>
-        <Freshness at={at} error={error} live={live} light />
+      <p className="sp-hero-under sp-tiny sp-muted" style={{ margin: 0 }}>
+        {longDate(m.date)} · <Freshness at={at} error={error} live={live} />
       </p>
-    </header>
+    </>
   );
 }
 
@@ -321,7 +315,6 @@ function Timeline({ events, live, names }) {
 function Stats({ stats, colors }) {
   const poss = stats.find((x) => x.key === 'possessionPct');
   const rest = stats.filter((x) => x !== poss);
-  const tint = (side) => ({ background: `color-mix(in srgb, ${colors[side]} 20%, transparent)`, color: 'var(--sp-ink)' });
   return (
     <div>
       {poss && (
@@ -339,9 +332,9 @@ function Stats({ stats, colors }) {
         return (
           <div key={s.key} className="sp-stat">
             <div className="sp-stat-top">
-              <span style={lead === 'home' ? tint('home') : undefined}>{s.home}{s.unit}</span>
+              <span style={{ fontWeight: lead === 'home' ? 900 : 600 }}>{s.home}{s.unit}</span>
               <span className="sp-stat-l">{s.label}</span>
-              <span style={lead === 'away' ? tint('away') : undefined}>{s.away}{s.unit}</span>
+              <span style={{ fontWeight: lead === 'away' ? 900 : 600 }}>{s.away}{s.unit}</span>
             </div>
             <div className="sp-stat-bars" aria-hidden>
               <div><i style={{ width: `${(s.home / tot) * 100}%`, background: colors.home, opacity: lead === 'away' ? 0.4 : 1 }} /></div>
