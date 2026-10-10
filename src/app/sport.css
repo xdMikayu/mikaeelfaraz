@@ -653,3 +653,7 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-wf-track { display: block; height: 8px; background: var(--sp-sunk); }
 .sp-wf-track i { display: block; height: 100%; background: var(--sp-ink); }
 .sp-wf-note { grid-column: 1 / -1; margin: -3px 0 3px; }
+.sp-evi { display: flex; width: 100%; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 12px; text-align: left; font-size: 13px; color: var(--sp-ink-2); box-shadow: inset 0 0 0 1px var(--sp-rule-2); border-radius: 6px; }
+.sp-evi b { color: var(--sp-ink); }
+.sp-evi-body { padding: 10px 2px 4px; }
+.sp-evi-w { display: grid; grid-template-columns: 130px minmax(0, 1fr) 40px; gap: 10px; align-items: center; min-height: 24px; }

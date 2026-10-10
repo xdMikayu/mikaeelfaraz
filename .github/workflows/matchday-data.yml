@@ -1,7 +1,7 @@
 name: Matchday data
 
 # Adds newly finished Premier League matches to the matchup data (xG by role, team ratings,
-# player match logs) and commits it, which redeploys the site. Mondays catch the weekend round,
+# player match logs), refits the Net xG weights, and commits it, which redeploys the site. Mondays catch the weekend round,
 # Thursdays the midweek one. Only new matches are fetched, so a run takes about a minute.
 on:
   schedule:
@@ -27,6 +27,8 @@ jobs:
           node-version: 22
       # The script uses only Node's built-ins and the app's own modules, so no npm install.
       - run: node scripts/sport/build-matchups.mjs
+      # Relearn the Net xG weights with the new matches and re-test them (a few seconds).
+      - run: node scripts/sport/fit-netxg.mjs
       - name: Commit if anything changed
         run: |
           git add data/sport public/sport/data
