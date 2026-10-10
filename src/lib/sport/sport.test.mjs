@@ -5,6 +5,7 @@ import { xgFor, shotGeometry, shotTraits, PENALTY_XG } from './xg.mjs';
 import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, simulateSeason, ratesFromTable } from './forecast.mjs';
 import { rolesFromLines, versus, roleFactor } from './matchups.mjs';
 import { shotPoint } from './espn.mjs';
+import { netFor, rawFactors, designRow } from './netxg.mjs';
 import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
 
 test('bonus: plain 3-2-1', () => {
@@ -295,11 +296,13 @@ test('matchups: record against one opponent, and a shrunk role factor', () => {
   const v = versus(rows, 'X');
   assert.equal(v.goals, 1);
   assert.ok(Math.abs(v.xgi90 - 0.8) < 1e-9);
-  // An opponent allowing double the league rate over 90 minutes barely moves the factor; over a season it does.
-  const lg = { 2026: { 'W-R': [9000, 30, 0, 0, 0] } };
-  const small = roleFactor({ 2026: { 'W-R': [90, 0.6, 0, 0, 0] } }, lg, 'W-R', ['2026']);
-  const big = roleFactor({ 2026: { 'W-R': [3000, 20, 0, 0, 0] } }, lg, 'W-R', ['2026']);
-  assert.ok(small.factor < 1.15 && big.factor > 1.5);
+  // Where they leak, not how much: a side that concedes double everywhere has no tilt.
+  const lg = { 2026: { 'W-R': [9000, 30, 0, 0, 0], ST: [9000, 60, 0, 0, 0] } };
+  const leakyEverywhere = roleFactor({ 2026: { 'W-R': [3000, 20, 0, 0, 0], ST: [3000, 40, 0, 0, 0] } }, lg, 'W-R', ['2026']);
+  assert.ok(Math.abs(leakyEverywhere.factor - 1) < 1e-9);
+  // Right wingers getting double their usual share moves it a lot over a season, barely over one match.
+  const tilted = (min) => roleFactor({ 2026: { 'W-R': [min, (min / 9000) * 60, 0, 0, 0], ST: [min, (min / 9000) * 60, 0, 0, 0] } }, lg, 'W-R', ['2026']);
+  assert.ok(tilted(3000).factor > 1.3 && tilted(90).factor < 1.1);
 });
 
 test('old ESPN shot spots: fractions from goal become percentages; penalties land on the spot', () => {
@@ -307,4 +310,33 @@ test('old ESPN shot spots: fractions from goal become percentages; penalties lan
   assert.ok(Math.abs(shotGeometry(pen.x, pen.y).dist - 11.04) < 0.1);
   assert.deepEqual(shotPoint({ fieldPositionX: 88.9, fieldPositionY: 46.6 }), { x: 88.9, y: 46.6 });
   assert.equal(shotPoint({ fieldPositionX: 0, fieldPositionY: 0, text: 'shot from outside the box' }).guessed, true);
+});
+
+test('net xG: learned weights apply as powers, factors multiply out, a zero weight drops a factor', () => {
+  const el = { id: 9, team: 1, type: 4, minutes: 540, xg: 3, xa: 0.6, starts: 6, playing: null };
+  const ctx = { model: { pos: { 4: { xg: 0.35, xa: 0.1 } }, teams: { 1: { n: 6 } } } };
+  const kit = {
+    fplTeams: { 1: 'A', 2: 'B' },
+    roles: { 9: 'ST' },
+    roleFactorRaw: () => 1.2,
+    ratings: { def: { A: 1, B: 1.2 }, baseH: 1.5, baseA: 1.2 },
+    ix: { current: ['A', 'B'] },
+  };
+  const mdl = { xg: { intercept: 0, weights: { base: 1, form: 0.1, defence: 0.8, venue: 0.2, position: 0.25, history: 0 }, shrink: { form: 0, history: 900 } } };
+  const nx = { l: [2700, 15, 3], r: [450, 2.5, 0.5], v: { B: [180, 3, 0] } };
+  const home = netFor(el, { home: 1, away: 2 }, ctx, kit, nx, 'xg', mdl);
+  const product = home.factors.reduce((t, f) => t * f.x, home.start);
+  assert.ok(Math.abs(product - home.value) < 1e-12);
+  assert.ok(Math.abs(home.factors.find((f) => f.key === 'position').x - 1.2 ** 0.25) < 1e-12);
+  assert.equal(home.factors.find((f) => f.key === 'history').x, 1);
+  const away = netFor(el, { home: 2, away: 1 }, ctx, kit, nx, 'xg', mdl);
+  assert.ok(home.value > away.value);
+});
+
+test('net xG: the fit and the live page share one definition of each factor', () => {
+  const f = rawFactors({ lMin: 900, lX: 4.5, rMin: 0, rX: 0, vMin: 0, vX: 0, pos90: 0.3, defence: 1.1, home: true, tilt: 1 }, 450, 900);
+  assert.ok(Math.abs(f.base - ((4.5 + 1.5) / 1350) * 90) < 1e-12);
+  assert.equal(f.form, 1);
+  assert.equal(f.history, 1);
+  assert.deepEqual(designRow(f).slice(2), [Math.log(1.1), 0.5, 0, 0]);
 });

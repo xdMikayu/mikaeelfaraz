@@ -139,28 +139,42 @@ export function allowedByRole(teamSeason, leagueSeason) {
 }
 
 /**
- * How much more (or less) than usual an opponent gives up to one role, pulled towards "average"
- * while the sample is small. 1.2 means 20% more than an average team.
+ * Where an opponent leaks, not how much: the share of the chances they concede that goes to one
+ * role, against the league's share for that role. 1.2 means that role gets 20% more of what this
+ * side gives up than it would against an average side. How leaky they are overall is the team
+ * rating's job, so the two can be multiplied without counting the same thing twice. Pulled towards
+ * 1 while the sample is small; this season counts double last season, which counts double the one before.
  */
 export function roleFactor(teamSeasons, leagueSeasons, role, seasons) {
-  // This season counts double last season's; a season before that, half again.
   const weights = [1, 0.5, 0.25];
+  const rate = (row) => (row && row[0] ? (row[1] + row[2]) / row[0] : null);
+  const overall = (season) => {
+    let min = 0;
+    let c = 0;
+    for (const [r, row] of Object.entries(season ?? {})) {
+      if (r === 'GK') continue;
+      min += row[0];
+      c += row[1] + row[2];
+    }
+    return min ? c / min : null;
+  };
   let num = 0;
   let den = 0;
   let minutes = 0;
   seasons.forEach((s, i) => {
     const t = teamSeasons?.[s]?.[role];
     const l = leagueSeasons?.[s]?.[role];
-    if (!t || !l || !l[0] || !t[0]) return;
-    const lRate = (l[1] + l[2]) / l[0];
+    const tAll = overall(teamSeasons?.[s]);
+    const lAll = overall(leagueSeasons?.[s]);
+    if (!rate(t) || !rate(l) || !tAll || !lAll) return;
     const w = (weights[i] ?? 0) * t[0];
-    num += w * ((t[1] + t[2]) / t[0] / lRate);
+    num += w * (rate(t) / tAll / (rate(l) / lAll));
     den += w;
     minutes += t[0];
   });
   if (!den) return { factor: 1, raw: null, minutes: 0 };
   const raw = num / den;
-  // About ten matches' worth of an average opponent keeps a hot streak from running away with it.
+  // About ten matches' worth of "no tilt" keeps a hot streak from running away with it.
   const k = 900;
   const eff = Math.min(minutes, den);
   return { factor: (raw * eff + k) / (eff + k), raw, minutes };

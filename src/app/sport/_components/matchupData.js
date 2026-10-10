@@ -34,11 +34,17 @@ function useJson(path) {
 }
 
 export const useMatchupIndex = () => useJson('index.json');
+/** Net xG inputs per FPL player: long-run, recent and per-opponent [minutes, xG, xA]. */
+export const useNetXgData = () => useJson('netxg.json');
+/** Learned Net xG weights and their test results (scripts/sport/fit-netxg.mjs). */
+export const useNetXgModel = () => useJson('netxg-model.json');
 /** Every match row for one club's current players: { espnId: { n, rows } }. */
 export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam}.json` : null);
 
 /** Team ratings and role factors from the index, ready for fpl.mjs withMatchups and match odds. */
-export function useForecastKit(ix) {
+export function useForecastKit(ix, learned) {
+  // The position tilt counts only as much as the backtest says it predicts (1 = in full).
+  const wPos = learned?.xg?.weights?.position ?? 1;
   return useMemo(() => {
     if (!ix) return null;
     const [, last] = ix.seasons;
@@ -50,8 +56,9 @@ export function useForecastKit(ix) {
       goalRates,
       fplTeams: ix.fplTeams,
       roles: ix.roles,
-      roleFactor: (opp, role) => roleFactor(ix.conceded[opp], ix.league, role, ix.seasons).factor,
+      roleFactorRaw: (opp, role) => roleFactor(ix.conceded[opp], ix.league, role, ix.seasons).factor,
+      roleFactor: (opp, role) => roleFactor(ix.conceded[opp], ix.league, role, ix.seasons).factor ** wPos,
       espnOfFpl: (fplTeam) => ix.fplTeams[fplTeam],
     };
-  }, [ix]);
+  }, [ix, wPos]);
 }
