@@ -4,6 +4,7 @@ import { projectAhead, returnOdds, suggestTransfers } from '@/lib/sport/fpl.mjs'
 import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
 import Record from './FantasyRecord';
+import Advice from './FantasyAdvice';
 import { TransferPlan, Chips, Rotations } from './FantasyOptimiser';
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
@@ -86,6 +87,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
 
       {view === 'overview' && (
         <>
+          <Advice entry={entry} gw={gws[0]} els={ctx.elements} teams={teams} />
           <Record />
 
           <section className="sp-panel">

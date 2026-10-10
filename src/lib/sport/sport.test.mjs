@@ -7,6 +7,7 @@ import { rolesFromLines, versus, roleFactor } from './matchups.mjs';
 import { shotPoint } from './espn.mjs';
 import { netFor, rawFactors, designRow } from './netxg.mjs';
 import { bestXI, nextFree, estimateFree, planTransfers, buildSquad, rotationPairs } from './optimise.mjs';
+import { chipsLeft, validate } from './advice.mjs';
 import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
 
 test('bonus: plain 3-2-1', () => {
@@ -407,4 +408,40 @@ test('rotation pairs: both players must start a fair share of the weeks', () => 
   assert.equal(r.single, 3);
   assert.deepEqual([r.pairs[0].a, r.pairs[0].b].sort(), [1, 2]);
   assert.equal(r.pairs[0].total, 18);
+});
+
+test('advice: chips reset at the halfway point', () => {
+  const used = [{ name: 'wildcard', event: 4 }, { name: '3xc', event: 21 }];
+  assert.deepEqual(chipsLeft(used, 7), ['freehit', 'bboost', '3xc']);
+  assert.deepEqual(chipsLeft(used, 25), ['wildcard', 'freehit', 'bboost']);
+});
+
+test('advice: rule-breaking picks are dropped or replaced, and hits are counted here', () => {
+  const { els, ahead, gk, def, mid, fwd } = market();
+  const squad = [gk[0], gk[1], ...def.slice(0, 5), ...mid.slice(0, 5), ...fwd.slice(0, 3)];
+  const packet = { chipsAvailable: ['freehit', '3xc'], _: { squad, bank: 1, free: 1, gw: 7, ahead, els, pool: new Set([gk[2], def[7], mid[7], fwd[4]]) } };
+  const a = validate(
+    {
+      transfers: [
+        { out: def[0], in: def[7], reason: '' }, // 4.0 -> 7.5 with 1.0 in the bank: over budget
+        { out: mid[0], in: fwd[4], reason: '' }, // wrong position
+        { out: gk[1], in: gk[2], reason: '' }, // 4.0 -> 5.0 with 1.0 in the bank: fine
+      ],
+      starting_xi: squad.slice(0, 11), // two goalkeepers: illegal
+      bench: [],
+      captain: 999,
+      vice_captain: 999,
+      chip: { play: 'bboost', reason: '' },
+    },
+    packet,
+  );
+  assert.deepEqual(a.transfers.map((t) => t.in), [gk[2]]);
+  assert.equal(a.hit, 0);
+  assert.equal(a.chip.play, 'none');
+  assert.equal(a.starting_xi.length, 11);
+  assert.equal(a.starting_xi.filter((id) => els[id].type === 1).length, 1);
+  assert.ok(a.starting_xi.includes(a.captain) && a.captain !== a.vice_captain);
+  assert.equal(els[a.bench[0]].type, 1);
+  assert.equal(a.bankAfter, 0);
+  assert.equal(a.fixes.length, 5);
 });
