@@ -158,17 +158,22 @@ const norm = (s) =>
     .replace(/[łŁ]/g, 'l')
     .replace(/[đĐ]/g, 'd')
     .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
-const fpl = await json('https://fantasy.premierleague.com/api/bootstrap-static/');
+// FPL sometimes turns away cloud machines; then the previous build's mapping stands.
+const previous = await readJson(join(OUT, 'index.json'), {});
+const fpl = await json('https://fantasy.premierleague.com/api/bootstrap-static/').catch((e) => (console.warn(`FPL unavailable (${e.message}); keeping the last mapping`), null)) ?? {
+  teams: [],
+  elements: [],
+};
 const thisSeason = String(CURRENT);
 const currentTeams = Object.keys(conceded).filter((id) => conceded[id][thisSeason]);
-const espnOfFpl = {};
+const espnOfFpl = fpl.teams.length ? {} : (previous.fplTeams ?? {});
 for (const id of currentTeams) {
   const f = fplTeamFor(teamInfo[id]?.name, fpl.teams.map((t) => ({ id: t.id, name: t.name })));
   if (f) espnOfFpl[f] = id;
 }
 const byTeam = {};
 for (const [id, p] of Object.entries(players)) (byTeam[p.team] ??= []).push([id, p]);
-const fplIds = {};
+const fplIds = fpl.elements.length ? {} : (previous.fpl ?? {});
 let matched = 0;
 for (const e of fpl.elements) {
   const team = espnOfFpl[e.team];

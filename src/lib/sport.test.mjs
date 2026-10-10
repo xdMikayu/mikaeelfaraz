@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bonusFromBps, teamLive, leagueLive, projectedBonus, buildModel, fixtureRates, poissonTail, poissonFloor, projectPlayer, headToHead } from './fpl.mjs';
 import { xgFor, shotGeometry, shotTraits, PENALTY_XG } from './xg.mjs';
+import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, simulateSeason, ratesFromTable } from './forecast.mjs';
+import { rolesFromLines, versus, roleFactor } from './matchups.mjs';
+import { shotPoint } from './espn.mjs';
 import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
 
 test('bonus: plain 3-2-1', () => {
@@ -224,4 +227,84 @@ test('normaliseMatch reads home/away by flag, not order, and counts red cards', 
   assert.equal(m.away.red, 1);
   assert.equal(m.away.color, '#112233');
   assert.deepEqual(m.goals.map((g) => [g.side, g.name]), [['home', 'H. Home']]);
+});
+
+test('ratings: the side that creates more rates higher; probabilities add up', () => {
+  const games = { A: [], B: [], C: [] };
+  const add = (d, h, a, hs, as, xh, xa) => {
+    games[h].push([d, a, 1, hs, as, xh, xa]);
+    games[a].push([d, h, 0, as, hs, xa, xh]);
+  };
+  for (let i = 0; i < 6; i++) {
+    add(`2026-0${(i % 6) + 1}-01`, 'A', 'B', 2, 0, 2.2, 0.6);
+    add(`2026-0${(i % 6) + 1}-08`, 'B', 'C', 1, 1, 1.1, 1.2);
+    add(`2026-0${(i % 6) + 1}-15`, 'C', 'A', 0, 2, 0.7, 1.9);
+  }
+  const r = rateTeams(games, { asOf: new Date('2026-07-01').getTime() });
+  assert.ok(r.att.A > r.att.B && r.att.A > r.att.C);
+  assert.ok(r.def.A < r.def.B);
+  const g = goalRates(r, 'A', 'B');
+  const o = matchOdds(g.home, g.away);
+  assert.ok(Math.abs(o.home + o.draw + o.away - 1) < 1e-9);
+  assert.ok(o.home > o.away);
+});
+
+test('in play: a two-goal lead at 89 minutes is nearly won; the final whistle settles it', () => {
+  const p = inPlay(1.4, 1.4, { minute: 89, hs: 2, as: 0 });
+  assert.ok(p.home > 0.97);
+  const path = winPath(1.4, 1.2, [{ kind: 'goal', side: 'away', minute: "90'+3'" }], 90, { finished: true });
+  assert.deepEqual([path[90].home, path[90].draw, path[90].away], [0, 0, 1]);
+});
+
+test('shot outcomes: one sure chance against nothing wins', () => {
+  assert.deepEqual(shotOutcomes([1], []), { home: 1, draw: 0, away: 0 });
+  const even = shotOutcomes([0.5], [0.5]);
+  assert.ok(Math.abs(even.home - 0.25) < 1e-9 && Math.abs(even.draw - 0.5) < 1e-9);
+});
+
+test('season simulation: a far stronger side usually wins the league', () => {
+  const r = { att: { A: 2, B: 1, C: 0.5 }, def: { A: 0.5, B: 1, C: 1.5 }, baseH: 1.5, baseA: 1.2 };
+  const fx = [];
+  for (let i = 0; i < 10; i++) fx.push({ home: 'A', away: 'B' }, { home: 'B', away: 'C' }, { home: 'C', away: 'A' });
+  const out = simulateSeason([{ id: 'A', pts: 0, gd: 0, gf: 0 }, { id: 'B', pts: 0, gd: 0, gf: 0 }, { id: 'C', pts: 0, gd: 0, gf: 0 }], fx, r, { n: 500, top: 1, bottom: 1 });
+  assert.ok(out.A.title > 0.9);
+  assert.ok(out.C.bottom > 0.8);
+  assert.ok(Math.abs(out.A.dist.reduce((a, b) => a + b, 0) - 1) < 1e-9);
+});
+
+test('table rates: home advantage and attack show through', () => {
+  const rows = [{ id: '1', p: 10, gf: 25, ga: 8 }, { id: '2', p: 10, gf: 10, ga: 20 }];
+  const r = ratesFromTable(rows, '1', '2');
+  assert.ok(r.home > r.away);
+});
+
+test('roles: 4-2-3-1 has wide attackers as wingers, 4-3-3 midfield three as central', () => {
+  const p = (id) => ({ id });
+  const l4231 = [[p('gk')], [p('lb'), p('cb1'), p('cb2'), p('rb')], [p('dm1'), p('dm2')], [p('lw'), p('am'), p('rw')], [p('st')]];
+  assert.deepEqual(rolesFromLines(l4231), { gk: 'GK', lb: 'FB-L', cb1: 'CB', cb2: 'CB', rb: 'FB-R', dm1: 'CM', dm2: 'CM', lw: 'W-L', am: 'AM', rw: 'W-R', st: 'ST' });
+  const l433 = [[p('gk')], [p('lb'), p('cb1'), p('cb2'), p('rb')], [p('m1'), p('m2'), p('m3')], [p('lw'), p('st'), p('rw')]];
+  const r = rolesFromLines(l433);
+  assert.deepEqual([r.m1, r.m2, r.m3, r.lw, r.st, r.rw], ['CM', 'CM', 'CM', 'W-L', 'ST', 'W-R']);
+  const l352 = [[p('gk')], [p('c1'), p('c2'), p('c3')], [p('lwb'), p('m1'), p('m2'), p('m3'), p('rwb')], [p('s1'), p('s2')]];
+  const w = rolesFromLines(l352);
+  assert.deepEqual([w.c1, w.lwb, w.rwb, w.s1], ['CB', 'FB-L', 'FB-R', 'ST']);
+});
+
+test('matchups: record against one opponent, and a shrunk role factor', () => {
+  const rows = [['2025-01-01', 'X', 1, 2, 0, 'W-R', 90, 3, 0.6, 1, 0.2, 0], ['2025-02-01', 'Y', 0, 0, 1, 'W-R', 90, 1, 0.1, 0, 0.1, 0]];
+  const v = versus(rows, 'X');
+  assert.equal(v.goals, 1);
+  assert.ok(Math.abs(v.xgi90 - 0.8) < 1e-9);
+  // An opponent allowing double the league rate over 90 minutes barely moves the factor; over a season it does.
+  const lg = { 2026: { 'W-R': [9000, 30, 0, 0, 0] } };
+  const small = roleFactor({ 2026: { 'W-R': [90, 0.6, 0, 0, 0] } }, lg, 'W-R', ['2026']);
+  const big = roleFactor({ 2026: { 'W-R': [3000, 20, 0, 0, 0] } }, lg, 'W-R', ['2026']);
+  assert.ok(small.factor < 1.15 && big.factor > 1.5);
+});
+
+test('old ESPN shot spots: fractions from goal become percentages; penalties land on the spot', () => {
+  const pen = shotPoint({ fieldPositionX: 0.23, fieldPositionY: 0.5, text: 'Penalty' });
+  assert.ok(Math.abs(shotGeometry(pen.x, pen.y).dist - 11.04) < 0.1);
+  assert.deepEqual(shotPoint({ fieldPositionX: 88.9, fieldPositionY: 46.6 }), { x: 88.9, y: 46.6 });
+  assert.equal(shotPoint({ fieldPositionX: 0, fieldPositionY: 0, text: 'shot from outside the box' }).guessed, true);
 });

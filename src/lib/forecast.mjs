@@ -122,6 +122,109 @@ export function matchOdds(lh, la, { rho = -0.08, max = 10 } = {}) {
   };
 }
 
+const RED_FOR = 0.7; // a side down to ten creates about 30% less
+const RED_AGAINST = 1.25; // and concedes about 25% more
+
+/**
+ * Result odds from a given moment: the score so far plus Poisson goals in the minutes left.
+ * Stoppage time adds about four minutes to the 90; red cards shift both rates.
+ */
+export function inPlay(lh, la, { minute = 0, hs = 0, as = 0, redsH = 0, redsA = 0 } = {}) {
+  const left = Math.max(0, 94 - minute) / 94;
+  const rh = lh * left * RED_FOR ** redsH * RED_AGAINST ** redsA;
+  const ra = la * left * RED_FOR ** redsA * RED_AGAINST ** redsH;
+  const ph = pmf(rh, 10);
+  const pa = pmf(ra, 10);
+  let home = 0;
+  let draw = 0;
+  let away = 0;
+  for (let i = 0; i <= 10; i++) {
+    for (let j = 0; j <= 10; j++) {
+      const p = ph[i] * pa[j];
+      const d = hs + i - (as + j);
+      if (d > 0) home += p;
+      else if (d === 0) draw += p;
+      else away += p;
+    }
+  }
+  const t = home + draw + away;
+  return { home: home / t, draw: draw / t, away: away / t };
+}
+
+/**
+ * Win probability minute by minute through a match, from the pre-match rates and its events
+ * ({ kind: goal|pen|og|red, side, minute: "67'" }). Returns [{ m, home, draw, away }].
+ */
+export function winPath(lh, la, events, upTo = 90, { finished = false } = {}) {
+  const min = (e) => {
+    const m = String(e.minute ?? '').match(/^(\d+)(?:'?\+(\d+))?/);
+    return m ? Number(m[1]) + (m[2] ? Number(m[2]) / 10 : 0) : 0;
+  };
+  // Stoppage time is drawn at the 90th minute; extra time isn't modelled.
+  const evs = events.filter((e) => ['goal', 'pen', 'og', 'red'].includes(e.kind) && e.side).map((e) => ({ ...e, at: Math.min(90, min(e)) }));
+  const out = [];
+  for (let m = 0; m <= upTo; m++) {
+    // At the final whistle nothing is left to play, so the result is settled.
+    const s = { minute: finished && m === upTo ? 94 : m, hs: 0, as: 0, redsH: 0, redsA: 0 };
+    for (const e of evs) {
+      if (e.at > m) continue;
+      if (e.kind === 'red') s[e.side === 'home' ? 'redsH' : 'redsA'] += 1;
+      else s[e.side === 'home' ? 'hs' : 'as'] += 1;
+    }
+    out.push({ m, ...inPlay(lh, la, s) });
+  }
+  return out;
+}
+
+/**
+ * What the chances deserved: every shot scored with probability equal to its xG, all at once.
+ * Exact goal distributions for each side (Poisson-binomial), then win/draw/loss.
+ */
+export function shotOutcomes(homeXg, awayXg) {
+  const dist = (list) => {
+    let d = [1];
+    for (const p of list) {
+      const n = new Array(d.length + 1).fill(0);
+      d.forEach((v, k) => {
+        n[k] += v * (1 - p);
+        n[k + 1] += v * p;
+      });
+      d = n;
+    }
+    return d;
+  };
+  const h = dist(homeXg);
+  const a = dist(awayXg);
+  let home = 0;
+  let draw = 0;
+  let away = 0;
+  h.forEach((ph, i) =>
+    a.forEach((pa, j) => {
+      const p = ph * pa;
+      if (i > j) home += p;
+      else if (i === j) draw += p;
+      else away += p;
+    })
+  );
+  return { home, draw, away };
+}
+
+/**
+ * Goal rates for any league with a table: goals for and against per game, relative to the league,
+ * pulled towards average for the first few games, with home advantage. Cruder than the xG ratings.
+ */
+export function ratesFromTable(rows, homeId, awayId, { prior = 6 } = {}) {
+  const played = rows.filter((r) => r.p > 0);
+  const games = played.reduce((t, r) => t + r.p, 0);
+  if (!games) return null;
+  const avg = played.reduce((t, r) => t + r.gf, 0) / games; // goals per team per game
+  const rate = (r, k) => (r ? (r[k] + prior * avg) / (r.p + prior) / avg : 1);
+  const h = rows.find((r) => String(r.id) === String(homeId));
+  const a = rows.find((r) => String(r.id) === String(awayId));
+  if (!h || !a) return null;
+  return { home: avg * 1.1 * rate(h, 'gf') * rate(a, 'ga'), away: (avg / 1.1) * rate(a, 'gf') * rate(h, 'ga') };
+}
+
 /** Small seeded generator so a page shows the same simulation every time it renders. */
 export function rng(seed = 1) {
   let a = seed >>> 0;
