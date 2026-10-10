@@ -6,6 +6,7 @@ import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, simulat
 import { rolesFromLines, versus, roleFactor } from './matchups.mjs';
 import { shotPoint } from './espn.mjs';
 import { netFor, rawFactors, designRow } from './netxg.mjs';
+import { bestXI, nextFree, estimateFree, planTransfers, buildSquad, rotationPairs } from './optimise.mjs';
 import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
 
 test('bonus: plain 3-2-1', () => {
@@ -339,4 +340,71 @@ test('net xG: the fit and the live page share one definition of each factor', ()
   assert.equal(f.form, 1);
   assert.equal(f.history, 1);
   assert.deepEqual(designRow(f).slice(2), [Math.log(1.1), 0.5, 0, 0]);
+});
+
+// A small market: 3 GKs, 8 DEFs, 8 MIDs, 5 FWDs over 20 clubs, with projected points per gameweek.
+function market() {
+  const els = {};
+  const ahead = {};
+  let id = 1;
+  const add = (type, cost, pts, team) => {
+    els[id] = { id, type, cost, team, status: 'a', starts: 6, name: `P${id}` };
+    ahead[id] = { per: Object.fromEntries(pts.map((v, i) => [7 + i, { xp: v }])) };
+    return id++;
+  };
+  const gk = [add(1, 4.5, [4, 4, 4], 1), add(1, 4, [3, 3, 3], 2), add(1, 5, [5, 5, 5], 3)];
+  const def = Array.from({ length: 8 }, (_, i) => add(2, 4 + i * 0.5, [3 + i * 0.3, 3 + (i % 2), 3], 4 + i));
+  const mid = Array.from({ length: 8 }, (_, i) => add(3, 5 + i, [4 + i * 0.5, 4, 4 + i * 0.2], 12 + (i % 4)));
+  const fwd = Array.from({ length: 5 }, (_, i) => add(4, 6 + i * 1.5, [4 + i, 4 + i, 4], 16 + i));
+  return { els, ahead, gk, def, mid, fwd };
+}
+
+test('optimiser: best XI is a legal formation with the captain doubled', () => {
+  const { els, ahead, gk, def, mid, fwd } = market();
+  const squad = [gk[0], gk[1], ...def.slice(0, 5), ...mid.slice(0, 5), ...fwd.slice(0, 3)];
+  const r = bestXI(squad, 7, ahead, els);
+  assert.equal(r.xi.length, 11);
+  const n = (t) => r.xi.filter((id) => els[id].type === t).length;
+  assert.equal(n(1), 1);
+  assert.ok(n(2) >= 3 && n(3) >= 2 && n(4) >= 1);
+  assert.equal(r.captain, r.xi.reduce((b, id) => (ahead[id].per[7].xp > ahead[b].per[7].xp ? id : b)));
+});
+
+test('optimiser: free transfers bank up to five and chips keep them', () => {
+  assert.equal(nextFree(1, 0, false), 2);
+  assert.equal(nextFree(5, 0, false), 5);
+  assert.equal(nextFree(2, 3, false), 1);
+  assert.equal(nextFree(3, 6, true), 4);
+  assert.equal(estimateFree([{ event: 2, transfers: 0 }, { event: 3, transfers: 0 }, { event: 4, transfers: 2 }], [], 4), 2);
+});
+
+test('optimiser: plans stay legal, conservative never takes a hit, and never lose to holding', () => {
+  const { els, ahead, gk, def, mid, fwd } = market();
+  const squad = [gk[0], gk[1], ...def.slice(0, 5), ...mid.slice(0, 5), ...fwd.slice(0, 3)];
+  for (const mode of ['conservative', 'aggressive']) {
+    const r = planTransfers({ squad, bank: 1, free: 1, gws: [7, 8, 9], ahead, els, mode });
+    assert.ok(r.total >= r.hold - 1e-9);
+    if (mode === 'conservative') assert.ok(r.plan.every((p) => p.hit === 0));
+    const cost = r.squad.reduce((t, id) => t + els[id].cost, 0);
+    assert.ok(cost <= squad.reduce((t, id) => t + els[id].cost, 0) + 1 + 1e-9);
+    assert.equal(new Set(r.squad).size, 15);
+  }
+});
+
+test('optimiser: wildcard draft is fifteen players, two-five-five-three, within budget', () => {
+  const { els, ahead } = market();
+  const w = buildSquad({ budget: 100, gws: [7, 8, 9], ahead, els });
+  assert.equal(w.squad.length, 15);
+  assert.deepEqual([1, 2, 3, 4].map((t) => w.squad.filter((id) => els[id].type === t).length), [2, 5, 5, 3]);
+  assert.ok(w.cost <= 100 + 1e-9);
+});
+
+test('rotation pairs: both players must start a fair share of the weeks', () => {
+  const els = { 1: { type: 2, cost: 4, team: 1, starts: 6, status: 'a' }, 2: { type: 2, cost: 4, team: 2, starts: 6, status: 'a' }, 3: { type: 2, cost: 4, team: 3, starts: 6, status: 'a' } };
+  const per = (a) => ({ per: Object.fromEntries(a.map((v, i) => [7 + i, { xp: v }])) });
+  const ahead = { 1: per([6, 1, 6]), 2: per([1, 6, 1]), 3: per([7, 7, 7]) };
+  const r = rotationPairs({ type: 2, maxCost: 4.5, gws: [7, 8, 9], ahead, els, teamsPlayed: { 1: 6, 2: 6, 3: 6 } });
+  assert.equal(r.single, 3);
+  assert.deepEqual([r.pairs[0].a, r.pairs[0].b].sort(), [1, 2]);
+  assert.equal(r.pairs[0].total, 18);
 });

@@ -38,6 +38,8 @@ export const useMatchupIndex = () => useJson('index.json');
 export const useNetXgData = () => useJson('netxg.json');
 /** Learned Net xG weights and their test results (scripts/sport/fit-netxg.mjs). */
 export const useNetXgModel = () => useJson('netxg-model.json');
+/** Our graded record: projections saved before each deadline against what happened (scripts/sport/accuracy.mjs). */
+export const useAccuracy = () => useJson('accuracy.json');
 /** Every match row for one club's current players: { espnId: { n, rows } }. */
 export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam}.json` : null);
 

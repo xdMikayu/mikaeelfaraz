@@ -155,8 +155,8 @@ export default function Home() {
               </p>
               <p className="links">
                 <a className="btn" href="/finance?demo=1" target="_blank" rel="noopener">Try the full demo ↗</a>
-                <a href="/notes/why-i-built-mifolio">Why I built it</a>
-                <a href="/notes/reading-bank-sms">How it counts each purchase once</a>
+                <Link href="/notes/why-i-built-mifolio">Why I built it</Link>
+                <Link href="/notes/reading-bank-sms">How it counts each purchase once</Link>
               </p>
             </div>
             <dl>

@@ -9,6 +9,7 @@ import Rival from './FantasyRival';
 import Planner from './FantasyPlanner';
 import Gameweek from './FantasyGameweek';
 import Stats from './FantasyStats';
+import Players, { WatchStar } from './FantasyPlayers';
 import MatchupPanel from './FantasyMatchup';
 import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
 
@@ -152,15 +153,17 @@ function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
           {fixtures && <button role="tab" aria-selected={tab === 'plan'} onClick={() => setTab('plan')}>Planner</button>}
           {leagueId && <button role="tab" aria-selected={tab === 'league'} onClick={() => setTab('league')}>League</button>}
           <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Gameweek</button>
+          <button role="tab" aria-selected={tab === 'players'} onClick={() => setTab('players')}>Players</button>
           <button role="tab" aria-selected={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
         </div>
       </div>
 
       {tab === 'team' && team && <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} />}
-      {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} />}
+      {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} entry={entry} />}
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
       {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} />}
+      {tab === 'players' && <Players st={st} ctx={ctx} teams={teams} squad={picks?.picks.map((p) => p.element) ?? []} fixtures={fixtures} kit={kit} />}
       {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
     </div>
   );
@@ -305,6 +308,9 @@ function PlayerCard({ l, ctx, teams, kit, fixtures }) {
   const fx = fixturesOf(el.team, ctx);
   // The matchup to read about: his match in progress or next up.
   const nextFx = (fixtures ?? ctx.fixtures).filter((f) => (f.home === el.team || f.away === el.team) && !f.finished && !f.finishedProvisional).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))[0] ?? null;
+  const { prefs, update } = usePrefs();
+  const watched = (prefs.fplWatch ?? []).includes(el.id);
+  const toggleWatch = (id) => update((p) => ({ fplWatch: (p.fplWatch ?? []).includes(id) ? p.fplWatch.filter((x) => x !== id) : [...(p.fplWatch ?? []), id] }));
   return (
     <section className="sp-panel" style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '72px 1fr', gap: 14 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -312,7 +318,9 @@ function PlayerCard({ l, ctx, teams, kit, fixtures }) {
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
           <div>
-            <h3 className="sp-h2">{el.first} {el.second}</h3>
+            <h3 className="sp-h2">
+              {el.first} {el.second} <WatchStar id={el.id} on={watched} toggle={toggleWatch} />
+            </h3>
             <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0', fontWeight: 600 }}>
               {teams[el.team]?.name} · {POS[el.type]} · £{el.cost.toFixed(1)}m · {el.owned}% owned
             </p>
