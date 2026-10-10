@@ -660,3 +660,27 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-rec-t th { font-size: 11px; color: var(--sp-muted); font-weight: 750; text-align: right; padding: 4px 4px 4px 0; white-space: nowrap; }
 .sp-rec-t td { text-align: right; padding: 6px 4px 6px 0; }
 .sp-rec-t .l { text-align: left; }
+
+/* ---------- optimiser ---------- */
+.sp-opt-ctl { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 16px; }
+.sp-step { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; vertical-align: middle; }
+.sp-step button { width: 28px; height: 28px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--sp-rule-2); font-weight: 800; }
+.sp-step button:disabled { opacity: 0.35; }
+.sp-step b { min-width: 22px; text-align: center; font-weight: 900; }
+.sp-opt-gw { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--sp-rule); }
+.sp-opt-gwn { display: flex; flex-direction: column; }
+.sp-opt-gwn b { font-weight: 900; font-size: 15px; }
+.sp-opt-move { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); gap: 6px; align-items: center; padding: 2px 0; }
+.sp-opt-p { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px; align-items: center; min-width: 0; }
+.sp-opt-draft { display: grid; gap: 0 24px; }
+@media (min-width: 640px) { .sp-opt-draft { grid-template-columns: 1fr 1fr; } }
+.sp-opt-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; }
+.sp-rate { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+.sp-rate > b { font-size: 56px; line-height: 0.9; font-weight: 900; font-variation-settings: 'wdth' 62; }
+.sp-rot { padding: 10px 0; border-top: 1px solid var(--sp-rule); }
+.sp-rot-head { display: grid; grid-template-columns: 16px minmax(0, 1fr) 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.sp-rot-val { display: flex; flex-direction: column; align-items: flex-end; }
+.sp-rot-val b { font-size: 19px; font-weight: 900; font-variation-settings: 'wdth' 72; }
+.sp-rot-weeks { display: flex; gap: 6px; margin: 6px 0 0 24px; overflow-x: auto; }
+.sp-rot-weeks > span { display: flex; flex-direction: column; align-items: center; min-width: 40px; }
+.sp-rot-weeks img { object-fit: contain; }
