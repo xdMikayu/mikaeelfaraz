@@ -20,6 +20,7 @@ export default function Home() {
         <nav aria-label="Sections">
           <a href="#work-h">Work</a>
           <a href="#mifolio">Mifolio</a>
+          <a href="#matchday">Matchday</a>
           <a href="#notes">Writing</a>
           <a href="#before">Background</a>
           <a href="#az">a–z</a>
@@ -113,6 +114,39 @@ export default function Home() {
           <figure className="mf-print">
             <Image src="/mifolio/categories.png" alt="Mifolio category breakdown: a ring chart of spending by category over the last three months, with each category’s total, share and change against usual" width={1202} height={1445} />
           </figure>
+        </section>
+
+        <section className="sec" id="matchday" aria-labelledby="matchday-h">
+          <div className="sec-head">
+            <h2 id="matchday-h">A football tracker</h2>
+            <p>Designed and built October 2026</p>
+          </div>
+          <div className="product">
+            <div>
+              <h3>Matchday</h3>
+              <p className="tag faint">Football scores and live fantasy points · Next.js, ESPN and FPL feeds</p>
+              <p>
+                The score apps I used had got slower and louder: pop-up ads over the match, favourites moved around, ratings
+                nobody could explain. Matchday puts the teams you follow first, refreshes only while a match is on, and says
+                how old every number is. A spoiler mode hides scores until you tap.
+              </p>
+              <p>
+                Match pages have a shot map and an expected-goals timeline from my own model, fitted on 25,513 shots from
+                StatsBomb’s open data and shown next to Opta’s figure where FPL publishes it. The fantasy page works out live
+                points, projected autosubs and which players move you against your mini-league.
+              </p>
+              <p className="links">
+                <a href="/sport">Open Matchday</a>
+                <a href="/sport/following#xg">How the xG model works</a>
+              </p>
+            </div>
+            <dl>
+              <dt>Role</dt><dd>Designer and sole engineer</dd>
+              <dt>Data</dt><dd>ESPN’s public feed straight from the browser; FPL through two cached routes</dd>
+              <dt>Cost</dt><dd>Nothing to run: static pages, no database, no paid APIs</dd>
+              <dt>Status</dt><dd>Football now; cricket, F1 and wrestling to follow</dd>
+            </dl>
+          </div>
         </section>
 
         <section className="sec" id="notes" aria-labelledby="notes-h">
