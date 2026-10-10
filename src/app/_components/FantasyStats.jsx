@@ -25,6 +25,8 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
   const [range, setRange] = useState('gw');
   const [sortBy, setSortBy] = useState('xgi');
   const [pos, setPos] = useState(0);
+  const [unit, setUnit] = useState('total');
+  const [maxCost, setMaxCost] = useState(null);
   const gws = useMemo(() => (range === 'gw' ? [cur] : range === 'last4' ? [cur - 3, cur - 2, cur - 1, cur].filter((g) => g >= 1) : null), [range, cur]);
   const [past, setPast] = useState({});
   const [err, setErr] = useState(null);
@@ -44,13 +46,14 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
     const per = {};
     const teamXg = {}; // gw -> team -> xG, for xG against
     if (!gws) {
-      for (const e of st.elements) per[e.id] = { g: e.goals ?? 0, a: e.assists ?? 0, xg: e.xg ?? 0, xa: e.xa ?? 0 };
+      for (const e of st.elements) per[e.id] = { g: e.goals ?? 0, a: e.assists ?? 0, xg: e.xg ?? 0, xa: e.xa ?? 0, min: e.minutes ?? 0 };
     } else {
       for (const g of gws) {
         const d = g === cur ? live : past[g];
         if (!d) return null;
         for (const [id, s] of Object.entries(d.elements)) {
-          const p = (per[id] ??= { g: 0, a: 0, xg: 0, xa: 0 });
+          const p = (per[id] ??= { g: 0, a: 0, xg: 0, xa: 0, min: 0 });
+          p.min += s.minutes ?? 0;
           p.g += s.goals ?? 0;
           p.a += s.assists ?? 0;
           p.xg += s.xg ?? 0;
@@ -84,8 +87,15 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
 
   if (err && !data) return <p className="sp-empty">Couldn’t load earlier gameweeks from FPL ({err}).</p>;
   if (!data) return <div className="sp-skel" style={{ height: 500, margin: 16 }} />;
+  // Totals, per 90 minutes (with a minimum so one cameo can't top it), or per £1m of price.
+  const minMinutes = range === 'gw' ? 45 : range === 'last4' ? 180 : 360;
   const top = data.players
-    .filter((p) => !pos || p.el.type === pos)
+    .filter((p) => (!pos || p.el.type === pos) && (maxCost == null || p.el.cost <= maxCost + 1e-9) && (unit !== 'p90' || p.min >= minMinutes))
+    .map((p) => {
+      if (unit === 'total') return p;
+      const f = unit === 'p90' ? 90 / p.min : 1 / p.el.cost;
+      return { ...p, ...Object.fromEntries(COLS.map(([k]) => [k, p[k] * f])) };
+    })
     .sort((a, b) => b[sortBy] - a[sortBy] || b.xgi - a.xgi)
     .slice(0, 20);
   const scale = Object.fromEntries(COLS.map(([k]) => [k, Math.max(...top.map((p) => p[k]), 0.01)]));
@@ -95,7 +105,7 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
   const maxXga = Math.max(...defence.map((c) => c.xga), 0.01);
   const minXga = Math.min(...defence.map((c) => c.xga));
   const rangeLabel = range === 'gw' ? `gameweek ${cur}` : range === 'last4' ? `gameweeks ${gws[0]}–${cur}` : 'the season';
-  const num = (k, v) => (['g', 'a', 'ga'].includes(k) ? v : v.toFixed(2));
+  const num = (k, v) => (unit === 'total' && ['g', 'a', 'ga'].includes(k) ? v : v.toFixed(2));
 
   return (
     <div style={{ marginTop: 12 }}>
@@ -116,6 +126,20 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
             ))}
           </div>
         </header>
+        <div className="sp-pad sp-opt-ctl" style={{ marginBottom: 6 }}>
+          <div className="sp-tabs" role="radiogroup" aria-label="Units" style={{ border: 0, gap: 12 }}>
+            {[['total', 'Totals'], ['p90', 'Per 90'], ['pm', 'Per £m']].map(([k, l]) => (
+              <button key={k} role="radio" aria-checked={unit === k} onClick={() => setUnit(k)} style={{ height: 28, fontSize: 13 }}>{l}</button>
+            ))}
+          </div>
+          <span className="sp-small">
+            {maxCost == null ? 'Any price' : <>Up to <b className="sp-num">£{maxCost.toFixed(1)}m</b></>}
+            <span className="sp-step" role="group" aria-label="Price ceiling">
+              <button onClick={() => setMaxCost((c) => Math.max(4, (c ?? 15) - 0.5))} aria-label="Cheaper">−</button>
+              <button onClick={() => setMaxCost((c) => (c == null || c + 0.5 > 15 ? null : c + 0.5))} aria-label="Dearer">+</button>
+            </span>
+          </span>
+        </div>
         <div className="sp-heat-wrap">
           <table className="sp-stat-t">
             <thead>
@@ -146,7 +170,7 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
             </tbody>
           </table>
         </div>
-        <p className="sp-tiny sp-muted sp-pad" style={{ margin: '6px 0 0' }}>Top 20 for {rangeLabel} by {COLS.find(([k]) => k === sortBy)[1]}; tap a column to re-rank. xG and xA are Opta’s, from FPL. xGI is the two together.</p>
+        <p className="sp-tiny sp-muted sp-pad" style={{ margin: '6px 0 0' }}>Top 20 for {rangeLabel} by {COLS.find(([k]) => k === sortBy)[1]}{unit === 'p90' ? ` per 90 (at least ${minMinutes} minutes)` : unit === 'pm' ? ' per £1m of price' : ''}{maxCost != null ? `, £${maxCost.toFixed(1)}m or less` : ''}; tap a column to re-rank. xG and xA are Opta’s, from FPL. xGI is the two together.</p>
       </section>
 
       <div className="sp-two" style={{ marginTop: 6 }}>

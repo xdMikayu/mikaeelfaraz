@@ -9,7 +9,7 @@ import Rival from './FantasyRival';
 import Planner from './FantasyPlanner';
 import Gameweek from './FantasyGameweek';
 import Stats from './FantasyStats';
-import Players from './FantasyPlayers';
+import Players, { WatchStar } from './FantasyPlayers';
 import MatchupPanel from './FantasyMatchup';
 import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
 
@@ -308,6 +308,9 @@ function PlayerCard({ l, ctx, teams, kit, fixtures }) {
   const fx = fixturesOf(el.team, ctx);
   // The matchup to read about: his match in progress or next up.
   const nextFx = (fixtures ?? ctx.fixtures).filter((f) => (f.home === el.team || f.away === el.team) && !f.finished && !f.finishedProvisional).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))[0] ?? null;
+  const { prefs, update } = usePrefs();
+  const watched = (prefs.fplWatch ?? []).includes(el.id);
+  const toggleWatch = (id) => update((p) => ({ fplWatch: (p.fplWatch ?? []).includes(id) ? p.fplWatch.filter((x) => x !== id) : [...(p.fplWatch ?? []), id] }));
   return (
     <section className="sp-panel" style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '72px 1fr', gap: 14 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -315,7 +318,9 @@ function PlayerCard({ l, ctx, teams, kit, fixtures }) {
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
           <div>
-            <h3 className="sp-h2">{el.first} {el.second}</h3>
+            <h3 className="sp-h2">
+              {el.first} {el.second} <WatchStar id={el.id} on={watched} toggle={toggleWatch} />
+            </h3>
             <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0', fontWeight: 600 }}>
               {teams[el.team]?.name} · {POS[el.type]} · £{el.cost.toFixed(1)}m · {el.owned}% owned
             </p>
