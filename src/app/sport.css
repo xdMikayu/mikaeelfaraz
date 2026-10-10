@@ -719,3 +719,12 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-news { display: grid; gap: 1px; padding: 8px 0; border-top: 1px solid var(--sp-rule); }
 .sp-news-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; padding: 6px 0; border-top: 1px solid var(--sp-rule); font-size: 13.5px; font-weight: 700; }
 .sp-news-out { color: var(--sp-loss); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* ---------- AI advice ---------- */
+.sp-ai { border-top: 2px solid var(--sp-ink); }
+.sp-ai-head { margin: 0; font-size: 18px; font-weight: 850; line-height: 1.3; font-variation-settings: 'wdth' 88; }
+.sp-ai-move { display: grid; gap: 4px; padding: 8px 0; border-top: 1px solid var(--sp-rule); }
+.sp-ai-xi { display: grid; gap: 6px; }
+.sp-ai-xi > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.sp-ai-xi > div > .sp-tiny { width: 34px; font-weight: 800; }
+.sp-ai-list { margin: 0; padding-left: 18px; list-style: disc; display: grid; gap: 6px; font-size: 14px; color: var(--sp-ink-2); }
