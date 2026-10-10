@@ -214,6 +214,31 @@ function shotOutcome(play) {
 }
 
 /** Every shot ESPN's commentary has a position for, with our xG estimate. */
+// Where a shot was taken, as % of the pitch attacking towards x = 100 (the shape xgFor expects).
+// Before 2026/27 ESPN sent fractions instead: x as distance from the goal line over about 48 m
+// (penalties sit at exactly 0.23, i.e. 11 m) and y across the width, with (0, 0) for "unknown".
+// Unknown spots are estimated from the commentary's own wording.
+const SPOT_FROM_TEXT = [
+  [/very close range/, 4, 50],
+  [/difficult angle on the left|from the left side of the six yard box/, 7, 24],
+  [/difficult angle on the right|from the right side of the six yard box/, 7, 76],
+  [/centre of the box/, 12, 50],
+  [/left side of the box/, 14, 32],
+  [/right side of the box/, 14, 68],
+  [/more than 35 yards|long range/, 33, 50],
+  [/outside the box/, 22, 50],
+];
+export function shotPoint(p) {
+  const x = p.fieldPositionX;
+  const y = p.fieldPositionY;
+  if (!Number.isFinite(x)) return null;
+  if (x > 1 || y > 1) return { x, y }; // already percentages
+  if (x > 0 || y > 0) return { x: 100 - ((x * 48) / 105) * 100, y: y * 100 };
+  if (/penalty/i.test(p.text ?? '')) return { x: 100 - (11 / 105) * 100, y: 50 };
+  const hit = SPOT_FROM_TEXT.find(([re]) => re.test(p.text ?? ''));
+  return hit ? { x: 100 - (hit[1] / 105) * 100, y: hit[2], guessed: true } : null;
+}
+
 export function shotsFrom(commentary = [], keyEvents = [], sideOfName) {
   const shots = [];
   const seen = new Set();
@@ -221,7 +246,8 @@ export function shotsFrom(commentary = [], keyEvents = [], sideOfName) {
   for (const p of plays) {
     if (seen.has(p.id)) continue;
     const outcome = shotOutcome(p);
-    if (!outcome || !Number.isFinite(p.fieldPositionX)) continue;
+    const at = outcome && shotPoint(p);
+    if (!at) continue;
     if (/own-goal/.test(p.type?.type ?? '')) continue;
     seen.add(p.id);
     const text = p.text ?? '';
@@ -230,15 +256,16 @@ export function shotsFrom(commentary = [], keyEvents = [], sideOfName) {
       side: sideOfName(p.team),
       minute: p.clock?.displayValue ?? '',
       order: minuteSort(p.clock, p.period?.number),
-      x: p.fieldPositionX,
-      y: p.fieldPositionY,
+      x: at.x,
+      y: at.y,
+      guessed: Boolean(at.guessed),
       goalY: Number.isFinite(p.goalPositionY) ? p.goalPositionY : null,
       outcome,
       player: p.participants?.[0]?.athlete?.displayName ?? '',
       header: /\bheader\b/i.test(text),
       penalty: /\bpenalty\b/i.test(text),
       text,
-      xg: xgFor({ x: p.fieldPositionX, y: p.fieldPositionY, text }),
+      xg: xgFor({ x: at.x, y: at.y, text }),
     });
   }
   return shots.sort((a, b) => a.order - b.order);

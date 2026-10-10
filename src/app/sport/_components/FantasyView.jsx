@@ -1,17 +1,18 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { projectedBonus, teamLive, leagueLive, pointChanges, POS, STAT_LABEL } from '@/lib/sport/fpl.mjs';
+import { projectedBonus, teamLive, leagueLive, pointChanges, buildModel, withMatchups, POS, STAT_LABEL } from '@/lib/sport/fpl.mjs';
 import { usePrefs } from './prefs';
 import { useLive, Freshness } from './useLive';
 import { kickoff, shortDate, until } from './time';
+import { shirt, photo, signed, fixturesOf, fxShort, fxLong, phase, Face } from './fplbits';
+import Rival from './FantasyRival';
+import Planner from './FantasyPlanner';
+import Gameweek from './FantasyGameweek';
+import Stats from './FantasyStats';
+import MatchupPanel from './FantasyMatchup';
+import { useMatchupIndex, useForecastKit } from './matchupData';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
-
-// The game's own artwork, served from its public CDN: kits by club code, photos by Opta id.
-const shirt = (code, gk) => `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${code}${gk ? '_1' : ''}-110.png`;
-const photo = (opta, big) => (opta ? `https://resources.premierleague.com/premierleague25/photos/players/${big ? '110x140' : '40x40'}/${String(opta).replace(/^p/, '')}.png` : null);
-
-const signed = (v) => (v > 0 ? `+${v}` : `−${Math.abs(v)}`);
 
 async function api(path, signal) {
   const res = await fetch(`/api/sport/fpl/${path}`, { signal });
@@ -29,6 +30,7 @@ export default function FantasyView() {
   const st = useLive((signal) => api('static', signal), [], { every: 300000, live: () => true });
   const gw = st.data?.current;
   const live = useLive((signal) => (gw ? api(`live?event=${gw}`, signal) : Promise.resolve(null)), [gw], { every: 30000, live: liveGw });
+  const season = useLive((signal) => api('fixtures', signal), [], { every: 600000, live: () => false });
   const entry = useLive((signal) => (gw && entryId ? api(`entry?id=${entryId}&event=${gw}`, signal) : Promise.resolve(null)), [gw, entryId], {
     every: 60000,
     live: () => liveGw(live.data),
@@ -53,14 +55,18 @@ export default function FantasyView() {
         <button className="sp-btn" onClick={() => update({ fplEntry: null })}>Use a different team ID</button>
       </div>
     );
-  return <Live st={st.data} live={live.data} entry={entry.data} liveAt={live.at} liveErr={live.error} />;
+  return <Live st={st.data} live={live.data} entry={entry.data} fixtures={season.data} liveAt={live.at} liveErr={live.error} />;
 }
 
-function Live({ st, live, entry, liveAt, liveErr }) {
+function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
   const { prefs, update } = usePrefs();
+  const mx = useMatchupIndex();
+  const kit = useForecastKit(mx.data);
+  // FPL's season numbers first; the longer matchup history replaces them once its file has loaded.
+  const model = useMemo(() => (kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements)), [st, kit]);
   const ctx = useMemo(
-    () => ({ elements: Object.fromEntries(st.elements.map((e) => [e.id, e])), live: live.elements, fixtures: live.fixtures, bonus: projectedBonus(live.fixtures) }),
-    [st, live]
+    () => ({ elements: Object.fromEntries(st.elements.map((e) => [e.id, e])), live: live.elements, fixtures: live.fixtures, bonus: projectedBonus(live.fixtures), model }),
+    [st, live, model]
   );
   const teams = useMemo(() => Object.fromEntries(st.teams.map((t) => [t.id, t])), [st]);
   const gw = st.events.find((e) => e.id === live.event);
@@ -76,33 +82,31 @@ function Live({ st, live, entry, liveAt, liveErr }) {
   const prevRank = entry.history.find((h) => h.event === live.event - 1)?.overall ?? null;
   const rankNow = picks?.overall ?? null;
   const moved = prevRank && rankNow ? prevRank - rankNow : 0;
-  const played = team ? team.lines.filter((l) => l.counts && !l.state.left).length : 0;
-  const counting = team ? team.lines.filter((l) => l.counts).length : 0;
+  // The counting players by where they are in their gameweek.
+  const counts = { done: 0, live: 0, todo: 0 };
+  for (const l of team?.lines ?? []) {
+    if (!l.counts) continue;
+    const k = phase(l.state, fixturesOf(ctx.elements[l.element]?.team, ctx)).kind;
+    counts[k === 'live' ? 'live' : k === 'todo' || k === 'bench' ? 'todo' : 'done'] += 1;
+  }
 
   return (
     <div className="sp-read">
       {team ? (
         <section className="sp-fhead" aria-label="Gameweek points">
-          <div className="sp-section-head" style={{ marginBottom: 6 }}>
-            <span className="sp-small" style={{ fontWeight: 700 }}>
-              Gameweek {live.event}
-              {isLive ? <span className="sp-live-text"> · live</span> : allDone && gw?.checked ? ' · final' : ''}
-            </span>
-            <button className="sp-small sp-link sp-ink2" onClick={() => update({ fplEntry: null, fplLeague: null })}>Change team</button>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
-            <span className="sp-hero-num sp-num">{team.net}</span>
-            <span className="sp-small sp-ink2" style={{ paddingBottom: 8, lineHeight: 1.35 }}>
-              {allDone && gw?.checked ? 'points' : 'points so far'}
-              {team.hit ? `, after −${team.hit}` : ''}
-              <br />
-              <b style={{ color: 'var(--sp-ink)' }}>{entry.name}</b>
-            </span>
-          </div>
+          <p className="sp-small" style={{ fontWeight: 700, margin: 0 }}>
+            Gameweek {live.event}
+            {isLive ? <span className="sp-live-text"> · live</span> : allDone && gw?.checked ? ' · final' : ''}
+          </p>
+          <span className="sp-hero-num sp-num" style={{ display: 'block', marginTop: 8 }}>{team.net}</span>
+          <p className="sp-small sp-ink2" style={{ margin: '6px 0 0' }}>
+            {allDone && gw?.checked ? 'points' : 'points so far'}
+            {team.hit ? `, after −${team.hit}` : ''} · <b style={{ color: 'var(--sp-ink)' }}>{entry.name}</b>
+          </p>
           {(gw?.average || gw?.highest) && <Scale you={team.net} avg={gw.average} top={gw.highest} />}
-          <div className="sp-facts" style={{ marginTop: gw?.average || gw?.highest ? 4 : 14 }}>
+          <Progress counts={counts} />
+          <div className="sp-facts" style={{ marginTop: 10 }}>
             <span>Rank <b className="sp-num">{rankNow ? rankNow.toLocaleString() : '–'}</b>{moved !== 0 && <b className={moved > 0 ? 'sp-up' : 'sp-down'}> {moved > 0 ? '▲' : '▼'} {compactRank(Math.abs(moved))}</b>}</span>
-            <span><b>{counting - played}</b> still to play</span>
             {picks.chip ? <span><b>{CHIP[picks.chip] ?? picks.chip}</b> played</span> : <span><b>{team.lines.filter((l) => !l.counts).reduce((t, l) => t + l.state.points, 0)}</b> on the bench</span>}
           </div>
           {next && new Date(next.deadline) > Date.now() && (
@@ -110,7 +114,10 @@ function Live({ st, live, entry, liveAt, liveErr }) {
               Gameweek {next.id} deadline <b style={{ color: 'var(--sp-ink)' }}>{shortDate(next.deadline)}, {kickoff(next.deadline)}</b>, {until(next.deadline)}.
             </p>
           )}
-          <p className="sp-tiny sp-muted" style={{ margin: '6px 0 0' }}><Freshness at={liveAt} error={liveErr} live={isLive} every={30} /></p>
+          <p className="sp-tiny sp-muted" style={{ margin: '6px 0 0' }}>
+            <Freshness at={liveAt} error={liveErr} live={isLive} every={30} /> ·{' '}
+            <button className="sp-link" onClick={() => update({ fplEntry: null, fplLeague: null })}>Change team</button>
+          </p>
         </section>
       ) : (
         <p className="sp-empty">This team has no picks for gameweek {live.event}.</p>
@@ -141,15 +148,19 @@ function Live({ st, live, entry, liveAt, liveErr }) {
         <div className="sp-tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}>Pitch</button>
           <button role="tab" aria-selected={tab === 'list'} onClick={() => setTab('list')}>List</button>
+          {fixtures && <button role="tab" aria-selected={tab === 'plan'} onClick={() => setTab('plan')}>Planner</button>}
           {leagueId && <button role="tab" aria-selected={tab === 'league'} onClick={() => setTab('league')}>League</button>}
-          <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Fixtures</button>
+          <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Gameweek</button>
+          <button role="tab" aria-selected={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
         </div>
       </div>
 
-      {tab === 'team' && team && <Pitch team={team} ctx={ctx} teams={teams} />}
+      {tab === 'team' && team && <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} />}
+      {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} />}
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
-      {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} onPick={(id) => update({ fplLeague: id })} />}
-      {tab === 'fixtures' && <Fixtures live={live} teams={teams} />}
+      {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
+      {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
+      {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
     </div>
   );
 }
@@ -170,6 +181,23 @@ function Scale({ you, avg, top }) {
   );
 }
 
+/** Eleven squares, one per counting player: played, playing now, still to play. */
+function Progress({ counts }) {
+  const cells = [...Array(counts.done).fill('done'), ...Array(counts.live).fill('live'), ...Array(counts.todo).fill('todo')];
+  return (
+    <div className="sp-prog" style={{ marginTop: 14 }}>
+      <span className="sp-prog-cells" aria-hidden>
+        {cells.map((c, i) => <i key={i} className={`sp-prog-${c}`} />)}
+      </span>
+      <span className="sp-small">
+        <b>{counts.done}</b> played · <b className={counts.live ? 'sp-live-text' : ''}>{counts.live}</b> playing · <b>{counts.todo}</b> to play
+      </span>
+    </div>
+  );
+}
+
+const firstName = (name) => (name ?? '').trim().split(/\s+/)[0] || 'Rival';
+
 const compactRank = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 1 : 2)}M` : n >= 1e4 ? `${Math.round(n / 1e3)}k` : n.toLocaleString());
 
 /** Point changes between refreshes, newest first, for the players in this team. */
@@ -189,27 +217,6 @@ function useFeed(ctx, ids) {
   return feed;
 }
 
-const fixturesOf = (teamId, ctx) => ctx.fixtures.filter((f) => f.home === teamId || f.away === teamId);
-
-function fxShort(f, teamId, teams) {
-  const home = f.home === teamId;
-  const opp = teams[home ? f.away : f.home]?.short ?? '';
-  if (f.finished || f.finishedProvisional) return `${opp} ${home ? f.hs : f.as}–${home ? f.as : f.hs}`;
-  if (f.started) return `${opp} ${f.minutes}′`;
-  return `${opp} (${home ? 'H' : 'A'}) ${kickoff(f.kickoff)}`;
-}
-
-function fxLong(f, teamId, teams) {
-  const home = f.home === teamId;
-  const opp = teams[home ? f.away : f.home]?.short ?? '';
-  const vs = `${opp} (${home ? 'H' : 'A'})`;
-  // The player's own side first, so "AVL (A) 0–1" means his team is behind.
-  const score = home ? `${f.hs}–${f.as}` : `${f.as}–${f.hs}`;
-  if (f.finished || f.finishedProvisional) return `${vs} ${score} FT`;
-  if (f.started) return `${vs} ${score}, ${f.minutes}′`;
-  return `${vs} ${shortDate(f.kickoff)} ${kickoff(f.kickoff)}`;
-}
-
 /** "Goal +6 · Bonus +2 (provisional)": where the points came from, minutes left out. */
 function breakdown(state) {
   const sum = {};
@@ -219,15 +226,8 @@ function breakdown(state) {
   return out;
 }
 
-function playState(l) {
-  const s = l.state.status;
-  if (s === 'playing') return 'sp-st-live';
-  if (s === 'to play' || s === 'not on yet') return 'sp-st-todo';
-  return null;
-}
-
 /** The squad on a pitch: the scoring eleven (after projected autosubs) in their lines, bench below. */
-function Pitch({ team, ctx, teams }) {
+function Pitch({ team, ctx, teams, forecast, fixtures }) {
   const [sel, setSel] = useState(null);
   const subIn = new Set(team.subs.map((s) => s.in));
   const subOut = new Set(team.subs.map((s) => s.out));
@@ -239,12 +239,14 @@ function Pitch({ team, ctx, teams }) {
     const el = ctx.elements[l.element];
     const fx = fixturesOf(el.team, ctx);
     const pts = l.counts ? l.total : l.state.points;
-    const st = playState(l);
+    const ph = phase(l.state, fx);
+    // Still to play and nothing scored yet: the plate shows the kick-off instead of a 0.
+    const waiting = (ph.kind === 'todo' || ph.kind === 'bench') && l.state.minutes === 0 && pts === 0;
+    const label = { done: 'played', live: 'playing now', bench: 'on the bench in a live match', todo: 'still to play', out: 'didn’t play', blank: 'no match' }[ph.kind];
     return (
-      <button key={l.element} className={`sp-kit${onBench && !l.counts ? ' sp-kit-out' : ''}`} onClick={() => setSel(sel === l.element ? null : l.element)} aria-pressed={sel === l.element} aria-label={`${el.name}, ${pts} points`}>
+      <button key={l.element} className={`sp-kit sp-kit-${ph.kind}${onBench && !l.counts ? ' sp-kit-out' : ''}`} onClick={() => setSel(sel === l.element ? null : l.element)} aria-pressed={sel === l.element} aria-label={`${el.name}, ${pts} points, ${label}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={shirt(teams[el.team]?.code, el.type === 1)} alt="" width="52" height="52" loading="lazy" />
-        {st && <i className={`sp-kit-state ${st}`} title={l.state.status} />}
         {(subIn.has(l.element) || subOut.has(l.element)) && (
           <i className="sp-kit-sub" title={subIn.has(l.element) ? 'Comes on (projected)' : 'Comes off (projected)'}>
             <svg width="10" height="10" viewBox="0 0 10 10"><path d={subIn.has(l.element) ? 'M5 9V1.5M1.8 4.5 5 1.3l3.2 3.2' : 'M5 1v7.5M1.8 5.5 5 8.7l3.2-3.2'} stroke={subIn.has(l.element) ? '#0f9f5a' : '#e2394b'} strokeWidth="1.8" fill="none" strokeLinecap="round" /></svg>
@@ -254,8 +256,11 @@ function Pitch({ team, ctx, teams }) {
           <i className="sp-kit-badge">{l.captainNow ? (l.mult === 3 ? 'TC' : 'C') : l.captain ? 'C' : 'V'}</i>
         )}
         <span className="sp-kit-name">{el.name}</span>
-        <span className="sp-kit-pts">{pts}</span>
-        <span className="sp-kit-fx">{fx.length ? fx.map((f) => fxShort(f, el.team, teams)).join(', ') : 'No match'}</span>
+        <span className="sp-kit-pts">{waiting ? ph.when : pts}</span>
+        <span className="sp-kit-fx">
+          {ph.kind === 'done' ? 'FT ' : ph.kind === 'bench' ? 'Not on · ' : ''}
+          {ph.kind === 'out' ? 'Didn’t play' : fx.length ? fx.map((f) => fxShort(f, el.team, teams)).join(', ') : 'No match'}
+        </span>
       </button>
     );
   };
@@ -279,19 +284,26 @@ function Pitch({ team, ctx, teams }) {
           <div className="sp-fplrow" style={{ padding: 0 }}>{bench.map((l) => kit(l, true))}</div>
         </div>
       </div>
-      {cur ? <PlayerCard l={cur} ctx={ctx} teams={teams} /> : (
-        <p className="sp-note sp-pad" style={{ margin: '10px 0 0' }}>
-          Tap a player for his points. Red dot: playing now. Grey dot: still to play. Arrows mark projected autosubs.
+      <div className="sp-legend sp-pad" aria-hidden>
+        <span><i className="sp-kit-pts sp-lg-done">6</i>Played</span>
+        <span><i className="sp-kit-pts sp-lg-live">2</i>Playing now</span>
+        <span><i className="sp-kit-pts sp-lg-todo">Sun 16:30</i>To play</span>
+      </div>
+      {cur ? <PlayerCard l={cur} ctx={ctx} teams={teams} kit={forecast} fixtures={fixtures} /> : (
+        <p className="sp-note sp-pad" style={{ margin: '8px 0 0' }}>
+          Tap a player for his points. Arrows mark projected autosubs.
         </p>
       )}
     </>
   );
 }
 
-function PlayerCard({ l, ctx, teams }) {
+function PlayerCard({ l, ctx, teams, kit, fixtures }) {
   const el = ctx.elements[l.element];
   const parts = breakdown(l.state);
   const fx = fixturesOf(el.team, ctx);
+  // The matchup to read about: his match in progress or next up.
+  const nextFx = (fixtures ?? ctx.fixtures).filter((f) => (f.home === el.team || f.away === el.team) && !f.finished && !f.finishedProvisional).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))[0] ?? null;
   return (
     <section className="sp-panel" style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '72px 1fr', gap: 14 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -314,6 +326,9 @@ function PlayerCard({ l, ctx, teams }) {
           {l.mult > 1 && <span className="sp-small" style={{ fontWeight: 800 }}>×{l.mult} {l.mult === 3 ? 'triple captain' : 'captain'}</span>}
         </div>
       </div>
+      <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+        <MatchupPanel el={el} ctx={ctx} teams={teams} kit={kit} fixtures={fixtures} nextFx={nextFx} />
+      </div>
     </section>
   );
 }
@@ -333,21 +348,21 @@ function TeamList({ team, ctx, teams }) {
         ? `On for ${ctx.elements[subIn[l.element]].name} (projected)`
         : l.state.status === 'did not play' ? 'Didn’t play' : l.state.status === 'blank' ? 'No match' : '';
     const pts = l.counts ? l.total : l.state.points;
+    const ph = phase(l.state, fx);
     return (
-      <div key={l.element} className={`sp-pick${l.counts ? '' : ' sp-off'}`}>
+      <div key={l.element} className={`sp-pick sp-pick-${ph.kind}${l.counts ? '' : ' sp-off'}`}>
         <span className="sp-pick-pos">{POS[el.type]}</span>
         <span className="sp-pick-name">
           <b>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{el.name}</span>
             {l.captain && <span className="sp-badge" title="Captain">{l.mult === 3 ? 'TC' : 'C'}</span>}
             {l.vice && <span className={`sp-badge${team.viceUsed ? '' : ' sp-badge-quiet'}`} title="Vice-captain">V</span>}
-            {l.state.status === 'playing' && <i className="sp-dot sp-dot-live" style={{ color: 'var(--sp-live)' }} title="Playing now" />}
           </b>
           <small>{fx.map((f) => fxLong(f, el.team, teams)).join(' · ') || teams[el.team]?.short}</small>
           {(note || parts.length > 0) && <small>{[note, ...parts].filter(Boolean).join(' · ')}</small>}
         </span>
-        <span className="sp-tiny sp-muted sp-num">{l.mult > 1 ? `×${l.mult}` : ''}</span>
-        <span className="sp-pick-pts">{pts}</span>
+        <span className="sp-pick-when">{ph.kind === 'done' || ph.kind === 'out' ? 'Played' : ph.kind === 'blank' ? '' : ph.when}</span>
+        <span className="sp-pick-pts">{(ph.kind === 'todo' || ph.kind === 'bench') && l.state.minutes === 0 && pts === 0 ? '–' : pts}</span>
       </div>
     );
   };
@@ -365,11 +380,24 @@ function TeamList({ team, ctx, teams }) {
   );
 }
 
-function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
+function League({ id, event, entry, ctx, myTeam, teams, live, onPick }) {
+  const { prefs, update } = usePrefs();
+  const [comparing, setComparing] = useState(false);
   const lg = useLive((signal) => api(`league?id=${id}&event=${event}`, signal), [id, event], { every: 90000, live: () => true });
   const result = useMemo(() => (lg.data ? leagueLive(lg.data.rows, ctx) : null), [lg.data, ctx]);
+  useEffect(() => setComparing(false), [id]);
   if (!lg.data) return lg.error ? <p className="sp-empty">Couldn’t load this league ({lg.error}).</p> : <div className="sp-skel" style={{ height: 400, margin: 16 }} />;
   const me = result.table.find((r) => r.entry === entry.id);
+  // Outside the first 50 of a big league you aren't in the table we load; your own team stands in.
+  const meRow = me ?? (myTeam && { entry: entry.id, team: entry.name, manager: entry.manager, live: myTeam, total: null, eventTotal: null });
+  const rivalId = prefs.fplRival?.[id];
+  const rival = result.table.find((r) => r.entry === rivalId && r.entry !== entry.id && r.live);
+  const compare = (r) => {
+    update((p) => ({ fplRival: { ...p.fplRival, [id]: r.entry } }));
+    setComparing(true);
+    window.scrollTo?.({ top: 0 });
+  };
+  if (comparing && rival && meRow?.live) return <Rival me={meRow} them={rival} ctx={ctx} teams={teams} live={live} onBack={() => setComparing(false)} />;
   const myMult = Object.fromEntries((me?.live?.lines ?? myTeam?.lines ?? []).map((l) => [l.element, l.mult]));
   // Who moves you: big gaps between your multiplier and the league's average one.
   const swings = result.ownership
@@ -389,6 +417,15 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
           </select>
         </div>
       )}
+      {rival && meRow?.live && (
+        <button className="sp-h2h-link" onClick={() => compare(rival)}>
+          <span>
+            <span className="sp-tiny sp-muted" style={{ display: 'block', fontWeight: 700 }}>Head to head</span>
+            <b>You {meRow.live.net}–{rival.live.net} {firstName(rival.manager)}</b>
+          </span>
+          <span className="sp-small" style={{ fontWeight: 700 }}>Compare →</span>
+        </button>
+      )}
       <section className="sp-group" style={{ marginTop: 0 }}>
         <header className="sp-ghead">
           <h2 className="sp-h3">{lg.data.name}</h2>
@@ -397,8 +434,10 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
         {result.table.map((r) => {
           const moved = r.rank - r.liveRank;
           const cap = r.live && ctx.elements[r.live.captain];
+          const mineRow = r.entry === entry.id;
+          const Row = mineRow || !r.live || !meRow?.live ? 'div' : 'button';
           return (
-            <div key={r.entry} className={`sp-lrow${r.entry === entry.id ? ' sp-mine' : ''}`}>
+            <Row key={r.entry} className={`sp-lrow${mineRow ? ' sp-mine' : ''}`} {...(Row === 'button' ? { onClick: () => compare(r), 'aria-label': `Compare with ${r.team}, ${r.manager}` } : {})}>
               <span className="sp-lrank">
                 <b>{r.liveRank}</b>
                 {moved !== 0 && <span className={moved > 0 ? 'sp-up' : 'sp-down'}>{moved > 0 ? `▲${moved}` : `▼${-moved}`}</span>}
@@ -424,11 +463,11 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
                 <b>{r.liveTotal}</b>
                 <span>GW {r.gw}{r.live ? ` · ${r.live.toPlay} left` : ''}</span>
               </span>
-            </div>
+            </Row>
           );
         })}
         <p className="sp-tiny sp-muted" style={{ margin: 0, padding: '10px 16px 12px' }}>
-          Live from each manager’s picks and FPL’s live points; arrows compare with FPL’s last official table.
+          Tap a manager to compare your teams head to head. Live from each manager’s picks and FPL’s live points; arrows compare with FPL’s last official table.
           {lg.data.more ? ' Only the top 50 managers are included.' : ''}
         </p>
       </section>
@@ -463,53 +502,6 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
         </section>
       )}
     </div>
-  );
-}
-
-/** Player photo, or his club kit when the game has no photo for him yet. */
-function Face({ el, teams }) {
-  const [failed, setFailed] = useState(false);
-  const src = failed || !el.opta ? shirt(teams[el.team]?.code, el.type === 1) : photo(el.opta);
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img className="sp-photo" src={src} alt="" width="40" height="40" onError={() => setFailed(true)} style={failed ? { objectFit: 'contain', padding: 4 } : undefined} />;
-}
-
-function Fixtures({ live, teams }) {
-  const list = [...live.fixtures].sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
-  return (
-    <section className="sp-group" style={{ marginTop: 12 }}>
-      {list.map((f) => {
-        const on = f.started && !f.finished && !f.finishedProvisional;
-        const done = f.finished || f.finishedProvisional;
-        const side = (id, score, other) => (
-          <span className={`sp-team-line${done && score > other ? ' sp-won' : done && score < other ? ' sp-lost' : ''}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={shirt(teams[id]?.code)} alt="" width="24" height="24" style={{ objectFit: 'contain' }} loading="lazy" />
-            <span className="sp-tn">{teams[id]?.name}</span>
-          </span>
-        );
-        return (
-          <div key={f.id} className="sp-row">
-            <span className="sp-row-status">
-              {done ? <span className="sp-pill sp-pill-ft">FT</span> : on ? <span className="sp-pill sp-pill-live">{f.minutes}′</span> : (
-                <>
-                  <span className="sp-muted" style={{ fontWeight: 600 }}>{new Date(f.kickoff).toLocaleDateString(undefined, { weekday: 'short' })}</span>
-                  <span className="sp-pill sp-pill-time">{kickoff(f.kickoff)}</span>
-                </>
-              )}
-            </span>
-            <span className="sp-row-teams">
-              {side(f.home, f.hs, f.as)}
-              {side(f.away, f.as, f.hs)}
-            </span>
-            <span className="sp-row-score">
-              <span className={done && f.hs < f.as ? 'sp-lost' : ''}>{f.started ? f.hs : ''}</span>
-              <span className={done && f.as < f.hs ? 'sp-lost' : ''}>{f.started ? f.as : ''}</span>
-            </span>
-          </div>
-        );
-      })}
-    </section>
   );
 }
 

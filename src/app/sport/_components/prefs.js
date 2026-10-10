@@ -14,6 +14,7 @@ export const DEFAULTS = {
   theme: 'system', // system | light | dark
   fplEntry: null,
   fplLeague: null,
+  fplRival: {}, // league id -> the manager you last compared yourself with there
 };
 
 function read() {

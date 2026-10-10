@@ -52,8 +52,19 @@ export async function getStatic() {
       total: e.total_points,
       xg: num(e.expected_goals),
       xa: num(e.expected_assists),
+      goals: e.goals_scored,
+      assists: e.assists,
       ep: num(e.ep_next),
       opta: e.opta_code,
+      // Season totals for the projection model (fpl.mjs projectPlayer).
+      minutes: e.minutes,
+      starts: e.starts,
+      xgc: num(e.expected_goals_conceded),
+      saves: e.saves,
+      bonus: e.bonus,
+      dc90: num(e.defensive_contribution_per_90),
+      yc: e.yellow_cards,
+      playing: e.chance_of_playing_this_round,
     })),
     total: b.total_players,
   };
@@ -96,11 +107,33 @@ export async function getLive(event) {
       finished: Boolean(f.finished),
       finishedProvisional: Boolean(f.finished_provisional),
       minutes: f.minutes,
+      fdrH: f.team_h_difficulty,
+      fdrA: f.team_a_difficulty,
       bps: pairs(f, 'bps'),
       bonus: pairs(f, 'bonus'),
     })),
     at: new Date().toISOString(),
   };
+}
+
+/** Every fixture of the season, for looking several gameweeks ahead. */
+export async function getFixtures() {
+  const all = await fpl('/fixtures/', 300e3);
+  return (all ?? []).map((f) => ({
+    id: f.id,
+    event: f.event,
+    kickoff: f.kickoff_time,
+    home: f.team_h,
+    away: f.team_a,
+    hs: f.team_h_score,
+    as: f.team_a_score,
+    started: Boolean(f.started),
+    finished: Boolean(f.finished),
+    finishedProvisional: Boolean(f.finished_provisional),
+    minutes: f.minutes,
+    fdrH: f.team_h_difficulty,
+    fdrA: f.team_a_difficulty,
+  }));
 }
 
 const picksShape = (p) =>
