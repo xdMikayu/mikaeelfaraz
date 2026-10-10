@@ -10,10 +10,6 @@ const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hi
 // The game's own artwork, served from its public CDN: kits by club code, photos by Opta id.
 const shirt = (code, gk) => `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${code}${gk ? '_1' : ''}-110.png`;
 const photo = (opta, big) => (opta ? `https://resources.premierleague.com/premierleague25/photos/players/${big ? '110x140' : '40x40'}/${String(opta).replace(/^p/, '')}.png` : null);
-const badge = (code) => `https://resources.premierleague.com/premierleague/badges/50/t${code}.png`;
-
-/** Points colour bands, as on the pitch: blank, ordinary, good, a haul. */
-const tier = (pts) => (pts <= 1 ? 'sp-t0' : pts <= 5 ? 'sp-t1' : pts <= 9 ? 'sp-t2' : 'sp-t3');
 
 const signed = (v) => (v > 0 ? `+${v}` : `−${Math.abs(v)}`);
 
@@ -86,83 +82,43 @@ function Live({ st, live, entry, liveAt, liveErr }) {
   return (
     <div className="sp-read">
       {team ? (
-        <section className="sp-fpl-hero" aria-label="Gameweek points">
-          <div className="sp-fpl-hero-top">
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="sp-pill" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff' }}>Gameweek {live.event}</span>
-              {isLive && <span className="sp-pill sp-pill-live" style={{ background: '#ff3d5e', color: '#fff' }}><i className="sp-dot sp-dot-live" />Live</span>}
+        <section className="sp-fhead" aria-label="Gameweek points">
+          <div className="sp-section-head" style={{ marginBottom: 6 }}>
+            <span className="sp-small" style={{ fontWeight: 700 }}>
+              Gameweek {live.event}
+              {isLive ? <span className="sp-live-text"> · live</span> : allDone && gw?.checked ? ' · final' : ''}
             </span>
-            <button onClick={() => update({ fplEntry: null, fplLeague: null })}>Change team</button>
+            <button className="sp-small sp-link sp-ink2" onClick={() => update({ fplEntry: null, fplLeague: null })}>Change team</button>
           </div>
-          <p style={{ margin: '14px 0 0', fontWeight: 750, fontSize: 16 }}>{entry.name}</p>
-          <p style={{ margin: 0, fontSize: 13, opacity: 0.75 }}>{entry.manager}</p>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
             <span className="sp-hero-num sp-num">{team.net}</span>
-            <span style={{ paddingBottom: 10, lineHeight: 1.25 }}>
-              <b style={{ display: 'block', fontSize: 15 }}>points</b>
-              <span style={{ fontSize: 12.5, opacity: 0.8 }}>
-                {allDone && gw?.checked ? 'Final' : 'Provisional'}
-                {team.hit ? ` · −${team.hit} hit` : ''}
-              </span>
+            <span className="sp-small sp-ink2" style={{ paddingBottom: 8, lineHeight: 1.35 }}>
+              {allDone && gw?.checked ? 'points' : 'points so far'}
+              {team.hit ? `, after −${team.hit}` : ''}
+              <br />
+              <b style={{ color: 'var(--sp-ink)' }}>{entry.name}</b>
             </span>
           </div>
-          {(gw?.average || gw?.highest) && (
-            <div className="sp-cmp" aria-label="Compared with other managers">
-              {[
-                ['You', team.net, true],
-                gw.average ? ['Average', gw.average] : null,
-                gw.highest ? ['Highest', gw.highest] : null,
-              ]
-                .filter(Boolean)
-                .map(([l, v, you]) => (
-                  <div key={l} className={`sp-cmp-row${you ? ' sp-cmp-you' : ''}`}>
-                    <span>{l}</span>
-                    <div><i style={{ width: `${Math.min(100, (v / Math.max(team.net, gw.highest ?? 0, gw.average ?? 0, 1)) * 100)}%` }} /></div>
-                    <b>{v}</b>
-                  </div>
-                ))}
-            </div>
-          )}
-          <div className="sp-fpl-tiles">
-            <div className="sp-fpl-tile">
-              <b>
-                {rankNow ? compactRank(rankNow) : '–'}
-                {moved !== 0 && <span style={{ fontSize: 13, marginLeft: 4, color: moved > 0 ? '#00e88f' : '#ff8a96' }}>{moved > 0 ? '▲' : '▼'}</span>}
-              </b>
-              <span>Overall rank</span>
-            </div>
-            <div className="sp-fpl-tile">
-              <b>{played}<span style={{ opacity: 0.6, fontSize: 14 }}>/{counting}</span></b>
-              <span>Played</span>
-            </div>
-            <div className="sp-fpl-tile">
-              <b>{picks.chip ? CHIP[picks.chip] ?? picks.chip : team.lines.filter((l) => !l.counts).reduce((t, l) => t + l.state.points, 0)}</b>
-              <span>{picks.chip ? 'Chip' : 'Bench points'}</span>
-            </div>
+          {(gw?.average || gw?.highest) && <Scale you={team.net} avg={gw.average} top={gw.highest} />}
+          <div className="sp-facts" style={{ marginTop: gw?.average || gw?.highest ? 4 : 14 }}>
+            <span>Rank <b className="sp-num">{rankNow ? rankNow.toLocaleString() : '–'}</b>{moved !== 0 && <b className={moved > 0 ? 'sp-up' : 'sp-down'}> {moved > 0 ? '▲' : '▼'} {compactRank(Math.abs(moved))}</b>}</span>
+            <span><b>{counting - played}</b> still to play</span>
+            {picks.chip ? <span><b>{CHIP[picks.chip] ?? picks.chip}</b> played</span> : <span><b>{team.lines.filter((l) => !l.counts).reduce((t, l) => t + l.state.points, 0)}</b> on the bench</span>}
           </div>
-          <p style={{ margin: '12px 0 0', fontSize: 12, opacity: 0.8 }}>
-            <Freshness at={liveAt} error={liveErr} live={isLive} every={30} light />
-          </p>
+          {next && new Date(next.deadline) > Date.now() && (
+            <p className="sp-small sp-ink2" style={{ margin: '10px 0 0' }}>
+              Gameweek {next.id} deadline <b style={{ color: 'var(--sp-ink)' }}>{shortDate(next.deadline)}, {kickoff(next.deadline)}</b>, {until(next.deadline)}.
+            </p>
+          )}
+          <p className="sp-tiny sp-muted" style={{ margin: '6px 0 0' }}><Freshness at={liveAt} error={liveErr} live={isLive} every={30} /></p>
         </section>
       ) : (
         <p className="sp-empty">This team has no picks for gameweek {live.event}.</p>
       )}
 
-      {next && new Date(next.deadline) > Date.now() && (
-        <div className="sp-pad" style={{ marginTop: 12 }}>
-          <div className="sp-card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-            <span className="sp-pill sp-pill-gold" style={{ height: 30, fontSize: 13 }}>GW {next.id}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 14 }}>
-              <b>Deadline {shortDate(next.deadline)}, {kickoff(next.deadline)}</b>
-              <span className="sp-muted" style={{ display: 'block', fontSize: 12.5 }}>{until(next.deadline)}</span>
-            </span>
-          </div>
-        </div>
-      )}
-
       {feed.length > 0 && (
-        <section className="sp-panel" style={{ marginTop: 12 }}>
-          <h2 className="sp-h2" style={{ marginBottom: 6 }}>Since you opened this page</h2>
+        <section className="sp-panel" style={{ borderTop: 0 }}>
+          <h2 className="sp-h3" style={{ marginBottom: 4 }}>Since you opened this page</h2>
           <ul className="sp-feed">
             {feed.slice(0, 12).map((f) => {
               const el = ctx.elements[f.element];
@@ -181,8 +137,8 @@ function Live({ st, live, entry, liveAt, liveErr }) {
         </section>
       )}
 
-      <div className="sp-pad" style={{ marginTop: 16 }}>
-        <div className="sp-tabs sp-tabs-fpl" role="tablist">
+      <div className="sp-pad" style={{ marginTop: 6 }}>
+        <div className="sp-tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}>Pitch</button>
           <button role="tab" aria-selected={tab === 'list'} onClick={() => setTab('list')}>List</button>
           {leagueId && <button role="tab" aria-selected={tab === 'league'} onClick={() => setTab('league')}>League</button>}
@@ -194,6 +150,22 @@ function Live({ st, live, entry, liveAt, liveErr }) {
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} onPick={(id) => update({ fplLeague: id })} />}
       {tab === 'fixtures' && <Fixtures live={live} teams={teams} />}
+    </div>
+  );
+}
+
+/** You against the gameweek average and the top score, on one line. */
+function Scale({ you, avg, top }) {
+  const max = Math.max(top ?? 0, you, avg ?? 0, 1);
+  const at = (v) => `${Math.min(97, Math.max(3, (v / max) * 100))}%`;
+  // Your label sits under the line, the others above it, so they never collide.
+  return (
+    <div className="sp-scale" role="img" aria-label={`You ${you}${avg ? `, average ${avg}` : ''}${top ? `, highest ${top}` : ''}`}>
+      <div className="sp-scale-bar" />
+      {avg ? <div className="sp-scale-m" style={{ left: at(avg) }}>Average {avg}<i /></div> : null}
+      {top ? <div className="sp-scale-m" style={{ left: at(top), transform: 'translateX(-100%)', textAlign: 'right' }}>Top {top}<i style={{ marginRight: 0 }} /></div> : null}
+      <span className="sp-scale-you" style={{ left: at(you) }} />
+      <span className="sp-scale-you-l" style={{ left: at(you) }}>You</span>
     </div>
   );
 }
@@ -279,10 +251,10 @@ function Pitch({ team, ctx, teams }) {
           </i>
         )}
         {(l.captain || l.vice || l.captainNow) && (
-          <i className={`sp-kit-badge${l.captainNow ? ' sp-cap' : ''}`}>{l.captainNow ? (l.mult === 3 ? 'TC' : 'C') : l.captain ? 'C' : 'V'}</i>
+          <i className="sp-kit-badge">{l.captainNow ? (l.mult === 3 ? 'TC' : 'C') : l.captain ? 'C' : 'V'}</i>
         )}
         <span className="sp-kit-name">{el.name}</span>
-        <span className={`sp-kit-pts ${tier(pts)}`}>{pts}</span>
+        <span className="sp-kit-pts">{pts}</span>
         <span className="sp-kit-fx">{fx.length ? fx.map((f) => fxShort(f, el.team, teams)).join(', ') : 'No match'}</span>
       </button>
     );
@@ -332,14 +304,14 @@ function PlayerCard({ l, ctx, teams }) {
               {teams[el.team]?.name} · {POS[el.type]} · £{el.cost.toFixed(1)}m · {el.owned}% owned
             </p>
           </div>
-          <span className={`sp-pick-pts ${tier(l.counts ? l.total : l.state.points)}`} style={{ fontSize: 20, minWidth: 48, height: 40 }}>{l.counts ? l.total : l.state.points}</span>
+          <span className="sp-pick-pts" style={{ fontSize: 30 }}>{l.counts ? l.total : l.state.points}</span>
         </div>
         <p className="sp-tiny sp-ink2" style={{ margin: '8px 0 6px', fontWeight: 600 }}>{fx.map((f) => fxLong(f, el.team, teams)).join(' · ') || 'No match this gameweek'}</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }}>
           {parts.length ? parts.map((p) => (
-            <span key={p.k} className={`sp-pill ${p.v > 0 ? 'sp-pill-win' : 'sp-pill-off'}`}>{p.label} {signed(p.v)}</span>
-          )) : <span className="sp-pill sp-pill-ft">No points yet</span>}
-          {l.mult > 1 && <span className="sp-pill sp-pill-gold">×{l.mult} {l.mult === 3 ? 'triple captain' : 'captain'}</span>}
+            <span key={p.k} className="sp-small" style={{ fontWeight: 700 }}>{p.label} <span className={p.v > 0 ? 'sp-up' : 'sp-down'}>{signed(p.v)}</span></span>
+          )) : <span className="sp-small sp-muted">No points yet</span>}
+          {l.mult > 1 && <span className="sp-small" style={{ fontWeight: 800 }}>×{l.mult} {l.mult === 3 ? 'triple captain' : 'captain'}</span>}
         </div>
       </div>
     </section>
@@ -375,7 +347,7 @@ function TeamList({ team, ctx, teams }) {
           {(note || parts.length > 0) && <small>{[note, ...parts].filter(Boolean).join(' · ')}</small>}
         </span>
         <span className="sp-tiny sp-muted sp-num">{l.mult > 1 ? `×${l.mult}` : ''}</span>
-        <span className={`sp-pick-pts ${l.counts ? tier(pts) : ''}`}>{pts}</span>
+        <span className="sp-pick-pts">{pts}</span>
       </div>
     );
   };
@@ -399,7 +371,6 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
   if (!lg.data) return lg.error ? <p className="sp-empty">Couldn’t load this league ({lg.error}).</p> : <div className="sp-skel" style={{ height: 400, margin: 16 }} />;
   const me = result.table.find((r) => r.entry === entry.id);
   const myMult = Object.fromEntries((me?.live?.lines ?? myTeam?.lines ?? []).map((l) => [l.element, l.mult]));
-  const topGw = Math.max(1, ...result.table.map((r) => r.gw));
   // Who moves you: big gaps between your multiplier and the league's average one.
   const swings = result.ownership
     .map((o) => ({ ...o, mine: myMult[o.element] ?? 0, gap: (myMult[o.element] ?? 0) - o.eo / 100 }))
@@ -420,7 +391,6 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
       )}
       <section className="sp-group" style={{ marginTop: 0 }}>
         <header className="sp-ghead">
-          <span className="sp-lgmark" style={{ background: 'color-mix(in srgb, var(--sp-fpl) 16%, transparent)', color: 'var(--sp-fpl)', fontWeight: 800, fontSize: 13 }}>{result.table.length}</span>
           <h2 className="sp-h3">{lg.data.name}</h2>
           <Freshness at={lg.at} error={lg.error} />
         </header>
@@ -436,7 +406,7 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
               <span style={{ minWidth: 0 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                   <b style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14.5 }}>{r.team}</b>
-                  {r.chip && <span className="sp-pill sp-pill-fpl" style={{ height: 18, fontSize: 10.5 }}>{CHIP[r.chip] ?? r.chip}</span>}
+                  {r.chip && <span className="sp-tiny" style={{ fontWeight: 800, flex: 'none' }}>{CHIP[r.chip] ?? r.chip}</span>}
                 </span>
                 <span className="sp-tiny sp-muted" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.manager}</span>
@@ -449,7 +419,6 @@ function League({ id, event, entry, ctx, myTeam, teams, onPick }) {
                   )}
                   {r.hit ? <span className="sp-down" style={{ flex: 'none' }}>−{r.hit}</span> : null}
                 </span>
-                <div className="sp-lbar" aria-hidden><i style={{ width: `${(r.gw / topGw) * 100}%` }} /></div>
               </span>
               <span className="sp-lpts">
                 <b>{r.liveTotal}</b>
@@ -515,14 +484,14 @@ function Fixtures({ live, teams }) {
         const side = (id, score, other) => (
           <span className={`sp-team-line${done && score > other ? ' sp-won' : done && score < other ? ' sp-lost' : ''}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={badge(teams[id]?.code)} alt="" width="22" height="22" style={{ objectFit: 'contain' }} loading="lazy" />
+            <img src={shirt(teams[id]?.code)} alt="" width="24" height="24" style={{ objectFit: 'contain' }} loading="lazy" />
             <span className="sp-tn">{teams[id]?.name}</span>
           </span>
         );
         return (
-          <div key={f.id} className={`sp-row${on ? ' sp-row-live' : ''}`}>
+          <div key={f.id} className="sp-row">
             <span className="sp-row-status">
-              {done ? <span className="sp-pill sp-pill-ft">FT</span> : on ? <span className="sp-pill sp-pill-live"><i className="sp-dot sp-dot-live" />{f.minutes}′</span> : (
+              {done ? <span className="sp-pill sp-pill-ft">FT</span> : on ? <span className="sp-pill sp-pill-live">{f.minutes}′</span> : (
                 <>
                   <span className="sp-muted" style={{ fontWeight: 600 }}>{new Date(f.kickoff).toLocaleDateString(undefined, { weekday: 'short' })}</span>
                   <span className="sp-pill sp-pill-time">{kickoff(f.kickoff)}</span>
@@ -533,7 +502,7 @@ function Fixtures({ live, teams }) {
               {side(f.home, f.hs, f.as)}
               {side(f.away, f.as, f.hs)}
             </span>
-            <span className={`sp-row-score${on ? ' sp-is-live' : ''}`}>
+            <span className="sp-row-score">
               <span className={done && f.hs < f.as ? 'sp-lost' : ''}>{f.started ? f.hs : ''}</span>
               <span className={done && f.as < f.hs ? 'sp-lost' : ''}>{f.started ? f.as : ''}</span>
             </span>
@@ -547,8 +516,8 @@ function Fixtures({ live, teams }) {
 function FantasySkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading fantasy">
-      <div className="sp-skel" style={{ height: 300, margin: '12px 12px 0', borderRadius: 24 }} />
-      <div className="sp-skel" style={{ height: 460, margin: '14px 12px 0', borderRadius: 18 }} />
+      <div className="sp-skel" style={{ height: 220, margin: '12px 16px 0' }} />
+      <div className="sp-skel" style={{ height: 460, margin: '14px 0 0' }} />
     </div>
   );
 }
@@ -575,21 +544,20 @@ function Setup({ onSave }) {
   };
   return (
     <div className="sp-read">
-      <section className="sp-fpl-hero">
-        <span className="sp-pill" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff' }}>Fantasy Premier League</span>
-        <h1 className="sp-h1" style={{ marginTop: 14, color: '#fff' }}>Your team, live</h1>
-        <p style={{ margin: '8px 0 0', opacity: 0.85, maxWidth: '44ch' }}>
-          Points as they happen, bonus as it stands, projected autosubs, and which players move you against your mini-league.
+      <section className="sp-pad" style={{ paddingTop: 16 }}>
+        <h1 className="sp-h1">Your team, live</h1>
+        <p className="sp-ink2" style={{ margin: '8px 0 0', maxWidth: '46ch' }}>
+          Fantasy Premier League points as they happen, bonus as it stands, projected autosubs, and which players move you against your mini-league.
         </p>
       </section>
-      <form onSubmit={save} className="sp-panel" style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+      <form onSubmit={save} className="sp-panel" style={{ display: 'grid', gap: 10, marginTop: 16 }}>
         <label htmlFor="fplid" style={{ fontWeight: 700 }}>Your FPL team ID</label>
         <input id="fplid" className="sp-input" inputMode="numeric" autoComplete="off" placeholder="e.g. 1234567" value={v} onChange={(e) => setV(e.target.value)} />
         <p className="sp-tiny sp-muted" style={{ margin: 0 }}>
           On fantasy.premierleague.com, open Points. The address reads /entry/<b>1234567</b>/event/6; the number after “entry” is your ID. You can paste the whole address.
         </p>
         {err && <p className="sp-small" style={{ margin: 0, color: 'var(--sp-loss)' }}>{err}</p>}
-        <button className="sp-btn sp-btn-primary" style={{ height: 46, background: 'var(--sp-fpl)', borderColor: 'var(--sp-fpl)' }} disabled={busy}>{busy ? 'Checking…' : 'Show my team'}</button>
+        <button className="sp-btn sp-btn-primary" style={{ height: 46 }} disabled={busy}>{busy ? 'Checking…' : 'Show my team'}</button>
       </form>
       <p className="sp-tiny sp-muted sp-pad" style={{ marginTop: 12 }}>The ID stays in this browser. FPL team pages are public, so no password is needed or asked for.</p>
     </div>

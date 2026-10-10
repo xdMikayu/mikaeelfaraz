@@ -44,39 +44,32 @@ export default function Today() {
   const ranked = (list) => [...list].sort((a, b) => Number(followed.has(b.home.id) || followed.has(b.away.id)) - Number(followed.has(a.home.id) || followed.has(a.away.id)));
   const upcoming = matches.filter((m) => m.status.state === 'pre' && !m.status.off && new Date(m.date) > Date.now());
   const featured = live.length ? ranked(live) : ranked(upcoming).slice(0, 8);
-  const lgName = (slug) => data?.leagues?.[slug]?.abbr ?? LEAGUE_BY_SLUG[slug]?.short ?? slug;
+  const lgName = (slug) => LEAGUE_BY_SLUG[slug]?.short ?? data?.leagues?.[slug]?.abbr ?? slug;
 
   if (!day) return <Skeleton />;
   const isToday = day === todayYmd();
+  const shownLive = liveOnly ? live : featured.slice(0, 3);
   return (
     <div className="sp-read">
       <div className="sp-pad" style={{ paddingTop: 14 }}>
-        <div className="sp-section-head" style={{ marginBottom: 2 }}>
+        <div className="sp-section-head" style={{ marginBottom: 4 }}>
           <h1 className="sp-h1">{isToday ? 'Today' : day === todayYmd(1) ? 'Tomorrow' : day === todayYmd(-1) ? 'Yesterday' : ymdToDate(day).toLocaleDateString(undefined, { weekday: 'long' })}</h1>
-          {live.length > 0 && (
-            <button className={`sp-pill ${liveOnly ? 'sp-pill-live' : 'sp-pill-ft'}`} style={{ height: 32, padding: '0 12px', fontSize: 13 }} aria-pressed={liveOnly} onClick={() => setLiveOnly((v) => !v)}>
-              <i className="sp-dot sp-dot-live" style={{ color: 'var(--sp-live)' }} /> {live.length} live
-            </button>
-          )}
+          <span className="sp-small sp-muted">{ymdToDate(day).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
         </div>
-        <p className="sp-small sp-muted" style={{ margin: '0 0 14px' }}>
-          {longDate(ymdToDate(day))} · {zoneLabel()}
-        </p>
-        <div className="sp-days" role="group" aria-label="Day">
+        <div className="sp-days" role="group" aria-label="Day" style={{ borderBottom: '1px solid var(--sp-rule)' }}>
           {DAYS.map((o) => {
             const ymd = todayYmd(o);
             const d = ymdToDate(ymd);
             return (
               <button key={o} className="sp-day" aria-pressed={ymd === day} onClick={() => setDay(ymd)} aria-label={longDate(d)}>
-                <b>{o === 0 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' })}</b>
-                <span className="sp-num">{d.getDate()}</span>
+                {o === 0 ? 'Today' : `${d.toLocaleDateString(undefined, { weekday: 'short' })} ${d.getDate()}`}
               </button>
             );
           })}
         </div>
-        <div style={{ minHeight: 18, marginTop: 10 }}>
-          <Freshness at={at} error={error} live={matches.some(isHot)} />
-        </div>
+        <p className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>
+          {zoneLabel()} · <Freshness at={at} error={error} />
+        </p>
       </div>
 
       {data?.failed?.length > 0 && data.failed.length < slugs.length && (
@@ -85,13 +78,18 @@ export default function Today() {
 
       {!data && !error && <Skeleton />}
 
-      {featured.length > 0 && !liveOnly && (
-        <section aria-label={live.length ? 'Live now' : 'Coming up'} style={{ marginTop: 14 }}>
-          <h2 className="sp-h2 sp-pad" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            {live.length ? <><i className="sp-dot sp-dot-live" style={{ color: 'var(--sp-live)' }} /> Live now</> : 'Coming up'}
-          </h2>
+      {(live.length > 0 || (featured.length > 0 && isToday)) && (
+        <section aria-label={live.length ? 'Live now' : 'Coming up'} style={{ marginTop: 16 }}>
+          <div className="sp-section-head sp-pad" style={{ marginBottom: 8 }}>
+            <h2 className="sp-h2">{live.length ? (liveOnly ? 'Everything live' : 'Live now') : 'Coming up'}</h2>
+            {live.length > 3 && (
+              <button className="sp-small sp-link" style={{ fontWeight: 700 }} onClick={() => setLiveOnly((v) => !v)}>
+                {liveOnly ? 'Back to all matches' : `All ${live.length} live`}
+              </button>
+            )}
+          </div>
           <div className="sp-carousel">
-            {featured.map((m) => <MatchCard key={m.id} m={m} league={lgName(m.league)} />)}
+            {shownLive.map((m) => <MatchCard key={m.id} m={m} league={lgName(m.league)} />)}
           </div>
         </section>
       )}
@@ -118,21 +116,12 @@ export default function Today() {
 function Group({ slug, title, matches, showLeague, leagues }) {
   const lg = LEAGUE_BY_SLUG[slug];
   const logo = leagues?.[slug]?.logo;
-  const liveN = matches.filter((m) => m.status.state === 'in').length;
   return (
     <section className="sp-group" aria-label={title}>
       <header className="sp-ghead">
-        {slug ? (
-          <span className="sp-lgmark">{logo ? <Crest src={logo} size={20} light /> : null}</span>
-        ) : (
-          <span className="sp-lgmark" style={{ background: 'var(--sp-gold-soft)', color: 'var(--sp-gold)' }}>★</span>
-        )}
-        <h2 className="sp-h3">
-          {title}
-          {lg && lg.country !== 'Europe' && lg.country !== 'International' && <span className="sp-muted" style={{ fontWeight: 500 }}> · {lg.country}</span>}
-        </h2>
-        {liveN > 0 && <span className="sp-pill sp-pill-live">{liveN} live</span>}
-        {lg?.table && <Link className="sp-pill sp-pill-ft" href={`/sport/table/${slug}`}>Table</Link>}
+        {slug && <span className="sp-lgmark">{logo ? <Crest src={logo} size={22} /> : null}</span>}
+        <h2 className="sp-h3">{title}</h2>
+        {lg?.table && <Link className="sp-small sp-link sp-ink2" href={`/sport/table/${slug}`}>Table</Link>}
       </header>
       {matches.map((m) => (
         <MatchRow key={m.id} m={m} caption={showLeague ? LEAGUE_BY_SLUG[m.league]?.name ?? m.league : null} />
@@ -143,16 +132,17 @@ function Group({ slug, title, matches, showLeague, leagues }) {
 
 function Skeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading">
+    <div aria-busy="true" aria-label="Loading" style={{ marginTop: 16 }}>
+      <div className="sp-pad"><div className="sp-skel" style={{ height: 112, borderRadius: 10 }} /></div>
       {[5, 3].map((n, g) => (
         <div key={g} className="sp-group">
-          <div className="sp-ghead"><span className="sp-skel" style={{ width: 140, height: 14 }} /></div>
+          <div className="sp-ghead"><span className="sp-skel" style={{ width: 140, height: 16 }} /></div>
           {Array.from({ length: n }, (_, i) => (
             <div key={i} className="sp-row">
               <span className="sp-skel" style={{ width: 34, height: 12 }} />
               <div className="sp-row-teams">
-                <span className="sp-skel" style={{ width: '55%', height: 14 }} />
-                <span className="sp-skel" style={{ width: '45%', height: 14 }} />
+                <span className="sp-skel" style={{ width: '55%', height: 14, margin: '6px 0' }} />
+                <span className="sp-skel" style={{ width: '45%', height: 14, margin: '6px 0' }} />
               </div>
               <span />
             </div>

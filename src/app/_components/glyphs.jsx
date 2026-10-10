@@ -85,3 +85,18 @@ export const Screen = ({ size = 14 }) => (
     <path d="M5.5 14.5h5" strokeLinecap="round" />
   </svg>
 );
+
+/**
+ * A small shirt in the team's kit colour: the team marker in lists, where a crest would usually sit.
+ * The collar takes the alternate colour when there is one; a hairline keeps white kits visible.
+ */
+export function ShirtMark({ color, alt, size = 22 }) {
+  const body = color && /^#[0-9a-f]{6}$/i.test(color) ? color : '#9a9a9a';
+  const trim = alt && /^#[0-9a-f]{6}$/i.test(alt) && alt.toLowerCase() !== body.toLowerCase() ? alt : 'rgba(0,0,0,0.18)';
+  return (
+    <svg className="sp-shirtmark" width={size} height={size * 0.92} viewBox="0 0 22 20" aria-hidden>
+      <path d="M7 1 2.5 3.5 0.8 8.2l3.4 1.4V19h13.6V9.6l3.4-1.4L19.5 3.5 15 1c-.6 1.6-2.2 2.7-4 2.7S7.6 2.6 7 1Z" fill={body} style={{ stroke: 'var(--sp-shirt-edge)' }} strokeWidth="0.9" strokeLinejoin="round" />
+      <path d="M7.3 1.4c.8 1.4 2.1 2.2 3.7 2.2s2.9-.8 3.7-2.2" fill="none" stroke={trim} strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}

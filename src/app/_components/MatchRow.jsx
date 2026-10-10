@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import Crest from './Crest';
-import { Card } from './glyphs';
+import { Card, ShirtMark } from './glyphs';
 import { useSpoiler } from './prefs';
 import { kickoff, dayMonth } from './time';
 
@@ -17,7 +16,7 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
   const result = (a, b) => (!done || hidden || a == null || b == null ? '' : a > b ? 'sp-won' : a < b ? 'sp-lost' : '');
   const label = `${m.home.name} v ${m.away.name}`;
   return (
-    <div className={`sp-row${live ? ' sp-row-live' : ''}`}>
+    <div className="sp-row">
       <Link className="sp-row-link" href={`/sport/match?id=${m.id}`} aria-label={hidden ? `${label}, score hidden` : label} />
       <div className="sp-row-status">
         {showDate && <span className="sp-muted" style={{ fontWeight: 600 }}>{dayMonth(m.date)}</span>}
@@ -26,13 +25,13 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
         ) : m.status.state === 'pre' ? (
           <span className="sp-pill sp-pill-time">{kickoff(m.date)}</span>
         ) : live ? (
-          <span className="sp-pill sp-pill-live"><i className="sp-dot sp-dot-live" />{hidden ? 'Live' : m.status.label}</span>
+          <span className="sp-pill sp-pill-live">{hidden ? 'Live' : m.status.label}</span>
         ) : (
           <span className="sp-pill sp-pill-ft">{m.status.label}</span>
         )}
       </div>
       <div className="sp-row-teams">
-        {caption && <span className="sp-tiny sp-muted" style={{ lineHeight: 1.2, fontWeight: 600 }}>{caption}</span>}
+        {caption && <span className="sp-tiny sp-muted" style={{ lineHeight: 1.2, height: 14.4, fontWeight: 650 }}>{caption}</span>}
         <TeamLine team={m.home} cls={result(hs, as)} hidden={hidden} />
         <TeamLine team={m.away} cls={result(as, hs)} hidden={hidden} />
       </div>
@@ -54,7 +53,7 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
 function TeamLine({ team, cls, hidden }) {
   return (
     <div className={`sp-team-line ${cls}`}>
-      <Crest src={team.logo} size={22} />
+      <ShirtMark color={team.color} alt={team.alt} />
       <span className="sp-tn">{team.short || team.name}</span>
       {!hidden && team.red > 0 && (
         <span className="sp-pips" aria-label={`${team.red} red card${team.red > 1 ? 's' : ''}`}>
