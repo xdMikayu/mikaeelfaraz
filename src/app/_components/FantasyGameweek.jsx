@@ -4,6 +4,7 @@ import { fixtureRates } from '@/lib/sport/fpl.mjs';
 import { matchOdds } from '@/lib/sport/forecast.mjs';
 import { shirt, heat } from './fplbits';
 import { kickoff } from './time';
+import Leaderboard from './FantasyLeaderboard';
 
 const pc = (p) => `${Math.round(p * 100)}%`;
 const isDone = (f) => f.finished || f.finishedProvisional;
@@ -76,6 +77,7 @@ export default function Gameweek({ st, live, fixtures, ctx, teams }) {
         <div className="sp-tabs" role="radiogroup" aria-label="View" style={{ gap: 16 }}>
           <button role="radio" aria-checked={view === 'match'} onClick={() => setView('match')} style={{ height: 34, fontSize: 14 }}>By match</button>
           <button role="radio" aria-checked={view === 'team'} onClick={() => setView('team')} style={{ height: 34, fontSize: 14 }}>By club</button>
+          <button role="radio" aria-checked={view === 'player'} onClick={() => setView('player')} style={{ height: 34, fontSize: 14 }}>By player</button>
         </div>
       </div>
 
@@ -142,6 +144,8 @@ export default function Gameweek({ st, live, fixtures, ctx, teams }) {
           </table>
         </div>
       )}
+
+      {view === 'player' && fixtures && <Leaderboard st={st} fixtures={fixtures} gw={gw} ctx={ctx} teams={teams} />}
 
       {view === 'team' && rows.length > 0 && (
         <section className="sp-group" style={{ marginTop: 4 }}>

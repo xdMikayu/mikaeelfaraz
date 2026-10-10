@@ -31,6 +31,8 @@ export const ROLE_ONE = {
   ST: 'striker',
 };
 
+export const ROLE_SHORT = { GK: 'keeper', CB: 'centre-back', 'FB-L': 'left-back', 'FB-R': 'right-back', CM: 'midfield', AM: 'No. 10', 'W-L': 'left wing', 'W-R': 'right wing', ST: 'striker' };
+
 /**
  * Roles for a starting eleven from its formation lines (GK first, then back to front, each line
  * left to right). ESPN's own labels shift with the formation (in a 4-3-3 "RM" is a central

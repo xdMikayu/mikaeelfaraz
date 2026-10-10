@@ -624,3 +624,10 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-club-stat span:nth-last-child(-n + 2) { text-align: right; }
 .sp-club-bar { display: block; height: 8px; background: var(--sp-sunk); }
 .sp-club-bar i { display: block; height: 100%; background: var(--sp-ink); }
+.sp-lb tbody th { font-weight: 600; }
+.sp-lb-who { display: grid; grid-template-columns: 20px 18px minmax(0, 1fr); gap: 6px; align-items: center; max-width: 220px; }
+.sp-lb-n { font-size: 12px; font-weight: 800; text-align: right; }
+.sp-lb-who img { object-fit: contain; }
+.sp-lb-who b { display: block; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-lb-who small { display: block; font-size: 11px; color: var(--sp-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-lb td { height: 40px; }
