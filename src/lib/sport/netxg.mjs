@@ -14,6 +14,8 @@
 //   history  his own xG per 90 against this opponent, against his usual rate
 //   minutes  his likely minutes, which scale the whole number
 
+import { availability } from './fpl.mjs';
+
 export const FEATURES = ['base', 'form', 'defence', 'venue', 'position', 'history'];
 const PRIOR_BASE = 450; // minutes of position-average output mixed into his own rate
 
@@ -82,7 +84,7 @@ export function netFor(el, f, ctx, kit, nx, which, mdl) {
   // Minutes from his starts so far and FPL's availability flag.
   const team = model.teams[el.team] ?? { n: 0 };
   const n = Math.max(1, Math.round(team.n));
-  const avail = el.playing == null ? 1 : el.playing / 100;
+  const avail = availability(el, f, ctx);
   const starts = el.starts ?? 0;
   const seasonMin = el.minutes ?? 0;
   const pStart = Math.min(1, starts / n) * avail;

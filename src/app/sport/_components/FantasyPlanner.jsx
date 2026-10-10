@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { projectAhead, returnOdds, suggestTransfers } from '@/lib/sport/fpl.mjs';
 import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
+import Record from './FantasyRecord';
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const shade = (v, max) => Math.max(0, Math.min(1, v / max));
@@ -71,6 +72,8 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit }) 
           ))}
         </div>
       </div>
+
+      <Record />
 
       <section className="sp-panel">
         <h2 className="sp-h2">Captain for gameweek {first}</h2>
