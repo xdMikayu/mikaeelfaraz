@@ -29,6 +29,7 @@ two earlier versions of this app shipped them.
 | Green | Points gained; players who help you in your league |
 | Grass green | Pitches |
 | Black and white | Everything else |
+| Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions): more ink means more |
 
 - Near-white kits fall back to the club's alternate colour when it has a darker one.
 - Coloured blocks get a hairline edge so white halves don't merge with the page.

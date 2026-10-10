@@ -10,6 +10,8 @@ import MatchRow from './MatchRow';
 import MatchCard from './MatchCard';
 import { inkOn } from './colors';
 import { Star } from './glyphs';
+import TeamAnalysis from './TeamAnalysis';
+import { teamColors, useDark } from './colors';
 
 export default function TeamView() {
   const q = useSearchParams();
@@ -21,6 +23,7 @@ export default function TeamView() {
   });
   const { isFollowed, toggle } = useFollow();
   const { prefs } = usePrefs();
+  const dark = useDark();
   const [all, setAll] = useState(false);
   if (!id) return <p className="sp-empty">No team given.</p>;
   if (!data) return error ? <p className="sp-empty">Couldn’t load this team from ESPN.</p> : <div className="sp-skel" style={{ height: 400, margin: 16 }} />;
@@ -71,6 +74,8 @@ export default function TeamView() {
           </div>
         </section>
       )}
+
+      {!(prefs.spoilers === 'all') && <TeamAnalysis team={team} fixtures={fixtures} color={teamColors(team, { color: null }, dark).home} />}
 
       <section className="sp-group">
         <header className="sp-ghead"><h2 className="sp-h3">Fixtures</h2></header>
