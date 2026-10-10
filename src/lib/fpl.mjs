@@ -259,6 +259,16 @@ export function withMatchups(model, m) {
   };
 }
 
+/**
+ * FPL's chance-of-playing flag for this fixture: "this round" for the live gameweek's matches,
+ * "next round" for anything later. No flag means fit.
+ */
+export function availability(el, f, ctx) {
+  const thisRound = ctx.fixtures?.some((x) => x.id === f.id);
+  const flag = thisRound ? el.playing : el.chance ?? el.playing;
+  return flag == null ? 1 : flag / 100;
+}
+
 /** Expected goals each side scores in this fixture, before kick-off. */
 export function fixtureRates(f, model) {
   const r = model.rates?.(f.home, f.away);
@@ -310,7 +320,7 @@ export function projectFixture(id, f, ctx) {
     p60 = on ? (alreadyMins >= 60 ? 1 : alreadyMins + 90 * left >= 60 ? 0.85 : 0) : 0;
   } else {
     const n = Math.max(1, Math.round(team.n));
-    const avail = el.playing == null ? 1 : el.playing / 100;
+    const avail = availability(el, f, ctx);
     const starts = el.starts ?? 0;
     const pStart = Math.min(1, starts / n) * avail;
     const perStart = starts > 0 ? Math.min(90, min / starts) : 0;

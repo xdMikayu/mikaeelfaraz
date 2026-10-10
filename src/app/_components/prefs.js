@@ -15,6 +15,7 @@ export const DEFAULTS = {
   fplEntry: null,
   fplLeague: null,
   fplRival: {}, // league id -> the manager you last compared yourself with there
+  fplWatch: [], // FPL player ids starred to keep an eye on
 };
 
 function read() {

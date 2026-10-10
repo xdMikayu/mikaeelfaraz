@@ -3,23 +3,27 @@ import { useMemo, useState } from 'react';
 import { projectAhead, returnOdds, suggestTransfers } from '@/lib/sport/fpl.mjs';
 import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
+import Record from './FantasyRecord';
+import { TransferPlan, Chips, Rotations } from './FantasyOptimiser';
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const shade = (v, max) => Math.max(0, Math.min(1, v / max));
 const oppLabel = (teams, f) => `${teams[f.opp]?.short ?? ''}${f.home ? '' : ' (A)'}`;
 
 /** The weeks ahead: projected points, captaincy, transfers and fixtures, all from our model. */
-export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit }) {
+export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, entry }) {
   const [horizon, setHorizon] = useState(5);
+  const [view, setView] = useState('overview');
   const [ticker, setTicker] = useState('att');
   // Plan from the next deadline: the current gameweek once it has started, else this one.
   const cur = st.events.find((e) => e.current);
   const curStarted = fixtures.some((f) => f.event === cur?.id && f.started);
   const start = cur && !curStarted ? cur.id : (st.events.find((e) => e.next)?.id ?? (cur?.id ?? 1) + 1);
-  const gws = Array.from({ length: horizon }, (_, i) => start + i).filter((g) => g <= 38);
-  const squad = picks.map((p) => p.element);
-  const ahead = useMemo(() => projectAhead(st.elements.map((e) => e.id), fixtures, gws, ctx), [st, fixtures, gws.join(','), ctx]);
-  const transfers = useMemo(() => suggestTransfers(squad, bank, ahead, ctx), [squad.join(','), bank, ahead, ctx]);
+  const gws = useMemo(() => Array.from({ length: horizon }, (_, i) => start + i).filter((g) => g <= 38), [start, horizon]);
+  const squad = useMemo(() => picks.map((p) => p.element), [picks]);
+  const ahead = useMemo(() => projectAhead(st.elements.map((e) => e.id), fixtures, gws, ctx), [st, fixtures, gws, ctx]);
+  const transfers = useMemo(() => suggestTransfers(squad, bank, ahead, ctx), [squad, bank, ahead, ctx]);
+  const teamsPlayed = useMemo(() => Object.fromEntries(st.teams.map((t) => [t.id, Math.round(ctx.model.teams[t.id]?.n ?? 1)])), [st, ctx]);
   if (!gws.length) return <p className="sp-empty">The season is over: nothing left to plan.</p>;
 
   const first = gws[0];
@@ -72,152 +76,177 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit }) 
         </div>
       </div>
 
-      <section className="sp-panel">
-        <h2 className="sp-h2">Captain for gameweek {first}</h2>
-        <p className="sp-small sp-ink2" style={{ margin: '4px 0 6px' }}>Your players by projected points. Returns are the chance of at least one goal or assist; a haul, two or more.</p>
-        {captains.map((c, i) => {
-          const el = ctx.elements[c.id];
-          const g = c.g;
-          const odds = returnOdds(g.xg, g.xa);
-          const f = g.fx[0];
-          const role = kit && ctx.model.role?.(c.id);
-          const rf = f?.roleF ?? 1;
-          return (
-            <div key={c.id} className="sp-cap">
-              <span className="sp-cap-n sp-num">{i + 1}</span>
-              <Face el={el} teams={teams} />
-              <span style={{ minWidth: 0 }}>
-                <b className="sp-dif-name" style={{ display: 'block' }}>{el.name}</b>
-                <span className="sp-tiny sp-muted sp-dif-line">
-                  {g.fx.map((x) => oppLabel(teams, x)).join(', ')} · xG {g.xg.toFixed(2)} · xA {g.xa.toFixed(2)}
-                  {g.cs != null && el.type <= 2 ? ` · clean sheet ${pct(g.cs)}` : ''}
-                </span>
-                {role && Math.abs(rf - 1) >= 0.04 && (
-                  <span className="sp-tiny sp-ink2" style={{ display: 'block', marginTop: 2 }}>
-                    {ROLE_NAME[role]} get {Math.round(Math.abs(rf - 1) * 100)}% {rf > 1 ? 'more' : 'less'} of what {teams[f.opp]?.name} concede than usual
-                  </span>
-                )}
-              </span>
-              <span className="sp-cap-r">
-                <b className="sp-num">{one(g.xp * 2)}</b>
-                <span className="sp-tiny sp-muted">as captain</span>
-                <span className="sp-tiny sp-ink2 sp-num">return {pct(odds.any)} · haul {pct(odds.two)}</span>
-              </span>
-            </div>
-          );
-        })}
-      </section>
-
-      <section className="sp-group">
-        <header className="sp-ghead" style={{ display: 'block' }}>
-          <h2 className="sp-h3">Your squad, projected</h2>
-          <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0' }}>Expected points per gameweek, darker is more. Opponents in capitals at home.</p>
-        </header>
-        <div className="sp-heat-wrap">
-          <table className="sp-heat">
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left' }}>Player</th>
-                {gws.map((g) => <th key={g}>GW{g}</th>)}
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => {
-                const el = ctx.elements[p.element];
-                const a = ahead[p.element];
-                if (!el || !a) return null;
-                return (
-                  <tr key={p.element} className={p.position > 11 ? 'sp-off' : ''}>
-                    <th>
-                      <span className="sp-heat-name">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={shirt(teams[el.team]?.code, el.type === 1)} alt="" width="18" height="18" />
-                        {el.name}
-                      </span>
-                    </th>
-                    {gws.map((g) => {
-                      const c = a.per[g];
-                      if (!c.fx.length) return <td key={g} className="sp-heat-blank">–</td>;
-                      return (
-                        <td key={g} style={heat(shade(c.xp, maxCell))} title={`${c.fx.map((x) => oppLabel(teams, x)).join(', ')}: ${one(c.xp)}`}>
-                          <span className="sp-heat-opp">{c.fx.map((x) => (x.home ? teams[x.opp]?.short : teams[x.opp]?.short.toLowerCase())).join(' ')}</span>
-                          <b className="sp-num">{one(c.xp)}</b>
-                        </td>
-                      );
-                    })}
-                    <td className="sp-heat-total sp-num">{one(a.total)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <div className="sp-pad">
+        <div className="sp-tabs" role="tablist" aria-label="Planner" style={{ gap: 16 }}>
+          {[['overview', 'Overview'], ['transfers', 'Transfers'], ['chips', 'Chips'], ['rotation', 'Rotation'], ['fixtures', 'Fixtures']].map(([k, l]) => (
+            <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{ height: 36, fontSize: 14 }}>{l}</button>
+          ))}
         </div>
-      </section>
+      </div>
 
-      <section className="sp-panel">
-        <h2 className="sp-h2">Transfers worth a look</h2>
-        <p className="sp-small sp-ink2" style={{ margin: '4px 0 6px' }}>
-          Single swaps that add the most projected points over {gws.length} gameweeks, within your £{bank.toFixed(1)}m in the bank and three per club. Prices are today’s; FPL keeps your selling prices private.
-        </p>
-        {transfers.length === 0 && <p className="sp-small" style={{ margin: '8px 0 0' }}>Nothing gains half a point or more. Your squad already looks right for these fixtures.</p>}
-        {transfers.map((t) => {
-          const o = ctx.elements[t.out];
-          const n = ctx.elements[t.in];
-          return (
-            <div key={`${t.out}-${t.in}`} className="sp-xfer">
-              <span className="sp-xfer-p">
-                <Face el={o} teams={teams} size={32} />
-                <span style={{ minWidth: 0 }}>
-                  <span className="sp-tiny sp-muted" style={{ display: 'block', fontWeight: 700 }}>Out</span>
-                  <b className="sp-dif-name">{o.name}</b>
-                  <span className="sp-tiny sp-muted sp-dif-line sp-num">{one(ahead[t.out].total)} · £{o.cost.toFixed(1)}m</span>
-                </span>
-              </span>
-              <span className="sp-xfer-arrow" aria-hidden>→</span>
-              <span className="sp-xfer-p">
-                <Face el={n} teams={teams} size={32} />
-                <span style={{ minWidth: 0 }}>
-                  <span className="sp-tiny sp-muted" style={{ display: 'block', fontWeight: 700 }}>In · {n.owned}%</span>
-                  <b className="sp-dif-name">{n.name}</b>
-                  <span className="sp-tiny sp-muted sp-dif-line sp-num">{one(ahead[t.in].total)} · £{n.cost.toFixed(1)}m</span>
-                </span>
-              </span>
-              <b className="sp-xfer-gain sp-num sp-up">+{one(t.gain)}</b>
-            </div>
-          );
-        })}
-      </section>
+      {view === 'overview' && (
+        <>
+          <Record />
 
-      <section className="sp-group">
-        <header className="sp-ghead">
-          <h2 className="sp-h3">Fixtures ahead</h2>
-          <div className="sp-tabs" role="radiogroup" aria-label="Rank fixtures for" style={{ border: 0, gap: 14 }}>
-            <button role="radio" aria-checked={ticker === 'att'} onClick={() => setTicker('att')} style={{ height: 28, fontSize: 13 }}>Attack</button>
-            <button role="radio" aria-checked={ticker === 'def'} onClick={() => setTicker('def')} style={{ height: 28, fontSize: 13 }}>Defence</button>
-          </div>
-        </header>
-        <p className="sp-tiny sp-muted sp-pad" style={{ margin: '0 0 6px' }}>
-          {ticker === 'att' ? 'Goals each club is expected to score; darker is more.' : 'Goals each club is expected to concede; darker is fewer, better for clean sheets.'} From our ratings on every match since 2023/24.
-        </p>
-        <div className="sp-heat-wrap">
-          <table className="sp-heat sp-ticker">
-            <tbody>
-              {tickerRows.map(({ t, per }) => (
-                <tr key={t.id}>
-                  <th>
-                    <span className="sp-heat-name">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={shirt(t.code)} alt="" width="18" height="18" />
-                      {t.short}
+          <section className="sp-panel">
+            <h2 className="sp-h2">Captain for gameweek {first}</h2>
+            <p className="sp-small sp-ink2" style={{ margin: '4px 0 6px' }}>Your players by projected points. Returns are the chance of at least one goal or assist; a haul, two or more.</p>
+            {captains.map((c, i) => {
+              const el = ctx.elements[c.id];
+              const g = c.g;
+              const odds = returnOdds(g.xg, g.xa);
+              const f = g.fx[0];
+              const role = kit && ctx.model.role?.(c.id);
+              const rf = f?.roleF ?? 1;
+              return (
+                <div key={c.id} className="sp-cap">
+                  <span className="sp-cap-n sp-num">{i + 1}</span>
+                  <Face el={el} teams={teams} />
+                  <span style={{ minWidth: 0 }}>
+                    <b className="sp-dif-name" style={{ display: 'block' }}>{el.name}</b>
+                    <span className="sp-tiny sp-muted sp-dif-line">
+                      {g.fx.map((x) => oppLabel(teams, x)).join(', ')} · xG {g.xg.toFixed(2)} · xA {g.xa.toFixed(2)}
+                      {g.cs != null && el.type <= 2 ? ` · clean sheet ${pct(g.cs)}` : ''}
                     </span>
-                  </th>
-                  {per.map((list, i) => (
-                    <td key={i} style={list.length ? heat(ticker === 'att' ? shade(list.reduce((s, x) => s + (x.forG ?? 0), 0) - 0.6, 1.6) : shade(2.2 - list.reduce((s, x) => s + (x.agst ?? 0), 0) / Math.max(1, list.length), 1.6)) : undefined} className={list.length ? '' : 'sp-heat-blank'}>
-                      {list.length ? (
-                        <>
-                          <span className="sp-heat-opp">{list.map((x) => (x.home ? teams[x.opp]?.short : teams[x.opp]?.short.toLowerCase())).join(' ')}</span>
-                          <b className="sp-num">{list.map((x) => (ticker === 'att' ? x.forG : x.agst)?.toFixed(1) ?? '–').join(' ')}</b>
+                    {role && Math.abs(rf - 1) >= 0.04 && (
+                      <span className="sp-tiny sp-ink2" style={{ display: 'block', marginTop: 2 }}>
+                        {ROLE_NAME[role]} get {Math.round(Math.abs(rf - 1) * 100)}% {rf > 1 ? 'more' : 'less'} of what {teams[f.opp]?.name} concede than usual
+                      </span>
+                    )}
+                  </span>
+                  <span className="sp-cap-r">
+                    <b className="sp-num">{one(g.xp * 2)}</b>
+                    <span className="sp-tiny sp-muted">as captain</span>
+                    <span className="sp-tiny sp-ink2 sp-num">return {pct(odds.any)} · haul {pct(odds.two)}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </section>
+
+          <section className="sp-group">
+            <header className="sp-ghead" style={{ display: 'block' }}>
+              <h2 className="sp-h3">Your squad, projected</h2>
+              <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0' }}>Expected points per gameweek, darker is more. Opponents in capitals at home.</p>
+            </header>
+            <div className="sp-heat-wrap">
+              <table className="sp-heat">
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left' }}>Player</th>
+                    {gws.map((g) => <th key={g}>GW{g}</th>)}
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((p) => {
+                    const el = ctx.elements[p.element];
+                    const a = ahead[p.element];
+                    if (!el || !a) return null;
+                    return (
+                      <tr key={p.element} className={p.position > 11 ? 'sp-off' : ''}>
+                        <th>
+                          <span className="sp-heat-name">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={shirt(teams[el.team]?.code, el.type === 1)} alt="" width="18" height="18" />
+                            {el.name}
+                          </span>
+                        </th>
+                        {gws.map((g) => {
+                          const c = a.per[g];
+                          if (!c.fx.length) return <td key={g} className="sp-heat-blank">–</td>;
+                          return (
+                            <td key={g} style={heat(shade(c.xp, maxCell))} title={`${c.fx.map((x) => oppLabel(teams, x)).join(', ')}: ${one(c.xp)}`}>
+                              <span className="sp-heat-opp">{c.fx.map((x) => (x.home ? teams[x.opp]?.short : teams[x.opp]?.short.toLowerCase())).join(' ')}</span>
+                              <b className="sp-num">{one(c.xp)}</b>
+                            </td>
+                          );
+                        })}
+                        <td className="sp-heat-total sp-num">{one(a.total)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+
+      {view === 'transfers' && (
+        <>
+          <TransferPlan squad={squad} bank={bank} entry={entry} gws={gws} ahead={ahead} els={ctx.elements} teams={teams} />
+          <section className="sp-panel">
+            <h2 className="sp-h2">Best single swaps</h2>
+            <p className="sp-small sp-ink2" style={{ margin: '4px 0 6px' }}>
+              Single swaps that add the most projected points over {gws.length} gameweeks, within your £{bank.toFixed(1)}m in the bank and three per club. Prices are today’s; FPL keeps your selling prices private.
+            </p>
+            {transfers.length === 0 && <p className="sp-small" style={{ margin: '8px 0 0' }}>Nothing gains half a point or more. Your squad already looks right for these fixtures.</p>}
+            {transfers.map((t) => {
+              const o = ctx.elements[t.out];
+              const n = ctx.elements[t.in];
+              return (
+                <div key={`${t.out}-${t.in}`} className="sp-xfer">
+                  <span className="sp-xfer-p">
+                    <Face el={o} teams={teams} size={32} />
+                    <span style={{ minWidth: 0 }}>
+                      <span className="sp-tiny sp-muted" style={{ display: 'block', fontWeight: 700 }}>Out</span>
+                      <b className="sp-dif-name">{o.name}</b>
+                      <span className="sp-tiny sp-muted sp-dif-line sp-num">{one(ahead[t.out].total)} · £{o.cost.toFixed(1)}m</span>
+                    </span>
+                  </span>
+                  <span className="sp-xfer-arrow" aria-hidden>→</span>
+                  <span className="sp-xfer-p">
+                    <Face el={n} teams={teams} size={32} />
+                    <span style={{ minWidth: 0 }}>
+                      <span className="sp-tiny sp-muted" style={{ display: 'block', fontWeight: 700 }}>In · {n.owned}%</span>
+                      <b className="sp-dif-name">{n.name}</b>
+                      <span className="sp-tiny sp-muted sp-dif-line sp-num">{one(ahead[t.in].total)} · £{n.cost.toFixed(1)}m</span>
+                    </span>
+                  </span>
+                  <b className="sp-xfer-gain sp-num sp-up">+{one(t.gain)}</b>
+                </div>
+              );
+            })}
+          </section>
+        </>
+      )}
+
+      {view === 'chips' && <Chips squad={squad} bank={bank} gws={gws} ahead={ahead} els={ctx.elements} teams={teams} />}
+      {view === 'rotation' && <Rotations gws={gws} ahead={ahead} els={ctx.elements} teams={teams} teamsPlayed={teamsPlayed} />}
+
+      {view === 'fixtures' && (
+        <>
+
+          <section className="sp-group">
+            <header className="sp-ghead">
+              <h2 className="sp-h3">Fixtures ahead</h2>
+              <div className="sp-tabs" role="radiogroup" aria-label="Rank fixtures for" style={{ border: 0, gap: 14 }}>
+                <button role="radio" aria-checked={ticker === 'att'} onClick={() => setTicker('att')} style={{ height: 28, fontSize: 13 }}>Attack</button>
+                <button role="radio" aria-checked={ticker === 'def'} onClick={() => setTicker('def')} style={{ height: 28, fontSize: 13 }}>Defence</button>
+              </div>
+            </header>
+            <p className="sp-tiny sp-muted sp-pad" style={{ margin: '0 0 6px' }}>
+              {ticker === 'att' ? 'Goals each club is expected to score; darker is more.' : 'Goals each club is expected to concede; darker is fewer, better for clean sheets.'} From our ratings on every match since 2023/24.
+            </p>
+            <div className="sp-heat-wrap">
+              <table className="sp-heat sp-ticker">
+                <tbody>
+                  {tickerRows.map(({ t, per }) => (
+                    <tr key={t.id}>
+                      <th>
+                        <span className="sp-heat-name">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={shirt(t.code)} alt="" width="18" height="18" />
+                          {t.short}
+                        </span>
+                      </th>
+                      {per.map((list, i) => (
+                        <td key={i} style={list.length ? heat(ticker === 'att' ? shade(list.reduce((s, x) => s + (x.forG ?? 0), 0) - 0.6, 1.6) : shade(2.2 - list.reduce((s, x) => s + (x.agst ?? 0), 0) / Math.max(1, list.length), 1.6)) : undefined} className={list.length ? '' : 'sp-heat-blank'}>
+                          {list.length ? (
+                            <>
+                              <span className="sp-heat-opp">{list.map((x) => (x.home ? teams[x.opp]?.short : teams[x.opp]?.short.toLowerCase())).join(' ')}</span>
+                              <b className="sp-num">{list.map((x) => (ticker === 'att' ? x.forG : x.agst)?.toFixed(1) ?? '–').join(' ')}</b>
                         </>
                       ) : '–'}
                     </td>
@@ -248,6 +277,8 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit }) 
           ))}
         </div>
       </section>
+        </>
+      )}
 
       <p className="sp-note sp-pad" style={{ margin: '12px 0 0' }}>
         Our projections, not FPL’s. Goal rates come from team ratings fitted on every Premier League match since 2023/24 (xG and goals, recent matches weighted more); each player’s share from his xG and xA per 90 and how often he starts;

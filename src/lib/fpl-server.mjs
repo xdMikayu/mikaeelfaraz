@@ -20,6 +20,18 @@ async function fpl(path, ttlMs = 0) {
 
 const num = (v) => (v == null || v === '' ? null : Number(v));
 
+// Only players anywhere near a change carry the nightly projections; the rest are steady.
+function priceOf(e) {
+  const nights = (e.price_change_projections ?? []).map((p) => [p.offset, num(p.projected_percent), p.likelihood]);
+  const near = nights.some(([, pct]) => Math.abs(pct ?? 0) >= 70) || Math.abs(num(e.price_change_percent) ?? 0) >= 70;
+  return {
+    progress: num(e.price_change_percent),
+    ...(near ? { nights } : null),
+    net: (e.transfers_in_event ?? 0) - (e.transfers_out_event ?? 0),
+    changed: e.cost_change_event ?? 0,
+  };
+}
+
 export async function getStatic() {
   const b = await fpl('/bootstrap-static/', 60e3);
   const current = b.events.find((e) => e.is_current) ?? b.events.find((e) => e.is_next);
@@ -52,9 +64,15 @@ export async function getStatic() {
       total: e.total_points,
       xg: num(e.expected_goals),
       xa: num(e.expected_assists),
+      // Price changes: FPL's own progress towards a rise (+100) or fall (−100), and its projection
+      // for tonight and the next two nights with a likelihood from −5 to 5.
+      price: priceOf(e),
+      // Set-piece order from FPL (1 = first choice), null when he isn't on the list.
+      setPieces: [e.penalties_order, e.direct_freekicks_order, e.corners_and_indirect_freekicks_order],
       goals: e.goals_scored,
       assists: e.assists,
       ep: num(e.ep_next),
+      epThis: num(e.ep_this),
       opta: e.opta_code,
       // Season totals for the projection model (fpl.mjs projectPlayer).
       minutes: e.minutes,
@@ -165,7 +183,7 @@ export async function getEntry(id, event) {
       .filter((l) => l.league_type === 'x') // private leagues; public ones are the giant system leagues
       .map((l) => ({ id: l.id, name: l.name, rank: l.entry_rank, size: l.rank_count ?? null })),
     gw: picksShape(picks),
-    history: (history?.current ?? []).map((h) => ({ event: h.event, points: h.points, total: h.total_points, overall: h.overall_rank, rank: h.rank, hit: h.event_transfers_cost, bench: h.points_on_bench })),
+    history: (history?.current ?? []).map((h) => ({ event: h.event, points: h.points, total: h.total_points, overall: h.overall_rank, rank: h.rank, hit: h.event_transfers_cost, transfers: h.event_transfers, bench: h.points_on_bench })),
     chips: (history?.chips ?? []).map((c) => ({ name: c.name, event: c.event })),
   };
 }
