@@ -20,6 +20,18 @@ async function fpl(path, ttlMs = 0) {
 
 const num = (v) => (v == null || v === '' ? null : Number(v));
 
+// Only players anywhere near a change carry the nightly projections; the rest are steady.
+function priceOf(e) {
+  const nights = (e.price_change_projections ?? []).map((p) => [p.offset, num(p.projected_percent), p.likelihood]);
+  const near = nights.some(([, pct]) => Math.abs(pct ?? 0) >= 70) || Math.abs(num(e.price_change_percent) ?? 0) >= 70;
+  return {
+    progress: num(e.price_change_percent),
+    ...(near ? { nights } : null),
+    net: (e.transfers_in_event ?? 0) - (e.transfers_out_event ?? 0),
+    changed: e.cost_change_event ?? 0,
+  };
+}
+
 export async function getStatic() {
   const b = await fpl('/bootstrap-static/', 60e3);
   const current = b.events.find((e) => e.is_current) ?? b.events.find((e) => e.is_next);
@@ -52,6 +64,9 @@ export async function getStatic() {
       total: e.total_points,
       xg: num(e.expected_goals),
       xa: num(e.expected_assists),
+      // Price changes: FPL's own progress towards a rise (+100) or fall (−100), and its projection
+      // for tonight and the next two nights with a likelihood from −5 to 5.
+      price: priceOf(e),
       goals: e.goals_scored,
       assists: e.assists,
       ep: num(e.ep_next),

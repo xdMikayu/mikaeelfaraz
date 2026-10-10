@@ -25,7 +25,7 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
   const [range, setRange] = useState('gw');
   const [sortBy, setSortBy] = useState('xgi');
   const [pos, setPos] = useState(0);
-  const gws = range === 'gw' ? [cur] : range === 'last4' ? [cur - 3, cur - 2, cur - 1, cur].filter((g) => g >= 1) : null;
+  const gws = useMemo(() => (range === 'gw' ? [cur] : range === 'last4' ? [cur - 3, cur - 2, cur - 1, cur].filter((g) => g >= 1) : null), [range, cur]);
   const [past, setPast] = useState({});
   const [err, setErr] = useState(null);
   useEffect(() => {
@@ -38,8 +38,7 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
     return () => {
       on = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, cur]);
+  }, [gws, cur]);
 
   const data = useMemo(() => {
     const per = {};
@@ -81,7 +80,7 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
     for (const p of players) club[p.el.team] && (club[p.el.team].xg += p.xg);
     if (!gws) for (const e of st.elements) club[e.team] && (club[e.team].xga += (e.xgc ?? 0) / 11);
     return { players, clubs: Object.values(club).filter((c) => c.n > 0) };
-  }, [gws?.join(','), past, live, st, ctx, fixtures, cur]);
+  }, [gws, past, live, st, ctx, fixtures, cur]);
 
   if (err && !data) return <p className="sp-empty">Couldn’t load earlier gameweeks from FPL ({err}).</p>;
   if (!data) return <div className="sp-skel" style={{ height: 500, margin: 16 }} />;

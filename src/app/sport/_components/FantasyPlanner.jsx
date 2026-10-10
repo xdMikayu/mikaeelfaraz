@@ -19,10 +19,10 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
   const cur = st.events.find((e) => e.current);
   const curStarted = fixtures.some((f) => f.event === cur?.id && f.started);
   const start = cur && !curStarted ? cur.id : (st.events.find((e) => e.next)?.id ?? (cur?.id ?? 1) + 1);
-  const gws = Array.from({ length: horizon }, (_, i) => start + i).filter((g) => g <= 38);
-  const squad = picks.map((p) => p.element);
-  const ahead = useMemo(() => projectAhead(st.elements.map((e) => e.id), fixtures, gws, ctx), [st, fixtures, gws.join(','), ctx]);
-  const transfers = useMemo(() => suggestTransfers(squad, bank, ahead, ctx), [squad.join(','), bank, ahead, ctx]);
+  const gws = useMemo(() => Array.from({ length: horizon }, (_, i) => start + i).filter((g) => g <= 38), [start, horizon]);
+  const squad = useMemo(() => picks.map((p) => p.element), [picks]);
+  const ahead = useMemo(() => projectAhead(st.elements.map((e) => e.id), fixtures, gws, ctx), [st, fixtures, gws, ctx]);
+  const transfers = useMemo(() => suggestTransfers(squad, bank, ahead, ctx), [squad, bank, ahead, ctx]);
   const teamsPlayed = useMemo(() => Object.fromEntries(st.teams.map((t) => [t.id, Math.round(ctx.model.teams[t.id]?.n ?? 1)])), [st, ctx]);
   if (!gws.length) return <p className="sp-empty">The season is over: nothing left to plan.</p>;
 

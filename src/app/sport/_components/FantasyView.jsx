@@ -9,6 +9,7 @@ import Rival from './FantasyRival';
 import Planner from './FantasyPlanner';
 import Gameweek from './FantasyGameweek';
 import Stats from './FantasyStats';
+import Players from './FantasyPlayers';
 import MatchupPanel from './FantasyMatchup';
 import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
 
@@ -152,6 +153,7 @@ function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
           {fixtures && <button role="tab" aria-selected={tab === 'plan'} onClick={() => setTab('plan')}>Planner</button>}
           {leagueId && <button role="tab" aria-selected={tab === 'league'} onClick={() => setTab('league')}>League</button>}
           <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Gameweek</button>
+          <button role="tab" aria-selected={tab === 'players'} onClick={() => setTab('players')}>Players</button>
           <button role="tab" aria-selected={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
         </div>
       </div>
@@ -161,6 +163,7 @@ function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
       {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} />}
+      {tab === 'players' && <Players st={st} ctx={ctx} teams={teams} squad={picks?.picks.map((p) => p.element) ?? []} fixtures={fixtures} kit={kit} />}
       {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
     </div>
   );
