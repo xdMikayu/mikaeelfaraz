@@ -34,7 +34,7 @@ export async function GET(req) {
   const id = /^\d{1,10}$/.test(q.get('id') ?? '') ? Number(q.get('id')) : null;
   const ft = /^[0-5]$/.test(q.get('ft') ?? '') ? Number(q.get('ft')) : null;
   if (!id) return json({ error: 'Need an FPL team id' }, 400);
-  if (!adviceEnabled()) return json({ error: 'AI advice is switched off: set ANTHROPIC_API_KEY in Netlify to turn it on.' }, 503);
+  if (!adviceEnabled()) return json({ error: 'AI advice is switched off: ANTHROPIC_API_KEY isn’t set on the server.' }, 503);
 
   const key = `${id}:${ft ?? ''}`;
   const hit = memo.get(key);
