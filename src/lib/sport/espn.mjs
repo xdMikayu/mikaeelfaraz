@@ -156,8 +156,10 @@ export async function fetchDay(slugs, localYmd, opts) {
   const seen = new Set();
   const matches = [];
   const failed = new Set();
+  const leagues = {};
   results.forEach((r, i) => {
     if (r.status !== 'fulfilled') return failed.add(jobs[i].slug);
+    if (r.value.league) leagues[r.value.slug] = r.value.league;
     for (const m of r.value.matches) {
       if (seen.has(m.id) || localDay(m.date) !== localYmd) continue;
       seen.add(m.id);
@@ -165,7 +167,7 @@ export async function fetchDay(slugs, localYmd, opts) {
     }
   });
   matches.sort((a, b) => new Date(a.date) - new Date(b.date));
-  return { matches, failed: [...failed] };
+  return { matches, failed: [...failed], leagues };
 }
 
 /* ---------------------------------------------------------------- match detail */

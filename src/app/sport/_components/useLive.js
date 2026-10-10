@@ -69,11 +69,11 @@ export function useAge(at) {
   return `Updated ${m} min ago`;
 }
 
-export function Freshness({ at, error, live, every = 20 }) {
+export function Freshness({ at, error, live, every = 20, light = false }) {
   const age = useAge(at);
   const stale = at && Date.now() - at > every * 3000;
   return (
-    <span className="sp-tiny sp-muted sp-num" aria-live="polite">
+    <span className={`sp-tiny sp-num${light ? '' : ' sp-muted'}`} aria-live="polite">
       {error && !at ? `Couldn’t load: ${error}` : error ? `${age}. Last refresh failed, trying again.` : age}
       {live && !error && !stale ? `, refreshing every ${every} s` : ''}
       {stale && !error ? '. This may be out of date.' : ''}
