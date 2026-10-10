@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bonusFromBps, teamLive, leagueLive, projectedBonus } from './fpl.mjs';
+import { bonusFromBps, teamLive, leagueLive, projectedBonus, buildModel, fixtureRates, poissonTail, poissonFloor, projectPlayer, headToHead } from './fpl.mjs';
 import { xgFor, shotGeometry, shotTraits, PENALTY_XG } from './xg.mjs';
 import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
 
@@ -106,6 +106,61 @@ test('league: live table re-ranks on live points and ownership counts captains',
   const p9 = out.ownership.find((o) => o.element === 9);
   assert.equal(p9.captains, 1);
   assert.equal(p9.eo, 150);
+});
+
+test('poisson helpers', () => {
+  assert.ok(Math.abs(poissonTail(2, 1) - (1 - Math.exp(-2))) < 1e-9);
+  assert.equal(poissonTail(2, 0), 1);
+  // E[floor(X/2)] for tiny rates is about P(X >= 2); an offset of 1 makes one more goal enough.
+  assert.ok(poissonFloor(0.01, 2) < 1e-4);
+  assert.ok(Math.abs(poissonFloor(0.01, 2, 1) - poissonTail(0.01, 1)) < 1e-4);
+});
+
+// Two equal teams, plus a striker who takes a third of his side's xG.
+function modelCtx() {
+  const els = [];
+  for (const team of [1, 2]) for (let i = 0; i < 11; i++) els.push({ id: team * 100 + i, team, type: i === 0 ? 1 : i < 5 ? 2 : i < 9 ? 3 : 4, minutes: 450, starts: 5, xg: i === 10 ? 2.5 : i > 4 ? 0.5 : 0.1, xa: 0.3, xgc: 6.5 });
+  const elements = Object.fromEntries(els.map((e) => [e.id, e]));
+  const fixtures = [{ id: 1, home: 1, away: 2, started: false, finished: false, finishedProvisional: false, minutes: 0, kickoff: '2026-10-11T14:00:00Z' }];
+  return { elements, live: {}, fixtures, bonus: {}, model: buildModel(els) };
+}
+
+test('model: home side expected to score more than the same side away', () => {
+  const ctx = modelCtx();
+  const r = fixtureRates(ctx.fixtures[0], ctx.model);
+  assert.ok(r.home > r.away);
+  assert.ok(Math.abs(r.home / r.away - 1.21) < 0.01);
+});
+
+test('projections: a regular starter expects more than appearance points; a finished match adds nothing', () => {
+  const ctx = modelCtx();
+  const st = projectPlayer(110, ctx);
+  assert.ok(st.rest > 2 && st.rest < 9, `striker ${st.rest}`);
+  assert.equal(st.now, 0);
+  ctx.fixtures[0] = { ...ctx.fixtures[0], started: true, finished: true, finishedProvisional: true, minutes: 90, hs: 1, as: 0 };
+  ctx.live[110] = { minutes: 90, points: 8, bonus: 0, bps: 0, explain: [] };
+  const done = projectPlayer(110, ctx);
+  assert.equal(done.rest, 0);
+  assert.equal(done.final, 8);
+});
+
+test('head to head: identical teams are a coin flip; a settled week is certain', () => {
+  const ctx = modelCtx();
+  const picks = Array.from({ length: 11 }, (_, i) => ({ element: 100 + i, position: i + 1, multiplier: 1, captain: i === 10, vice: i === 9 }));
+  const a = teamLive(picks, null, 0, ctx);
+  const same = headToHead(a, a, ctx);
+  assert.equal(same.pA, 0.5);
+  assert.equal(same.shared.length, 11);
+  assert.equal(same.onlyA.length, 0);
+  // Same players, different captain: only the captaincy can separate them.
+  const b = teamLive(picks.map((p) => ({ ...p, captain: p.element === 105 })), null, 0, ctx);
+  const h = headToHead(a, b, ctx);
+  assert.deepEqual(h.onlyA.map((r) => [r.element, r.extra]), [[110, 1]]);
+  assert.ok(h.pA > 0.5);
+  ctx.fixtures[0] = { ...ctx.fixtures[0], started: true, finished: true, finishedProvisional: true, minutes: 90, hs: 0, as: 0 };
+  ctx.live[105] = { minutes: 90, points: 3, bonus: 0, bps: 0, explain: [] };
+  const settled = headToHead(teamLive(picks, null, 0, ctx), teamLive(picks.map((p) => ({ ...p, captain: p.element === 105 })), null, 0, ctx), ctx);
+  assert.equal(settled.pA, 0);
 });
 
 test('xG: geometry and ordering make sense', () => {
