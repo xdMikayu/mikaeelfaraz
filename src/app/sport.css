@@ -570,3 +570,15 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-sim td, .sp-sim th { height: 40px; }
 .sp-posdist { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; width: 200px; height: 14px; }
 .sp-posdist i { display: block; }
+.sp-role { display: grid; grid-template-columns: 112px minmax(0, 1fr) 82px; gap: 10px; align-items: center; min-height: 26px; }
+.sp-share { display: flex; gap: 2px; margin-top: 4px; }
+.sp-share > span { display: flex; flex-direction: column; min-width: 0; font-size: 11px; color: var(--sp-ink-2); }
+.sp-share i { display: block; height: 10px; background: var(--sp-ink); }
+.sp-share > span:nth-child(even) i { background: var(--sp-ink-2); }
+.sp-share b { font-size: 12.5px; font-weight: 850; color: var(--sp-ink); margin-top: 3px; }
+.sp-share span span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-nx { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 2px 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--sp-rule); }
+.sp-nx .sp-split { grid-column: 2; }
+.sp-nx > span:nth-child(3), .sp-nx > span:nth-child(4) { grid-column: 2; }
+.sp-odds-cell { font-size: 12px; font-weight: 600; color: var(--sp-muted); white-space: nowrap; }
+.sp-odds-cell b { color: var(--sp-ink); font-weight: 800; }
