@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { rateTeams, goalRates } from '@/lib/sport/forecast.mjs';
-import { roleFactor } from '@/lib/sport/matchups.mjs';
+import { makeKit } from '@/lib/sport/kit.mjs';
 
 // The Premier League matchup data is built weekly into static files (scripts/sport/build-matchups.mjs)
 // and served from the CDN like any image, so reading it costs nothing per visit.
@@ -45,22 +44,5 @@ export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam
 
 /** Team ratings and role factors from the index, ready for fpl.mjs withMatchups and match odds. */
 export function useForecastKit(ix, learned) {
-  // The position tilt counts only as much as the backtest says it predicts (1 = in full).
-  const wPos = learned?.xg?.weights?.position ?? 1;
-  return useMemo(() => {
-    if (!ix) return null;
-    const [, last] = ix.seasons;
-    const playedLast = new Set(Object.entries(ix.games).filter(([, g]) => g.some((x) => x[0] >= `${last}-07` && x[0] < `${Number(last) + 1}-07`)).map(([id]) => id));
-    const ratings = rateTeams(ix.games, { newTeams: ix.current.filter((id) => !playedLast.has(id)) });
-    return {
-      ix,
-      ratings,
-      goalRates,
-      fplTeams: ix.fplTeams,
-      roles: ix.roles,
-      roleFactorRaw: (opp, role) => roleFactor(ix.conceded[opp], ix.league, role, ix.seasons).factor,
-      roleFactor: (opp, role) => roleFactor(ix.conceded[opp], ix.league, role, ix.seasons).factor ** wPos,
-      espnOfFpl: (fplTeam) => ix.fplTeams[fplTeam],
-    };
-  }, [ix, wPos]);
+  return useMemo(() => (ix ? makeKit(ix, learned) : null), [ix, learned]);
 }
