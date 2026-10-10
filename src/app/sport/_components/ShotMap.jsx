@@ -25,7 +25,7 @@ export default function ShotMap({ shots, colors, names }) {
           <button key={k} role="tab" aria-selected={only === k} onClick={() => setOnly(k)}>{l}</button>
         ))}
       </div>
-      <div className="sp-pitch-wrap" style={{ position: 'relative' }}>
+      <div className="sp-pitch-h" style={{ position: 'relative' }}>
         <svg viewBox="-2 -2 109 72" style={{ display: 'block', width: '100%' }} role="img" aria-label="Shot map">
           <rect x="0" y="0" width="105" height="68" {...line} />
           <line x1="52.5" y1="0" x2="52.5" y2="68" {...line} />
@@ -37,7 +37,7 @@ export default function ShotMap({ shots, colors, names }) {
                 <rect x={gx ? gx - 16.5 : 0} y={34 - 20.16} width="16.5" height="40.32" {...line} />
                 <rect x={gx ? gx - 5.5 : 0} y={34 - 9.16} width="5.5" height="18.32" {...line} />
                 <circle cx={gx + d * 11} cy="34" r="0.35" fill="var(--sp-pitch-line)" />
-                <line x1={gx} y1={34 - 3.66} x2={gx} y2={34 + 3.66} stroke="var(--sp-ink-2)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+                <line x1={gx} y1={34 - 3.66} x2={gx} y2={34 + 3.66} stroke="#fff" strokeWidth="3" vectorEffect="non-scaling-stroke" />
               </g>
             );
           })}
@@ -48,8 +48,8 @@ export default function ShotMap({ shots, colors, names }) {
             const onT = s.outcome === 'saved' || s.outcome === 'post';
             return (
               <g key={s.id} onClick={() => setSel(sel === s.id ? null : s.id)} onPointerEnter={(e) => e.pointerType === 'mouse' && setSel(s.id)} style={{ cursor: 'pointer' }}>
-                <circle cx={p.x} cy={p.y} r={r(s)} fill={goal ? c : 'var(--sp-pitch)'} fillOpacity={goal ? 1 : 0.6} stroke={goal ? 'var(--sp-pitch)' : c} strokeOpacity={goal || onT ? 1 : 0.45} strokeWidth={goal ? 1.5 : 2} vectorEffect="non-scaling-stroke" />
-                {sel === s.id && <circle cx={p.x} cy={p.y} r={r(s) + 1.2} fill="none" stroke="var(--sp-ink)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />}
+                <circle cx={p.x} cy={p.y} r={r(s)} fill={goal ? c : 'rgba(255,255,255,0.18)'} fillOpacity={1} stroke={goal ? '#fff' : c} strokeOpacity={goal || onT ? 1 : 0.45} strokeWidth={goal ? 1.5 : 2} vectorEffect="non-scaling-stroke" />
+                {sel === s.id && <circle cx={p.x} cy={p.y} r={r(s) + 1.2} fill="none" stroke="#fff" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
                 <circle cx={p.x} cy={p.y} r={Math.max(2.6, r(s))} fill="transparent" />
               </g>
             );

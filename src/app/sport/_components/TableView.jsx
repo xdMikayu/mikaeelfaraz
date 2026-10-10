@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { fetchStandings } from '@/lib/sport/espn.mjs';
 import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
 import { useLive, Freshness } from './useLive';
@@ -9,7 +8,6 @@ import { usePrefs, useFollow } from './prefs';
 import Crest from './Crest';
 
 export default function TableView({ slug }) {
-  const router = useRouter();
   const { prefs } = usePrefs();
   const { isFollowed } = useFollow();
   const [revealed, setRevealed] = useRevealAll(slug);
@@ -21,15 +19,17 @@ export default function TableView({ slug }) {
   return (
     <div className="sp-read">
       <div className="sp-pad" style={{ paddingTop: 16 }}>
-        <div className="sp-section-head" style={{ flexWrap: 'wrap' }}>
-          <h1 className="sp-h1">{lg?.name ?? slug}</h1>
-          <label className="sp-sr" htmlFor="lg">Competition</label>
-          <select id="lg" className="sp-select" value={slug} onChange={(e) => router.push(`/sport/table/${e.target.value}`)}>
-            {choices.map((l) => <option key={l.slug} value={l.slug}>{l.name}</option>)}
-          </select>
-        </div>
+        <h1 className="sp-h1">Tables</h1>
+        <nav className="sp-days" aria-label="Competition" style={{ margin: '12px 0 10px' }}>
+          {choices.map((l) => (
+            <Link key={l.slug} href={`/sport/table/${l.slug}`} className="sp-pill" aria-current={l.slug === slug ? 'page' : undefined}
+              style={l.slug === slug ? { height: 36, padding: '0 14px', fontSize: 13.5, background: 'var(--sp-brand)', color: '#fff' } : { height: 36, padding: '0 14px', fontSize: 13.5, background: 'var(--sp-surface)', color: 'var(--sp-ink-2)', border: '1px solid var(--sp-rule)' }}>
+              {l.short}
+            </Link>
+          ))}
+        </nav>
         <p className="sp-tiny sp-muted" style={{ margin: '0 0 6px' }}>
-          {data?.season ?? ''}{data?.season ? '. ' : ''}<Freshness at={at} error={error} />
+          <b style={{ color: 'var(--sp-ink-2)' }}>{lg?.name}</b> · {data?.season ?? ''}{data?.season ? '. ' : ''}<Freshness at={at} error={error} />
         </p>
       </div>
       {hidden ? (
@@ -44,7 +44,7 @@ export default function TableView({ slug }) {
       )}
       {!hidden && data && (
         <p className="sp-note sp-pad" style={{ marginTop: 10 }}>
-          Lines mark where places change: European spots, play-offs, relegation. They follow ESPN’s notes and can shift with cup winners. The table updates when a result is final, not during matches.
+          Colours mark where places change, from ESPN’s notes; they can shift with cup winners. The table updates when a result is final, not during matches.
         </p>
       )}
     </div>
@@ -52,10 +52,6 @@ export default function TableView({ slug }) {
 }
 
 function Group({ g, slug, isFollowed }) {
-  const zones = [];
-  g.rows.forEach((r, i) => {
-    if (i && r.zone !== g.rows[i - 1].zone) zones.push(i);
-  });
   return (
     <section className="sp-group" style={{ paddingBottom: 4 }}>
       {g.name && <header className="sp-ghead"><h2 className="sp-h3">{g.name}</h2></header>}
@@ -74,12 +70,14 @@ function Group({ g, slug, isFollowed }) {
           </tr>
         </thead>
         <tbody>
-          {g.rows.map((r, i) => (
-            <tr key={r.id} className={`${zones.includes(i) ? 'sp-zone-break' : ''} ${isFollowed(r.id) ? 'sp-mine' : ''}`} title={r.zone ?? undefined}>
-              <td className="l sp-pos" style={{ paddingLeft: 16 }}>{r.rank}</td>
+          {g.rows.map((r) => (
+            <tr key={r.id} className={isFollowed(r.id) ? 'sp-mine' : ''} title={r.zone ?? undefined}>
+              <td className="l sp-pos" style={{ paddingLeft: 12 }}>
+                <span className="sp-zone" style={zoneStyle(r.zone)}>{r.rank}</span>
+              </td>
               <td className="l" style={{ maxWidth: 0, width: '100%' }}>
                 <Link href={`/sport/team?id=${r.id}&l=${slug}`} className="sp-tteam">
-                  <Crest src={r.logo} size={18} /> <span>{r.short}</span>
+                  <Crest src={r.logo} size={22} /> <span>{r.short}</span>
                 </Link>
               </td>
               <td>{r.p}</td>
@@ -98,18 +96,35 @@ function Group({ g, slug, isFollowed }) {
   );
 }
 
+/** One colour per kind of place, so the table reads at a glance: Europe, promotion, the drop. */
+const zoneColor = (zone) => {
+  const z = (zone ?? '').toLowerCase(); // ESPN sends null for mid-table rows
+  if (!z) return null;
+  if (/relegat/.test(z) && /play/.test(z)) return '#f97316';
+  if (/relegat/.test(z)) return '#ef4444';
+  if (/champions/.test(z)) return '#3b82f6';
+  if (/europa/.test(z)) return '#f59e0b';
+  if (/conference/.test(z)) return '#10b981';
+  if (/promot/.test(z)) return '#22c55e';
+  if (/play/.test(z)) return '#14b8a6';
+  return '#8b5cf6';
+};
+
+const zoneStyle = (zone) => {
+  const c = zoneColor(zone);
+  return c ? { background: c, color: '#fff' } : { background: 'var(--sp-sunk)', color: 'var(--sp-ink-2)' };
+};
+
 function ZoneKey({ rows }) {
   const seen = [];
-  for (const r of rows) if (r.zone && !seen.some((z) => z.zone === r.zone)) seen.push({ zone: r.zone, from: r.rank, to: r.rank });
-  for (const r of rows) {
-    const z = seen.find((x) => x.zone === r.zone);
-    if (z) z.to = r.rank;
-  }
+  for (const r of rows) if (r.zone && !seen.includes(r.zone)) seen.push(r.zone);
   if (!seen.length) return null;
   return (
-    <p className="sp-tiny sp-muted" style={{ margin: 0, padding: '10px 16px 8px' }}>
-      {seen.map((z) => `${z.from === z.to ? z.from : `${z.from}–${z.to}`} ${z.zone}`).join(' · ')}
-    </p>
+    <div className="sp-key-chips">
+      {seen.map((z) => (
+        <span key={z}><i style={{ background: zoneColor(z) }} />{z}</span>
+      ))}
+    </div>
   );
 }
 

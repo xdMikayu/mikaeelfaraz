@@ -55,6 +55,25 @@ export function teamColors(home, away, dark) {
   return { home: toHex(h), away: toHex(a) };
 }
 
+/**
+ * Raw kit colours for tinted backgrounds (match cards, the match header), where a dark navy reads
+ * fine. The away side switches to its alternate colour when the two kits are too alike.
+ */
+export function kitPair(home, away) {
+  const ok = (c) => Boolean(c && hexToRgb(c));
+  // A near-white kit disappears on a white page: use the club's alternate colour when it has a darker one.
+  const pick = (t) => {
+    const main = ok(t.color) ? t.color : '#3a3a3a';
+    if (luminance(hexToRgb(main)) > 0.8 && ok(t.alt) && luminance(hexToRgb(t.alt)) < 0.5) return t.alt;
+    return main;
+  };
+  const h = pick(home);
+  let a = pick(away);
+  const close = (x, y) => distance(hexToRgb(x), hexToRgb(y)) < 18;
+  if (close(h, a) && ok(away.alt) && !close(h, away.alt)) a = away.alt;
+  return { '--home': h, '--away': a };
+}
+
 /** Readable text colour on a team-coloured shirt disc. */
 export function inkOn(hex) {
   const rgb = hexToRgb(hex ?? '');

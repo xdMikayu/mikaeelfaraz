@@ -1,68 +1,73 @@
-# Matchday design rules
+# Matchday design rules: kit colours
 
-The football section at `/sport`. Its own system, like Mifolio's: nothing shared with the portfolio
-or `/finance` styles. Every screen gets checked against this list before it ships.
+The football app at `/sport`, a product with its own look. The direction ("B: kit colours") was picked from three
+mockups. Check every screen against this file before it ships.
 
-## What it is for
+## The idea
 
-Checking a score should take one look. Everything else (xG, lineups, fantasy) sits one tap
-behind the score and never in front of it. The look comes from what's being shown:
-results pages are tables, so the base is rows and numbers. It is not a magazine.
+A white page, black type, and the teams' own kit colours as the only colour fields. A live match is literally half
+one kit and half the other. Everything else stays out of the way.
 
-## Type
+## Never
 
-- **Archivo** (variable, width 62–125), one family for everything.
-  - Team names and scores use the semi-condensed width (`wdth` 88), so long names fit on a phone.
-  - Prose and controls use width 100.
-- Numbers in columns use `tabular-nums` (scores, table columns, minutes, points), so a score
-  changing from 1 to 10 never moves the row. The big score on the match page uses proportional
-  figures.
-- Headings are sentence case. No tracked all-caps eyebrows, no monospace labels.
+These are the patterns that make an interface read as AI-made. People list them on Reddit and Hacker News, and
+two earlier versions of this app shipped them.
+
+- Gradients of any kind, glows, radial "aurora" overlays, glassmorphism or backdrop blur.
+- Purple, violet or indigo "brand" colours; neon accents on near-black or navy.
+- Drop shadows on cards; cards wrapped around every section; rounded-2xl everything.
+- Pills and badges on every status; pulsing dots.
+- Rows of stat tiles ("1.51M Overall rank"); gradient logo marks; emoji.
+- Cream-and-serif "tasteful" defaults: swapping one default for another doesn't fix it.
 
 ## Colour
 
-Neutral surfaces in both modes: a cool grey page and white or charcoal rows. No cream and no
-near-black. Colour appears only where it means something:
+| Colour | Means |
+|---|---|
+| Kit colours (from ESPN; FPL's own kit images on the fantasy pitch) | That team: split match cards, the match header, the team header, shirt markers, chart lines, possession |
+| Red | Live now (the minute), red cards, points lost |
+| Green | Points gained; players who help you in your league |
+| Grass green | Pitches |
+| Black and white | Everything else |
 
-| Token | Means | Never used for |
-|---|---|---|
-| `--sp-live` red | The match is being played right now (the minute, "HT") | decoration, buttons |
-| `--sp-win` / `--sp-draw` / `--sp-loss` | Results in the form guide (always with the letter) | anything else |
-| `--sp-yellow` / `--sp-red-card` | Card glyphs | text |
-| Team colours | Identity of a team in a chart (shot map, xG line) | backgrounds, borders, text |
+- Near-white kits fall back to the club's alternate colour when it has a darker one.
+- Coloured blocks get a hairline edge so white halves don't merge with the page.
+- Dark mode is neutral near-black (`#121212`), never navy. The kit colours are unchanged.
 
-Team colours come from ESPN and are checked at runtime. If a team's colour is too faint against
-the surface, or too close to the opponent's, the alternate colour is used, then a neutral pair.
+## Type
 
-## Shape and space
+- **Archivo** throughout.
+  - Numbers and headings are heavy and condensed (width 62–75, weight 900): scores, fantasy points, the wordmark.
+  - Names are slightly condensed (width 85–90); prose is normal width.
+- `tabular-nums` wherever numbers line up or change live.
 
-- Spacing: 4, 8, 12, 16, 24, 32, 48. Rows are 56 px on phones (tap target ≥ 44).
-- Lists are rows separated by hairlines, grouped under sticky competition headers. No cards
-  around rows, no nested cards, no coloured left borders, no shadows except on sheets and popovers.
-- Corner radius: 6 px on controls, 12 px on sheets. Crests sit unframed.
+## Shapes and layout
+
+- Rows separated by hairlines, edge to edge on phones.
+- Section headings are plain bold text with the competition's logo.
+- Corners: 10 px on kit cards; 3–6 px on small things (form squares, buttons, name plates).
+- Statuses are text: "FT" in grey, "38'" in red, "20:30" in ink.
+- Tabs and the day picker are words, underlined when active.
+- The tab bar is a plain bar with a hairline top edge.
+
+## Team markers
+
+In lists, a small shirt in the kit colour (with the alternate colour at the collar) stands in for a crest. Crests
+appear only on white discs inside kit-colour blocks.
 
 ## Motion
 
-Only for a change of state:
-- A score flashes once when it changes.
-- A lineup row highlights once when it's confirmed.
-
-Nothing fades in on scroll, nothing lifts on hover, nothing counts up. `prefers-reduced-motion`
-turns the flash into a static marker.
+- A new goal flashes the score once.
+- Nothing else moves except the page.
 
 ## Words
 
-- Say where data comes from and how old it is: "Updated 12 s ago", "ESPN", "Our xG estimate",
-  "Bonus provisional".
-- Times are shown in the viewer's own time zone, and the page names it once.
-- No marketing adjectives, no exclamation marks, no emoji, no em dashes.
-- Empty and error states say what happened and what happens next ("Couldn't reach ESPN for
-  LaLiga. Trying again in 20 s.").
+- Say where data comes from and how old it is: "Updated 14 s ago", "Our estimate", "Bonus (provisional)".
+- Times are in the viewer's own zone, named once on the page.
+- No marketing words, no exclamation marks, no emoji.
 
 ## Trust
 
-- Never invent a number. A missing value shows a dash, and the reason is given where known.
-- Spoiler mode hides scores, result colours and goal events until a deliberate tap. Page titles
-  never contain scores.
-- No ads, no tracking, no cookie banner (nothing is set but the viewer's own preferences, kept in
-  their browser).
+- Never invent a number. A missing value shows a dash.
+- Spoiler mode hides scores, form, tables and fantasy points until a deliberate tap.
+- No ads and no tracking. The only thing stored is the viewer's own preferences, kept in their browser.

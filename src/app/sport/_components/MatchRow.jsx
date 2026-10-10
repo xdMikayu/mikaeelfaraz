@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import Crest from './Crest';
-import { Card } from './glyphs';
+import { Card, ShirtMark } from './glyphs';
 import { useSpoiler } from './prefs';
 import { kickoff, dayMonth } from './time';
 
@@ -19,26 +18,25 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
   return (
     <div className="sp-row">
       <Link className="sp-row-link" href={`/sport/match?id=${m.id}`} aria-label={hidden ? `${label}, score hidden` : label} />
-      <div className={`sp-row-status${live ? ' sp-is-live' : ''}`}>
-        {m.status.state === 'pre' && !m.status.off ? (
-          <>
-            {showDate && <span className="sp-muted" style={{ display: 'block' }}>{dayMonth(m.date)}</span>}
-            <span className="sp-ink2">{kickoff(m.date)}</span>
-          </>
+      <div className="sp-row-status">
+        {showDate && <span className="sp-muted" style={{ fontWeight: 600 }}>{dayMonth(m.date)}</span>}
+        {m.status.off ? (
+          <abbr className="sp-pill sp-pill-off" title={m.status.long} style={{ textDecoration: 'none' }}>{m.status.label}</abbr>
+        ) : m.status.state === 'pre' ? (
+          <span className="sp-pill sp-pill-time">{kickoff(m.date)}</span>
+        ) : live ? (
+          <span className="sp-pill sp-pill-live">{hidden ? 'Live' : m.status.label}</span>
         ) : (
-          <>
-            {showDate && <span className="sp-muted" style={{ display: 'block' }}>{dayMonth(m.date)}</span>}
-            {hidden && live ? 'Live' : m.status.off ? <abbr title={m.status.long} style={{ textDecoration: 'none' }}>{m.status.label}</abbr> : m.status.label}
-          </>
+          <span className="sp-pill sp-pill-ft">{m.status.label}</span>
         )}
       </div>
       <div className="sp-row-teams">
-        {caption && <span className="sp-tiny sp-muted" style={{ lineHeight: 1.2, paddingTop: 6 }}>{caption}</span>}
+        {caption && <span className="sp-tiny sp-muted" style={{ lineHeight: 1.2, height: 14.4, fontWeight: 650 }}>{caption}</span>}
         <TeamLine team={m.home} cls={result(hs, as)} hidden={hidden} />
         <TeamLine team={m.away} cls={result(as, hs)} hidden={hidden} />
       </div>
       <div className={`sp-row-score${live ? ' sp-is-live' : ''}`}>
-        {caption && <i aria-hidden style={{ display: 'block', height: 20.5 }} />}
+        {caption && <i aria-hidden style={{ display: 'block', height: 14.4 }} />}
         {m.status.state === 'pre' || (m.status.off && hs == null) ? null : hidden ? (
           <button className="sp-reveal" onClick={reveal}>Show</button>
         ) : (
@@ -55,7 +53,7 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
 function TeamLine({ team, cls, hidden }) {
   return (
     <div className={`sp-team-line ${cls}`}>
-      <Crest src={team.logo} size={18} />
+      <ShirtMark color={team.color} alt={team.alt} />
       <span className="sp-tn">{team.short || team.name}</span>
       {!hidden && team.red > 0 && (
         <span className="sp-pips" aria-label={`${team.red} red card${team.red > 1 ? 's' : ''}`}>
