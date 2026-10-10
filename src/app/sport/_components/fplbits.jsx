@@ -11,6 +11,9 @@ export const photo = (opta, big) => (opta ? `https://resources.premierleague.com
 export const signed = (v) => (v > 0 ? `+${v}` : `−${Math.abs(v)}`);
 export const one = (v) => (Math.round(v * 10) / 10).toFixed(1);
 
+/** Monochrome heat for table cells: t from 0 to 1, more ink for more. */
+export const heat = (t) => ({ background: `color-mix(in srgb, var(--sp-ink) ${Math.round(Math.max(0, Math.min(1, t)) * 78)}%, transparent)`, color: t > 0.5 ? 'var(--sp-page)' : 'var(--sp-ink)' });
+
 export const fixturesOf = (teamId, ctx) => ctx.fixtures.filter((f) => f.home === teamId || f.away === teamId);
 
 const isDone = (f) => f.finished || f.finishedProvisional;

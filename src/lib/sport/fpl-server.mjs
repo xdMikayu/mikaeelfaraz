@@ -52,6 +52,8 @@ export async function getStatic() {
       total: e.total_points,
       xg: num(e.expected_goals),
       xa: num(e.expected_assists),
+      goals: e.goals_scored,
+      assists: e.assists,
       ep: num(e.ep_next),
       opta: e.opta_code,
       // Season totals for the projection model (fpl.mjs projectPlayer).
