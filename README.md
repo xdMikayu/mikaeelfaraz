@@ -1,6 +1,7 @@
 # mikaeelfaraz.com
 
-Personal site (Next.js 14) plus **Mifolio**, a private card-spending tracker at `/finance`.
+Personal site (Next.js 14) plus **Mifolio**, a private card-spending tracker at `/finance`, and
+**Matchday**, a football and fantasy tracker at `/sport`.
 
 ## Portfolio
 
@@ -71,6 +72,35 @@ Preview without Supabase: `npm run dev` and open `/finance` (demo data).
 | `src/app/finance/*` | Dashboard, transactions, setup, portfolio pages |
 
 `npm test` runs the parser tests.
+
+## Matchday
+
+Football scores, match detail and live Fantasy Premier League points at `/sport`, with its own design
+system (rules in `src/app/sport/DESIGN.md`). Cricket, F1 and wrestling can reuse the shell, preferences and
+polling; only the adapters in `src/lib/sport/` are football-specific.
+
+```
+Browser ─ ESPN public site API (CORS *) ─► scores, events, lineups, stats, commentary, shots
+   │        └─ on failure ─► /api/sport/espn (allow-listed relay, CDN cached)
+   └─────── /api/sport/fpl/{static,live,entry,league} ─► FPL API (no CORS), trimmed, CDN cached
+```
+
+Costs nothing to run: every page is static, nothing is stored server-side, and the two API routes
+send CDN cache headers so all viewers share one upstream call per window (FPL live: 20 s).
+Preferences (followed teams, competition order, spoilers, FPL team ID) live in the viewer's
+`localStorage`. Polling runs only while a match is live and the tab is visible.
+
+| Path | What |
+|---|---|
+| `src/lib/sport/espn.mjs` | ESPN adapter: day boundaries, matches, events, shots, lineups, standings, teams |
+| `src/lib/sport/xg.mjs` | xG model (logistic, fitted on StatsBomb open data; metrics in the header) |
+| `src/lib/sport/fpl.mjs` | FPL maths: bonus from BPS, autosubs, captaincy, live league, league EO |
+| `src/lib/sport/fpl-server.mjs` | FPL fetching and trimming, used by the API route |
+| `src/lib/sport/fplmap.mjs` | ESPN to FPL club mapping, Opta xG from FPL live data |
+| `src/app/sport/*` | Scores, match, table, team, fantasy and following pages |
+
+`npm test` covers bonus tie rules, autosubs, chips, the live league, the xG model, ESPN day
+boundaries and formation layout.
 
 ## Development
 
