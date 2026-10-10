@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { planTransfers, buildSquad, rotationPairs, bestXI, estimateFree } from '@/lib/sport/optimise.mjs';
 import { shirt, one, Face } from './fplbits';
+import { priceOutlook } from './FantasyPrices';
 
 const MODES = [
   ['conservative', 'Conservative', 'never takes a hit'],
@@ -25,19 +26,30 @@ const Mini = ({ id, els, teams, size = 26 }) => {
     <span className="sp-opt-p">
       <Face el={el} teams={teams} size={size} />
       <span style={{ minWidth: 0 }}>
-        <b className="sp-dif-name" style={{ display: 'block', fontSize: 13.5 }}>{el.name}</b>
+        <b className="sp-dif-name" style={{ display: 'block', fontSize: 13.5 }}>{el.name}<PriceFlag el={el} /></b>
         <span className="sp-tiny sp-muted" style={{ whiteSpace: 'nowrap' }}>{teams[el.team]?.short} · £{el.cost.toFixed(1)}m</span>
       </span>
     </span>
   );
 };
 
+/** ▲ or ▼ when FPL expects his price to move tonight. */
+function PriceFlag({ el }) {
+  const o = el.price ? priceOutlook(el) : null;
+  if (!o?.dir || o.offset !== 0) return null;
+  return (
+    <span className={`sp-tiny ${o.dir > 0 ? 'sp-up' : 'sp-down'}`} title={`Likely to ${o.dir > 0 ? 'rise' : 'fall'} tonight`} style={{ marginLeft: 4 }}>
+      {o.dir > 0 ? '▲' : '▼'}
+    </span>
+  );
+}
+
 /** Multi-gameweek transfer plan with free transfers, hits and three risk settings. */
 export function TransferPlan({ squad, bank, entry, gws, ahead, els, teams }) {
   const estimate = useMemo(() => estimateFree(entry.history ?? [], entry.chips ?? [], gws[0] - 1), [entry, gws]);
   const [free, setFree] = useState(estimate);
   const [mode, setMode] = useState('balanced');
-  const result = useMemo(() => planTransfers({ squad, bank, free, gws, ahead, els, mode }), [squad.join(','), bank, free, gws.join(','), ahead, els, mode]);
+  const result = useMemo(() => planTransfers({ squad, bank, free, gws, ahead, els, mode }), [squad, bank, free, gws, ahead, els, mode]);
   return (
     <section className="sp-panel">
       <h2 className="sp-h2">Transfer plan, gameweeks {gws[0]}–{gws[gws.length - 1]}</h2>
@@ -81,7 +93,7 @@ export function TransferPlan({ squad, bank, entry, gws, ahead, els, teams }) {
         </div>
       ))}
       <p className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>
-        {MODES.find(([k]) => k === mode)[2]}. Prices are today’s: FPL keeps your selling prices private, and prices will move. Points per gameweek count your best eleven with the captain doubled.
+        {MODES.find(([k]) => k === mode)[2]}. ▲▼: FPL expects that price to move tonight, so act before then. Prices are today’s: FPL keeps your selling prices private, and prices will move. Points per gameweek count your best eleven with the captain doubled.
       </p>
     </section>
   );
@@ -90,9 +102,10 @@ export function TransferPlan({ squad, bank, entry, gws, ahead, els, teams }) {
 /** Rate my team against the best squad your budget allows, plus wildcard and free-hit drafts. */
 export function Chips({ squad, bank, gws, ahead, els, teams }) {
   const budget = squad.reduce((t, id) => t + els[id].cost, 0) + bank;
-  const hold = useMemo(() => gws.reduce((t, gw) => t + bestXI(squad, gw, ahead, els).points, 0), [squad.join(','), gws.join(','), ahead, els]);
-  const wc = useMemo(() => buildSquad({ budget, gws, ahead, els }), [budget, gws.join(','), ahead, els]);
-  const fh = useMemo(() => buildSquad({ budget, gws: [gws[0]], ahead, els }), [budget, gws[0], ahead, els]);
+  const hold = useMemo(() => gws.reduce((t, gw) => t + bestXI(squad, gw, ahead, els).points, 0), [squad, gws, ahead, els]);
+  const wc = useMemo(() => buildSquad({ budget, gws, ahead, els }), [budget, gws, ahead, els]);
+  const first = gws[0];
+  const fh = useMemo(() => buildSquad({ budget, gws: [first], ahead, els }), [budget, first, ahead, els]);
   const holdFirst = bestXI(squad, gws[0], ahead, els).points;
   const score = Math.round((hold / wc.value) * 100);
   const draft = (s, title, note) => {
@@ -152,7 +165,7 @@ export function Rotations({ gws, ahead, els, teams, teamsPlayed }) {
   const [type, setType] = useState(2);
   const preset = ROT.find((r) => r[0] === type);
   const [cap, setCap] = useState(preset[2]);
-  const r = useMemo(() => rotationPairs({ type, maxCost: cap, gws, ahead, els, teamsPlayed }), [type, cap, gws.join(','), ahead, els, teamsPlayed]);
+  const r = useMemo(() => rotationPairs({ type, maxCost: cap, gws, ahead, els, teamsPlayed }), [type, cap, gws, ahead, els, teamsPlayed]);
   return (
     <section className="sp-panel">
       <h2 className="sp-h2">Fixture rotation</h2>

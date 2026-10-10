@@ -684,3 +684,11 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-rot-weeks { display: flex; gap: 6px; margin: 6px 0 0 24px; overflow-x: auto; }
 .sp-rot-weeks > span { display: flex; flex-direction: column; align-items: center; min-width: 40px; }
 .sp-rot-weeks img { object-fit: contain; }
+
+/* ---------- prices ---------- */
+.sp-price { display: grid; grid-template-columns: 22px minmax(0, 1fr) 128px; gap: 8px; align-items: center; min-height: 46px; border-top: 1px solid var(--sp-rule); }
+.sp-price img { object-fit: contain; }
+.sp-price-r { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sp-price-bar { position: relative; display: block; width: 100%; height: 6px; background: var(--sp-sunk); }
+.sp-price-bar::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--sp-ink-2); }
+.sp-price-bar i { position: absolute; top: 0; bottom: 0; }
