@@ -94,7 +94,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit }) 
                 </span>
                 {role && Math.abs(rf - 1) >= 0.04 && (
                   <span className="sp-tiny sp-ink2" style={{ display: 'block', marginTop: 2 }}>
-                    {teams[f.opp]?.name} allow {ROLE_NAME[role]} {Math.round(Math.abs(rf - 1) * 100)}% {rf > 1 ? 'more' : 'less'} than average
+                    {ROLE_NAME[role]} get {Math.round(Math.abs(rf - 1) * 100)}% {rf > 1 ? 'more' : 'less'} of what {teams[f.opp]?.name} concede than usual
                   </span>
                 )}
               </span>
@@ -251,7 +251,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit }) 
 
       <p className="sp-note sp-pad" style={{ margin: '12px 0 0' }}>
         Our projections, not FPL’s. Goal rates come from team ratings fitted on every Premier League match since 2023/24 (xG and goals, recent matches weighted more); each player’s share from his xG and xA per 90 and how often he starts;
-        {kit ? ' then scaled by how much each opponent usually allows his role.' : ' matchup data is still loading.'} Rotation, injuries after today and price changes aren’t modelled.
+        {kit ? ' then tilted by how much of what each opponent concedes usually goes to his position.' : ' matchup data is still loading.'} Rotation, injuries after today and price changes aren’t modelled.
       </p>
     </div>
   );

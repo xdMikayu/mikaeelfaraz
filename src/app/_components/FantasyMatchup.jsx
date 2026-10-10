@@ -112,7 +112,7 @@ export default function MatchupPanel({ el, ctx, teams, kit, fixtures, nextFx }) 
           {allow.before && <Compare label={seasonLabel(lastSeason)} v={allow.before.xgi90} avg={allow.before.leagueXgi90} />}
           <p className="sp-tiny sp-ink2" style={{ margin: '6px 0 0' }}>
             {allow.rank ? `${ordinal(allow.rank)} most of ${allow.n} clubs this season. ` : ''}
-            Weighing both seasons and the sample size: <b style={{ color: 'var(--sp-ink)' }}>{Math.abs(allow.factor - 1) < 0.02 ? 'about average' : `${Math.round(Math.abs(allow.factor - 1) * 100)}% ${allow.factor > 1 ? 'more' : 'fewer'} chances than usual`}</b> for a {ROLE_ONE[role]}.
+            Allowing for how much they concede overall, {ROLE_NAME[role]} get <b style={{ color: 'var(--sp-ink)' }}>{Math.abs(allow.factor - 1) < 0.02 ? 'their usual share' : `${Math.round(Math.abs(allow.factor - 1) * 100)}% ${allow.factor > 1 ? 'more' : 'less'} of it than usual`}</b> (both seasons, shrunk for small samples).
           </p>
         </div>
       )}

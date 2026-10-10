@@ -631,3 +631,29 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-lb-who b { display: block; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-lb-who small { display: block; font-size: 11px; color: var(--sp-muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sp-lb td { height: 40px; }
+
+/* ---------- net xG ---------- */
+.sp-lb-ctl { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; }
+.sp-nx-row { border-top: 1px solid var(--sp-rule); }
+.sp-nx-head { display: grid; grid-template-columns: 20px 22px minmax(0, 1fr) 84px; gap: 8px; align-items: center; width: 100%; padding: 10px 16px; text-align: left; }
+@media (min-width: 1024px) { .sp-nx-head { padding: 10px 0; } }
+.sp-nx-head img { object-fit: contain; }
+.sp-nx-head:hover { background: var(--sp-sunk); }
+.sp-nx-chips { display: flex; flex-wrap: wrap; gap: 0 10px; margin-top: 3px; font-size: 11px; color: var(--sp-muted); font-variant-numeric: tabular-nums; }
+.sp-nx-chips .up { color: var(--sp-ink); font-weight: 800; }
+.sp-nx-chips .down { color: var(--sp-muted); font-style: italic; }
+.sp-nx-val { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.sp-nx-val b { font-size: 21px; font-weight: 900; font-variation-settings: 'wdth' 72; line-height: 1; }
+.sp-nx-bar { display: block; width: 100%; height: 5px; background: var(--sp-sunk); }
+.sp-nx-bar i { display: block; height: 100%; background: var(--sp-ink); margin-left: auto; }
+.sp-nx-break { padding: 2px 16px 12px 50px; }
+@media (min-width: 1024px) { .sp-nx-break { padding: 2px 0 12px 34px; } }
+.sp-wf { display: grid; grid-template-columns: 74px 44px minmax(0, 1fr) 38px; gap: 2px 8px; align-items: center; min-height: 24px; }
+.sp-wf-x { color: var(--sp-ink-2); }
+.sp-wf-track { display: block; height: 8px; background: var(--sp-sunk); }
+.sp-wf-track i { display: block; height: 100%; background: var(--sp-ink); }
+.sp-wf-note { grid-column: 1 / -1; margin: -3px 0 3px; }
+.sp-evi { display: flex; width: 100%; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 12px; text-align: left; font-size: 13px; color: var(--sp-ink-2); box-shadow: inset 0 0 0 1px var(--sp-rule-2); border-radius: 6px; }
+.sp-evi b { color: var(--sp-ink); }
+.sp-evi-body { padding: 10px 2px 4px; }
+.sp-evi-w { display: grid; grid-template-columns: 130px minmax(0, 1fr) 40px; gap: 10px; align-items: center; min-height: 24px; }

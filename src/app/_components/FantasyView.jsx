@@ -10,7 +10,7 @@ import Planner from './FantasyPlanner';
 import Gameweek from './FantasyGameweek';
 import Stats from './FantasyStats';
 import MatchupPanel from './FantasyMatchup';
-import { useMatchupIndex, useForecastKit } from './matchupData';
+import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
@@ -61,7 +61,8 @@ export default function FantasyView() {
 function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
   const { prefs, update } = usePrefs();
   const mx = useMatchupIndex();
-  const kit = useForecastKit(mx.data);
+  const learned = useNetXgModel();
+  const kit = useForecastKit(mx.data, learned.data);
   // FPL's season numbers first; the longer matchup history replaces them once its file has loaded.
   const model = useMemo(() => (kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements)), [st, kit]);
   const ctx = useMemo(
@@ -159,7 +160,7 @@ function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
       {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} />}
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
-      {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
+      {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} />}
       {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
     </div>
   );

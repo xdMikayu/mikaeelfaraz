@@ -1,0 +1,173 @@
+{
+ "built": "2026-10-10T19:13:37.758Z",
+ "features": [
+  "base",
+  "form",
+  "defence",
+  "venue",
+  "position",
+  "history"
+ ],
+ "xg": {
+  "intercept": -0.10123763640249378,
+  "weights": {
+   "base": 0.9408730868587577,
+   "form": 0.089655395112699,
+   "defence": 0.8250654087461678,
+   "venue": 0.15129350932208274,
+   "position": 0.2563067488681191,
+   "history": -5.933773739615364e-7
+  },
+  "trainedOn2024": {
+   "base": 0.9587831504147035,
+   "form": 0.1044471591186217,
+   "defence": 0.8925387004551244,
+   "venue": 0.09435766174793983,
+   "position": 0.30115833294423866,
+   "history": -7.219852894132193e-7
+  },
+  "shrink": {
+   "form": 0,
+   "history": 1000000000
+  }
+ },
+ "xa": {
+  "intercept": -0.324995585536277,
+  "weights": {
+   "base": 0.8536274505437212,
+   "form": 0.36632114349561573,
+   "defence": 0.8781774578773636,
+   "venue": 0.15060005513796748,
+   "position": 0.05275949622250513,
+   "history": 0.07164498923462638
+  },
+  "trainedOn2024": {
+   "base": 0.8965368107764333,
+   "form": 0.34760193552882207,
+   "defence": 0.8836747054013634,
+   "venue": 0.07890716395949071,
+   "position": -0.02472846431245897,
+   "history": 0.33643223656802873
+  },
+  "shrink": {
+   "form": 1800,
+   "history": 3600
+  }
+ },
+ "report": {
+  "xg": {
+   "shrink": {
+    "form": 0,
+    "history": 1000000000
+   },
+   "test": {
+    "label": "2025/26",
+    "n": 9245,
+    "usualRate": {
+     "name": "usual rate only",
+     "deviance": 0.19550064199835723,
+     "mae": 0.11515417183540322,
+     "corr": 0.4701543423560791
+    },
+    "handSet": {
+     "name": "hand-set weights",
+     "deviance": 0.23197229149183404,
+     "mae": 0.12036697900272711,
+     "corr": 0.39894465902238235
+    },
+    "learned": {
+     "name": "learned weights",
+     "deviance": 0.193534835170822,
+     "mae": 0.11080071742457627,
+     "corr": 0.48014798346228904
+    }
+   },
+   "latest": {
+    "label": "2026/27 so far",
+    "n": 1396,
+    "usualRate": {
+     "name": "usual rate only",
+     "deviance": 0.17078634098145712,
+     "mae": 0.10136416193981726,
+     "corr": 0.49105021736231497
+    },
+    "handSet": {
+     "name": "hand-set weights",
+     "deviance": 0.19167131780214605,
+     "mae": 0.10476332331938065,
+     "corr": 0.4338417498876672
+    },
+    "learned": {
+     "name": "learned weights",
+     "deviance": 0.16900610445262199,
+     "mae": 0.10030891685665287,
+     "corr": 0.4997797266814277
+    }
+   }
+  },
+  "xa": {
+   "shrink": {
+    "form": 1800,
+    "history": 3600
+   },
+   "test": {
+    "label": "2025/26",
+    "n": 9245,
+    "usualRate": {
+     "name": "usual rate only",
+     "deviance": 0.16975475046079083,
+     "mae": 0.08969880924658051,
+     "corr": 0.31822743430990547
+    },
+    "handSet": {
+     "name": "hand-set weights",
+     "deviance": 0.16914110458132012,
+     "mae": 0.08844352709221874,
+     "corr": 0.33054265622407586
+    },
+    "learned": {
+     "name": "learned weights",
+     "deviance": 0.1679335291400407,
+     "mae": 0.08726863600232351,
+     "corr": 0.333032942001489
+    }
+   },
+   "latest": {
+    "label": "2026/27 so far",
+    "n": 1396,
+    "usualRate": {
+     "name": "usual rate only",
+     "deviance": 0.15576400911194138,
+     "mae": 0.08109169973979913,
+     "corr": 0.29231007528473063
+    },
+    "handSet": {
+     "name": "hand-set weights",
+     "deviance": 0.15615639201450157,
+     "mae": 0.0803430328094552,
+     "corr": 0.2934046786171927
+    },
+    "learned": {
+     "name": "learned weights",
+     "deviance": 0.15558853446364113,
+     "mae": 0.08201546627229295,
+     "corr": 0.29220158494664844
+    }
+   }
+  }
+ },
+ "summary": {
+  "test": "2025/26",
+  "testRows": 9245,
+  "trainedOn": "2024/25",
+  "xgGain": {
+   "deviance": 0.010055244869997648,
+   "mae": 0.03780544240333383
+  },
+  "xaGain": {
+   "deviance": 0.010728544066110235,
+   "mae": 0.027092592027353368
+  },
+  "handSetWorse": true
+ }
+}
