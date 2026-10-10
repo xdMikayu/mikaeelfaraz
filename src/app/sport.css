@@ -330,7 +330,7 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-key-chips i { width: 10px; height: 10px; border-radius: 2px; }
 
 /* ---------- fantasy ---------- */
-.sp-fhead { padding: 14px 16px 16px; border-bottom: 1px solid var(--sp-rule); }
+.sp-fhead { padding: 14px 16px 16px; border-bottom: 1px solid var(--sp-rule); text-align: center; }
 @media (min-width: 1024px) { .sp-fhead { padding: 6px 0 16px; } }
 .sp-hero-num { font-size: 92px; font-weight: 900; line-height: 0.88; letter-spacing: -0.02em; font-variation-settings: 'wdth' 62; }
 .sp-scale { position: relative; height: 50px; margin-top: 16px; }
@@ -339,7 +339,17 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-scale-m i { display: block; width: 2px; height: 14px; background: var(--sp-muted); margin: 3px auto 0; }
 .sp-scale-you { position: absolute; top: 20px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--sp-ink); }
 .sp-scale-you-l { position: absolute; top: 34px; transform: translateX(-50%); font-size: 12px; font-weight: 900; white-space: nowrap; }
-.sp-facts { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 14px; color: var(--sp-ink-2); }
+.sp-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; font-size: 14px; color: var(--sp-ink-2); }
+.sp-fhead .sp-scale { text-align: left; }
+/* Eleven squares: played (ink), playing now (red), still to play (outline) */
+.sp-prog { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--sp-ink-2); }
+.sp-prog b { color: var(--sp-ink); font-weight: 800; }
+.sp-prog b.sp-live-text { color: var(--sp-live); }
+.sp-prog-cells { display: flex; gap: 3px; }
+.sp-prog-cells i { width: 18px; height: 8px; border-radius: 2px; }
+.sp-prog-done { background: var(--sp-ink); }
+.sp-prog-live { background: var(--sp-live); }
+.sp-prog-todo { box-shadow: inset 0 0 0 1.5px var(--sp-rule-2); }
 .sp-facts b { color: var(--sp-ink); font-weight: 800; }
 
 .sp-fplpitch { position: relative; padding: 12px 0 8px; }
@@ -350,9 +360,18 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-kit-name { margin-top: -2px; max-width: 72px; padding: 2px 6px; border-radius: 4px 4px 0 0; background: #fff; color: #111; font-size: 11.5px; font-weight: 750; font-variation-settings: 'wdth' 82; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-kit-pts { min-width: 34px; padding: 1px 10px; border-radius: 0 0 4px 4px; font-size: 13.5px; font-weight: 900; font-variant-numeric: tabular-nums; font-variation-settings: 'wdth' 70; color: #fff; background: #111; }
 .sp-kit-badge { position: absolute; top: 0; right: 10px; width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 900; background: #111; color: #fff; border: 2px solid #fff; font-style: normal; }
-.sp-kit-state { position: absolute; top: 2px; left: 12px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--sp-pitch); }
-.sp-kit-state.sp-st-live { background: #ff3b3b; border-color: #fff; }
-.sp-kit-state.sp-st-todo { background: #fff; }
+/* The points plate says where he is: black when his match is over, red while it's on, an outline
+   (with the kick-off time while he has nothing yet) when it's still to come. */
+.sp-kit-live .sp-kit-pts, .sp-lg-live { background: #d6001c; color: #fff; }
+.sp-kit-todo .sp-kit-pts, .sp-kit-bench .sp-kit-pts { background: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+.sp-kit-live .sp-kit-fx { color: #fff; font-weight: 800; }
+.sp-kit.sp-kit-blank { opacity: 0.55; }
+.sp-benchrow .sp-kit-todo .sp-kit-pts, .sp-benchrow .sp-kit-bench .sp-kit-pts { color: var(--sp-bench-ink); box-shadow: inset 0 0 0 1.5px var(--sp-bench-ink); }
+.sp-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-top: 10px; font-size: 12.5px; font-weight: 650; color: var(--sp-ink-2); }
+.sp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sp-legend .sp-kit-pts { font-style: normal; border-radius: 4px; font-size: 12px; padding: 1px 7px; min-width: 0; }
+.sp-legend .sp-lg-done { background: var(--sp-ink); color: var(--sp-page); }
+.sp-legend .sp-lg-todo { background: transparent; color: var(--sp-ink); box-shadow: inset 0 0 0 1.5px var(--sp-ink); }
 .sp-kit-sub { position: absolute; top: 18px; left: 4px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #fff; }
 .sp-kit.sp-kit-out { opacity: 0.55; }
 .sp-kit-fx { margin-top: 3px; font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.92); max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -360,7 +379,7 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-benchrow-label { text-align: center; font-size: 11.5px; font-weight: 800; color: var(--sp-bench-ink); margin: 0; }
 .sp-benchrow .sp-kit-fx { color: var(--sp-bench-ink); }
 
-.sp-pick { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 40px; gap: 10px; align-items: center; min-height: 56px; border-top: 1px solid var(--sp-rule); }
+.sp-pick { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 36px; gap: 10px; align-items: center; min-height: 56px; border-top: 1px solid var(--sp-rule); }
 .sp-pick:first-child { border-top: 0; }
 .sp-pick-pos { font-size: 12px; font-weight: 800; color: var(--sp-muted); }
 .sp-pick-name { min-width: 0; line-height: 1.25; }
@@ -368,6 +387,11 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-pick-name small { display: block; color: var(--sp-muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-pick-pts { justify-self: end; font-weight: 900; font-size: 19px; font-variant-numeric: tabular-nums; font-variation-settings: 'wdth' 70; }
 .sp-pick.sp-off { color: var(--sp-muted); }
+.sp-pick-when { justify-self: end; font-size: 12.5px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--sp-muted); white-space: nowrap; }
+.sp-pick-live .sp-pick-when { color: var(--sp-live); font-weight: 850; }
+.sp-pick-todo .sp-pick-when, .sp-pick-bench .sp-pick-when { color: var(--sp-ink); }
+.sp-pick-todo .sp-pick-pts, .sp-pick-bench .sp-pick-pts { color: var(--sp-muted); }
+.sp-pick-live { box-shadow: inset 3px 0 0 var(--sp-live); padding-left: 8px; margin-left: -8px; }
 .sp-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 3px; border-radius: 50%; font-size: 10.5px; font-weight: 900; background: var(--sp-ink); color: var(--sp-page); }
 .sp-badge-quiet { background: var(--sp-sunk); color: var(--sp-ink-2); }
 .sp-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--sp-sunk); flex: none; }
@@ -379,6 +403,65 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-lrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--sp-rule); }
 @media (min-width: 1024px) { .sp-lrow { padding: 10px 0; } }
 .sp-lrow.sp-mine { background: var(--sp-mine); }
+button.sp-lrow { width: 100%; text-align: left; cursor: pointer; }
+button.sp-lrow:hover { background: var(--sp-sunk); }
+.sp-h2h-link { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--sp-rule); border-bottom: 1px solid var(--sp-rule); text-align: left; }
+.sp-h2h-link b { font-size: 16px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.sp-h2h-link:hover { background: var(--sp-sunk); }
+@media (min-width: 1024px) { .sp-h2h-link { padding: 12px 0; } }
+
+/* Head to head: you in ink, your rival on the page colour, the score on a plate between */
+.sp-vs { position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: 170px; overflow: hidden; outline: 1px solid var(--sp-rule-2); outline-offset: -1px; }
+@media (min-width: 640px) { .sp-vs { border-radius: 10px; margin: 0 16px; } }
+@media (min-width: 1024px) { .sp-vs { margin: 0; } }
+.sp-vs-half { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; padding: 16px 14px 14px; min-width: 0; font-size: 12.5px; }
+.sp-vs-half b { font-size: 15px; font-weight: 850; line-height: 1.15; font-variation-settings: 'wdth' 85; overflow-wrap: anywhere; }
+.sp-vs-who { position: absolute; top: 12px; font-size: 12px; font-weight: 800; }
+.sp-vs-me { background: var(--sp-ink); color: var(--sp-page); }
+.sp-vs-me .sp-vs-who { left: 14px; }
+.sp-vs-them { text-align: right; align-items: flex-end; color: var(--sp-ink); }
+.sp-vs-them .sp-vs-who { right: 14px; }
+.sp-vs .sp-hero-plate { top: 44%; outline: 1px solid var(--sp-rule-2); }
+.sp-vs .sp-hero-plate b { font-size: 38px; }
+.sp-proj { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.sp-proj > div { display: flex; flex-direction: column; }
+.sp-proj-num { font-size: 52px; line-height: 0.95; font-weight: 900; font-variation-settings: 'wdth' 62; }
+.sp-odds { position: relative; height: 10px; margin-top: 12px; box-shadow: inset 0 0 0 1.5px var(--sp-ink); border-radius: 2px; overflow: hidden; }
+.sp-odds i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--sp-ink); }
+.sp-odds-l { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 13px; color: var(--sp-ink-2); }
+.sp-odds-l b { color: var(--sp-ink); font-weight: 850; }
+
+.sp-common { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px 20px; }
+.sp-common li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 36px; }
+.sp-common-n { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-common-n small { display: block; font-size: 11.5px; color: var(--sp-ink-2); font-weight: 650; }
+.sp-st { font-size: 12.5px; font-weight: 750; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sp-st b { font-size: 15px; font-weight: 900; font-variation-settings: 'wdth' 75; }
+.sp-st-live { color: var(--sp-live); }
+.sp-st-done, .sp-st-out, .sp-st-blank { color: var(--sp-ink); }
+.sp-st-todo { color: var(--sp-ink-2); }
+.sp-st-word { font-weight: 750; }
+.sp-st-word.sp-st-todo, .sp-st-word.sp-st-bench { color: var(--sp-ink); }
+.sp-st-word.sp-st-done, .sp-st-word.sp-st-out { color: var(--sp-muted); }
+
+.sp-dif { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: start; padding: 11px 0; border-top: 1px solid var(--sp-rule); }
+.sp-dif-top { display: flex; align-items: baseline; gap: 8px; }
+.sp-dif-name { font-size: 14.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sp-dif-pts { margin-left: auto; flex: none; font-size: 13px; color: var(--sp-ink-2); white-space: nowrap; }
+.sp-dif-pts b { font-size: 18px; font-weight: 900; color: var(--sp-ink); font-variation-settings: 'wdth' 72; }
+.sp-dif-line { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-dif-track { display: flex; height: 8px; margin-top: 7px; background: var(--sp-sunk); }
+.sp-dif-now { background: var(--sp-ink); }
+.sp-dif-live .sp-dif-now { background: var(--sp-live); }
+.sp-dif-rest { box-shadow: inset 0 0 0 1.5px var(--sp-ink); }
+
+.sp-mx { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; padding: 10px 16px; border-top: 1px solid var(--sp-rule); }
+@media (min-width: 1024px) { .sp-mx { padding: 10px 0; } }
+.sp-mx-side { display: grid; grid-template-columns: 22px minmax(0, 1fr) 26px 44px; gap: 8px; align-items: center; min-height: 28px; font-size: 14.5px; font-weight: 650; }
+.sp-mx-side .sp-tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-mx-score { text-align: right; font-size: 16px; font-weight: 900; }
+.sp-mx-xg { text-align: right; font-size: 13px; font-weight: 750; }
+.sp-mx-who { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; }
 .sp-lrank { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
 .sp-lrank b { font-size: 17px; font-weight: 900; font-variation-settings: 'wdth' 75; }
 .sp-lrank span { font-size: 11px; font-weight: 800; }
