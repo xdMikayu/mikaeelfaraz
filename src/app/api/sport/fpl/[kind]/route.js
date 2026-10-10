@@ -1,10 +1,10 @@
-import { getStatic, getLive, getEntry, getLeague } from '@/lib/sport/fpl-server.mjs';
+import { getStatic, getLive, getEntry, getLeague, getFixtures } from '@/lib/sport/fpl-server.mjs';
 
 export const dynamic = 'force-dynamic';
 
 // Seconds the CDN may serve a response before asking us again, and how long it may keep
 // serving the old one while it refreshes. Every viewer shares the cached copy.
-const CACHE = { static: [300, 3600], live: [20, 60], entry: [60, 300], league: [90, 600] };
+const CACHE = { static: [300, 3600], fixtures: [600, 3600], live: [20, 60], entry: [60, 300], league: [90, 600] };
 
 const id = (v) => (/^\d{1,10}$/.test(v ?? '') ? Number(v) : null);
 
@@ -15,6 +15,7 @@ export async function GET(req, { params }) {
   try {
     let data;
     if (kind === 'static') data = await getStatic();
+    else if (kind === 'fixtures') data = await getFixtures();
     else {
       const event = id(q.get('event'));
       if (!event || event > 38) return Response.json({ error: 'Need a gameweek' }, { status: 400 });

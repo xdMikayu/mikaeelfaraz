@@ -232,8 +232,37 @@ export function buildModel(elements) {
   return { avg: avg || 1.35, teams: out, pos: per90 };
 }
 
+/**
+ * Adds the longer view from the matchup data (public/sport/data/pl/index.json): team ratings fitted
+ * on every match since 2023/24 (forecast.mjs rateTeams) replace this season's FPL numbers for goal
+ * rates, and each player's xG and xA are scaled by how much his opponent usually allows his role.
+ * m: { ratings, goalRates, fplTeams: { fplTeam: espnTeam }, roles: { fplPlayer: role }, roleFactor(espnOpp, role) }
+ */
+export function withMatchups(model, m) {
+  const memo = new Map();
+  return {
+    ...model,
+    rates(home, away) {
+      const h = m.fplTeams[home];
+      const a = m.fplTeams[away];
+      return h && a ? m.goalRates(m.ratings, h, a) : null;
+    },
+    role: (id) => m.roles[id] ?? null,
+    roleFactor(id, oppFplTeam) {
+      const role = m.roles[id];
+      const opp = m.fplTeams[oppFplTeam];
+      if (!role || !opp) return 1;
+      const key = `${role}:${opp}`;
+      if (!memo.has(key)) memo.set(key, m.roleFactor(opp, role));
+      return memo.get(key);
+    },
+  };
+}
+
 /** Expected goals each side scores in this fixture, before kick-off. */
 export function fixtureRates(f, model) {
+  const r = model.rates?.(f.home, f.away);
+  if (r) return r;
   const h = model.teams[f.home] ?? { for: model.avg, against: model.avg };
   const a = model.teams[f.away] ?? { for: model.avg, against: model.avg };
   return { home: (h.for * a.against * HOME) / model.avg, away: (a.for * h.against) / HOME / model.avg };
@@ -291,8 +320,10 @@ export function projectFixture(id, f, ctx) {
     p60 = pStart * (perStart >= 75 ? 0.9 : perStart >= 60 ? 0.7 : 0.3);
   }
   const frac = mins / 90;
-  const xg = lamFor * shareG * frac;
-  const xa = lamFor * shareA * frac;
+  // How much more or less than usual this opponent gives up to his role (1 without matchup data).
+  const roleF = model.roleFactor?.(id, home ? f.away : f.home) ?? 1;
+  const xg = lamFor * shareG * frac * roleF;
+  const xa = lamFor * shareA * frac * roleF;
   const conceded = f.started ? (home ? f.as : f.hs) ?? 0 : 0;
   const lamRest = lamAgainst * left;
 
@@ -338,7 +369,7 @@ export function projectFixture(id, f, ctx) {
   }
   if (!f.started) xp += per90(el.bonus ?? 0) * frac;
   xp -= per90(el.yc ?? 0) * frac;
-  return { xp: Math.max(0, xp), v, xg, xa, cs, mins, pApp, lamFor, lamAgainst };
+  return { xp: Math.max(0, xp), v, xg, xa, cs, mins, pApp, lamFor, lamAgainst, roleF };
 }
 
 /** Points so far plus what's still expected, across his fixtures this gameweek. */
@@ -433,6 +464,82 @@ export function headToHead(a, b, ctx) {
     sd,
     pA,
   };
+}
+
+/**
+ * Projections for gameweeks still to come: per player, per gameweek, the expected points of each
+ * of his fixtures (a blank gameweek is 0, a double counts both). fixtures: the whole season's.
+ */
+export function projectAhead(ids, fixtures, gws, ctx) {
+  const byTeamGw = {};
+  for (const f of fixtures) {
+    if (!gws.includes(f.event) || f.started) continue;
+    for (const t of [f.home, f.away]) ((byTeamGw[t] ??= {})[f.event] ??= []).push(f);
+  }
+  const future = { ...ctx, live: {} };
+  const out = {};
+  for (const id of ids) {
+    const el = ctx.elements[id];
+    if (!el) continue;
+    const per = {};
+    let total = 0;
+    for (const gw of gws) {
+      const fx = byTeamGw[el.team]?.[gw] ?? [];
+      const parts = fx.map((f) => ({ f, ...projectFixture(id, f, future) }));
+      const xp = parts.reduce((t, p) => t + p.xp, 0);
+      per[gw] = {
+        xp,
+        xg: parts.reduce((t, p) => t + p.xg, 0),
+        xa: parts.reduce((t, p) => t + p.xa, 0),
+        cs: parts.length ? parts.reduce((m, p) => Math.max(m, p.cs ?? 0), 0) : null,
+        v: parts.reduce((t, p) => t + p.v, 0),
+        fx: parts.map((p) => ({ id: p.f.id, opp: p.f.home === el.team ? p.f.away : p.f.home, home: p.f.home === el.team, xp: p.xp, roleF: p.roleF, pApp: p.pApp })),
+      };
+      total += xp;
+    }
+    out[id] = { per, total };
+  }
+  return out;
+}
+
+/** Chance of at least one goal or assist, and of two or more, from expected goals and assists. */
+export function returnOdds(xg, xa) {
+  const l = xg + xa;
+  return { any: 1 - Math.exp(-l), two: poissonTail(l, 2) };
+}
+
+/**
+ * Single transfers that most raise projected points over the horizon, within the bank and the
+ * three-per-club rule. Prices are today's; FPL keeps each manager's selling prices private.
+ */
+export function suggestTransfers(squad, bank, ahead, ctx, { limit = 6, minGain = 0.5 } = {}) {
+  const els = ctx.elements;
+  const owned = new Set(squad);
+  const perClub = {};
+  for (const id of squad) perClub[els[id]?.team] = (perClub[els[id]?.team] ?? 0) + 1;
+  const pool = Object.keys(ahead).map(Number).filter((id) => !owned.has(id) && els[id]?.status !== 'u');
+  const out = [];
+  for (const o of squad) {
+    const eo = els[o];
+    if (!eo || !ahead[o]) continue;
+    const budget = eo.cost + bank;
+    let best = null;
+    for (const c of pool) {
+      const ec = els[c];
+      if (ec.type !== eo.type || ec.cost > budget + 1e-9) continue;
+      if (ec.team !== eo.team && (perClub[ec.team] ?? 0) >= 3) continue;
+      if (!best || ahead[c].total > ahead[best].total) best = c;
+    }
+    if (best == null) continue;
+    const gain = ahead[best].total - ahead[o].total;
+    if (gain >= minGain) out.push({ out: o, in: best, gain, cost: els[best].cost - eo.cost });
+  }
+  // One suggestion per incoming player: the swap that gains most with him.
+  const seen = new Set();
+  return out
+    .sort((a, b) => b.gain - a.gain)
+    .filter((s) => (seen.has(s.in) ? false : seen.add(s.in)))
+    .slice(0, limit);
 }
 
 export const STAT_LABEL = {

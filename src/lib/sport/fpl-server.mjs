@@ -114,6 +114,26 @@ export async function getLive(event) {
   };
 }
 
+/** Every fixture of the season, for looking several gameweeks ahead. */
+export async function getFixtures() {
+  const all = await fpl('/fixtures/', 300e3);
+  return (all ?? []).map((f) => ({
+    id: f.id,
+    event: f.event,
+    kickoff: f.kickoff_time,
+    home: f.team_h,
+    away: f.team_a,
+    hs: f.team_h_score,
+    as: f.team_a_score,
+    started: Boolean(f.started),
+    finished: Boolean(f.finished),
+    finishedProvisional: Boolean(f.finished_provisional),
+    minutes: f.minutes,
+    fdrH: f.team_h_difficulty,
+    fdrA: f.team_a_difficulty,
+  }));
+}
+
 const picksShape = (p) =>
   p && {
     chip: p.active_chip,
