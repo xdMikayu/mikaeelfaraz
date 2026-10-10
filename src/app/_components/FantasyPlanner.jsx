@@ -2,12 +2,10 @@
 import { useMemo, useState } from 'react';
 import { projectAhead, returnOdds, suggestTransfers } from '@/lib/sport/fpl.mjs';
 import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
-import { shirt, one, Face } from './fplbits';
+import { shirt, one, heat, Face } from './fplbits';
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const shade = (v, max) => Math.max(0, Math.min(1, v / max));
-/** Monochrome heat: the more expected, the more ink. */
-const heat = (t) => ({ background: `color-mix(in srgb, var(--sp-ink) ${Math.round(t * 78)}%, transparent)`, color: t > 0.5 ? 'var(--sp-page)' : 'var(--sp-ink)' });
 const oppLabel = (teams, f) => `${teams[f.opp]?.short ?? ''}${f.home ? '' : ' (A)'}`;
 
 /** The weeks ahead: projected points, captaincy, transfers and fixtures, all from our model. */

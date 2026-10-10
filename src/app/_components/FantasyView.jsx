@@ -1,13 +1,14 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { projectedBonus, teamLive, leagueLive, pointChanges, buildModel, withMatchups, fixtureRates, POS, STAT_LABEL } from '@/lib/sport/fpl.mjs';
-import { matchOdds } from '@/lib/sport/forecast.mjs';
+import { projectedBonus, teamLive, leagueLive, pointChanges, buildModel, withMatchups, POS, STAT_LABEL } from '@/lib/sport/fpl.mjs';
 import { usePrefs } from './prefs';
 import { useLive, Freshness } from './useLive';
 import { kickoff, shortDate, until } from './time';
 import { shirt, photo, signed, fixturesOf, fxShort, fxLong, phase, Face } from './fplbits';
 import Rival from './FantasyRival';
 import Planner from './FantasyPlanner';
+import Gameweek from './FantasyGameweek';
+import Stats from './FantasyStats';
 import MatchupPanel from './FantasyMatchup';
 import { useMatchupIndex, useForecastKit } from './matchupData';
 
@@ -149,7 +150,8 @@ function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
           <button role="tab" aria-selected={tab === 'list'} onClick={() => setTab('list')}>List</button>
           {fixtures && <button role="tab" aria-selected={tab === 'plan'} onClick={() => setTab('plan')}>Planner</button>}
           {leagueId && <button role="tab" aria-selected={tab === 'league'} onClick={() => setTab('league')}>League</button>}
-          <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Fixtures</button>
+          <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Gameweek</button>
+          <button role="tab" aria-selected={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
         </div>
       </div>
 
@@ -157,7 +159,8 @@ function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
       {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} />}
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
-      {tab === 'fixtures' && <Fixtures live={live} teams={teams} ctx={ctx} />}
+      {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
+      {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
     </div>
   );
 }
@@ -499,64 +502,6 @@ function League({ id, event, entry, ctx, myTeam, teams, live, onPick }) {
         </section>
       )}
     </div>
-  );
-}
-
-function Fixtures({ live, teams, ctx }) {
-  const list = [...live.fixtures].sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
-  return (
-    <section className="sp-group" style={{ marginTop: 12 }}>
-      {list.map((f) => {
-        const on = f.started && !f.finished && !f.finishedProvisional;
-        const done = f.finished || f.finishedProvisional;
-        const side = (id, score, other) => (
-          <span className={`sp-team-line${done && score > other ? ' sp-won' : done && score < other ? ' sp-lost' : ''}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={shirt(teams[id]?.code)} alt="" width="24" height="24" style={{ objectFit: 'contain' }} loading="lazy" />
-            <span className="sp-tn">{teams[id]?.name}</span>
-          </span>
-        );
-        return (
-          <div key={f.id} className="sp-row">
-            <span className="sp-row-status">
-              {done ? <span className="sp-pill sp-pill-ft">FT</span> : on ? <span className="sp-pill sp-pill-live">{f.minutes}′</span> : (
-                <>
-                  <span className="sp-muted" style={{ fontWeight: 600 }}>{new Date(f.kickoff).toLocaleDateString(undefined, { weekday: 'short' })}</span>
-                  <span className="sp-pill sp-pill-time">{kickoff(f.kickoff)}</span>
-                </>
-              )}
-            </span>
-            <span className="sp-row-teams">
-              {side(f.home, f.hs, f.as)}
-              {side(f.away, f.as, f.hs)}
-            </span>
-            <span className="sp-row-score">
-              {f.started ? (
-                <>
-                  <span className={done && f.hs < f.as ? 'sp-lost' : ''}>{f.hs}</span>
-                  <span className={done && f.as < f.hs ? 'sp-lost' : ''}>{f.as}</span>
-                </>
-              ) : (
-                <Odds f={f} ctx={ctx} />
-              )}
-            </span>
-          </div>
-        );
-      })}
-      <p className="sp-tiny sp-muted" style={{ margin: 0, padding: '10px 16px 12px' }}>Before kick-off: each side’s chance of winning and expected goals, our estimate.</p>
-    </section>
-  );
-}
-
-/** Before kick-off: each side's win chance and expected goals, from our ratings. */
-function Odds({ f, ctx }) {
-  const r = fixtureRates(f, ctx.model);
-  const o = matchOdds(r.home, r.away);
-  return (
-    <>
-      <span className="sp-odds-cell"><b>{Math.round(o.home * 100)}%</b> {r.home.toFixed(1)}</span>
-      <span className="sp-odds-cell"><b>{Math.round(o.away * 100)}%</b> {r.away.toFixed(1)}</span>
-    </>
   );
 }
 
