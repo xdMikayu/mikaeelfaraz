@@ -1,11 +1,14 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { projectedBonus, teamLive, leagueLive, pointChanges, buildModel, POS, STAT_LABEL } from '@/lib/sport/fpl.mjs';
+import { projectedBonus, teamLive, leagueLive, pointChanges, buildModel, withMatchups, POS, STAT_LABEL } from '@/lib/sport/fpl.mjs';
 import { usePrefs } from './prefs';
 import { useLive, Freshness } from './useLive';
 import { kickoff, shortDate, until } from './time';
 import { shirt, photo, signed, fixturesOf, fxShort, fxLong, phase, Face } from './fplbits';
 import Rival from './FantasyRival';
+import Planner from './FantasyPlanner';
+import MatchupPanel from './FantasyMatchup';
+import { useMatchupIndex, useForecastKit } from './matchupData';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
@@ -25,6 +28,7 @@ export default function FantasyView() {
   const st = useLive((signal) => api('static', signal), [], { every: 300000, live: () => true });
   const gw = st.data?.current;
   const live = useLive((signal) => (gw ? api(`live?event=${gw}`, signal) : Promise.resolve(null)), [gw], { every: 30000, live: liveGw });
+  const season = useLive((signal) => api('fixtures', signal), [], { every: 600000, live: () => false });
   const entry = useLive((signal) => (gw && entryId ? api(`entry?id=${entryId}&event=${gw}`, signal) : Promise.resolve(null)), [gw, entryId], {
     every: 60000,
     live: () => liveGw(live.data),
@@ -49,12 +53,15 @@ export default function FantasyView() {
         <button className="sp-btn" onClick={() => update({ fplEntry: null })}>Use a different team ID</button>
       </div>
     );
-  return <Live st={st.data} live={live.data} entry={entry.data} liveAt={live.at} liveErr={live.error} />;
+  return <Live st={st.data} live={live.data} entry={entry.data} fixtures={season.data} liveAt={live.at} liveErr={live.error} />;
 }
 
-function Live({ st, live, entry, liveAt, liveErr }) {
+function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
   const { prefs, update } = usePrefs();
-  const model = useMemo(() => buildModel(st.elements), [st]);
+  const mx = useMatchupIndex();
+  const kit = useForecastKit(mx.data);
+  // FPL's season numbers first; the longer matchup history replaces them once its file has loaded.
+  const model = useMemo(() => (kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements)), [st, kit]);
   const ctx = useMemo(
     () => ({ elements: Object.fromEntries(st.elements.map((e) => [e.id, e])), live: live.elements, fixtures: live.fixtures, bonus: projectedBonus(live.fixtures), model }),
     [st, live, model]
@@ -139,12 +146,14 @@ function Live({ st, live, entry, liveAt, liveErr }) {
         <div className="sp-tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}>Pitch</button>
           <button role="tab" aria-selected={tab === 'list'} onClick={() => setTab('list')}>List</button>
+          {fixtures && <button role="tab" aria-selected={tab === 'plan'} onClick={() => setTab('plan')}>Planner</button>}
           {leagueId && <button role="tab" aria-selected={tab === 'league'} onClick={() => setTab('league')}>League</button>}
           <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Fixtures</button>
         </div>
       </div>
 
-      {tab === 'team' && team && <Pitch team={team} ctx={ctx} teams={teams} />}
+      {tab === 'team' && team && <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} />}
+      {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} />}
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
       {tab === 'fixtures' && <Fixtures live={live} teams={teams} />}
@@ -214,7 +223,7 @@ function breakdown(state) {
 }
 
 /** The squad on a pitch: the scoring eleven (after projected autosubs) in their lines, bench below. */
-function Pitch({ team, ctx, teams }) {
+function Pitch({ team, ctx, teams, forecast, fixtures }) {
   const [sel, setSel] = useState(null);
   const subIn = new Set(team.subs.map((s) => s.in));
   const subOut = new Set(team.subs.map((s) => s.out));
@@ -276,7 +285,7 @@ function Pitch({ team, ctx, teams }) {
         <span><i className="sp-kit-pts sp-lg-live">2</i>Playing now</span>
         <span><i className="sp-kit-pts sp-lg-todo">Sun 16:30</i>To play</span>
       </div>
-      {cur ? <PlayerCard l={cur} ctx={ctx} teams={teams} /> : (
+      {cur ? <PlayerCard l={cur} ctx={ctx} teams={teams} kit={forecast} fixtures={fixtures} /> : (
         <p className="sp-note sp-pad" style={{ margin: '8px 0 0' }}>
           Tap a player for his points. Arrows mark projected autosubs.
         </p>
@@ -285,10 +294,12 @@ function Pitch({ team, ctx, teams }) {
   );
 }
 
-function PlayerCard({ l, ctx, teams }) {
+function PlayerCard({ l, ctx, teams, kit, fixtures }) {
   const el = ctx.elements[l.element];
   const parts = breakdown(l.state);
   const fx = fixturesOf(el.team, ctx);
+  // The matchup to read about: his match in progress or next up.
+  const nextFx = (fixtures ?? ctx.fixtures).filter((f) => (f.home === el.team || f.away === el.team) && !f.finished && !f.finishedProvisional).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))[0] ?? null;
   return (
     <section className="sp-panel" style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '72px 1fr', gap: 14 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -310,6 +321,9 @@ function PlayerCard({ l, ctx, teams }) {
           )) : <span className="sp-small sp-muted">No points yet</span>}
           {l.mult > 1 && <span className="sp-small" style={{ fontWeight: 800 }}>×{l.mult} {l.mult === 3 ? 'triple captain' : 'captain'}</span>}
         </div>
+      </div>
+      <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+        <MatchupPanel el={el} ctx={ctx} teams={teams} kit={kit} fixtures={fixtures} nextFx={nextFx} />
       </div>
     </section>
   );
