@@ -1,0 +1,40 @@
+name: Matchday data
+
+# Adds newly finished Premier League matches to the matchup data (xG by role, team ratings,
+# player match logs) and commits it, which redeploys the site. Mondays catch the weekend round,
+# Thursdays the midweek one. Only new matches are fetched, so a run takes about a minute.
+on:
+  schedule:
+    - cron: '23 5 * * 1'
+    - cron: '23 5 * * 4'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: matchday-data
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The script uses only Node's built-ins and the app's own modules, so no npm install.
+      - run: node scripts/sport/build-matchups.mjs
+      - name: Commit if anything changed
+        run: |
+          git add data/sport public/sport/data
+          if git diff --cached --quiet; then
+            echo "No new matches."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Matchday data: add finished Premier League matches"
+          git push

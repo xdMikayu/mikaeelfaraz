@@ -6,6 +6,7 @@ import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
 import { useLive, Freshness } from './useLive';
 import { usePrefs, useFollow } from './prefs';
 import Crest from './Crest';
+import SeasonForecast from './SeasonForecast';
 
 export default function TableView({ slug }) {
   const { prefs } = usePrefs();
@@ -42,6 +43,7 @@ export default function TableView({ slug }) {
       ) : (
         data.groups.map((g) => <Group key={g.name ?? 'all'} g={g} slug={slug} isFollowed={isFollowed} />)
       )}
+      {!hidden && data && slug === 'eng.1' && data.groups[0]?.rows.length > 0 && <SeasonForecast rows={data.groups[0].rows} />}
       {!hidden && data && (
         <p className="sp-note sp-pad" style={{ marginTop: 10 }}>
           Colours mark where places change, from ESPN’s notes; they can shift with cup winners. The table updates when a result is final, not during matches.
