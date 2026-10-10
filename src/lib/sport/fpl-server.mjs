@@ -67,6 +67,8 @@ export async function getStatic() {
       // Price changes: FPL's own progress towards a rise (+100) or fall (−100), and its projection
       // for tonight and the next two nights with a likelihood from −5 to 5.
       price: priceOf(e),
+      // Set-piece order from FPL (1 = first choice), null when he isn't on the list.
+      setPieces: [e.penalties_order, e.direct_freekicks_order, e.corners_and_indirect_freekicks_order],
       goals: e.goals_scored,
       assists: e.assists,
       ep: num(e.ep_next),
