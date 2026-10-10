@@ -228,4 +228,23 @@ await writeFile(
     roles: Object.fromEntries(Object.entries(fplIds).map(([f, e]) => [f, mainRole(players[e].rows)]).filter(([, r]) => r)),
   })
 );
-console.log(`Wrote ${Object.keys(files).length} player files and index.json`);
+// Net xG inputs for every FPL player: long-run rates (two years), his last five matches, and his
+// record against each opponent. Each is [minutes, xG, xA].
+const tri = (rows) => [rows.reduce((t, r) => t + r[6], 0), r3(rows.reduce((t, r) => t + r[8], 0)), r3(rows.reduce((t, r) => t + r[10], 0))];
+const netxg = {};
+for (const [fplId, espnId] of Object.entries(fplIds)) {
+  const rows = players[espnId]?.rows;
+  if (!rows?.length) continue;
+  const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
+  const last = sorted[sorted.length - 1][0];
+  const twoYears = `${Number(last.slice(0, 4)) - 2}${last.slice(4)}`;
+  const vs = {};
+  for (const r of sorted) (vs[r[1]] ??= []).push(r);
+  netxg[fplId] = {
+    l: tri(sorted.filter((r) => r[0] > twoYears)),
+    r: tri(sorted.slice(-5)),
+    v: Object.fromEntries(Object.entries(vs).map(([opp, list]) => [opp, tri(list)])),
+  };
+}
+await writeFile(join(OUT, 'netxg.json'), JSON.stringify({ built: new Date().toISOString(), players: netxg }));
+console.log(`Wrote ${Object.keys(files).length} player files, index.json and netxg.json (${Object.keys(netxg).length} players)`);

@@ -34,6 +34,8 @@ function useJson(path) {
 }
 
 export const useMatchupIndex = () => useJson('index.json');
+/** Net xG inputs per FPL player: long-run, recent and per-opponent [minutes, xG, xA]. */
+export const useNetXgData = () => useJson('netxg.json');
 /** Every match row for one club's current players: { espnId: { n, rows } }. */
 export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam}.json` : null);
 

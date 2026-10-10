@@ -18,7 +18,7 @@ const span = (vals) => {
  * One gameweek at a glance: for every fixture, each side's projected goals and clean-sheet chance,
  * shaded so the best numbers stand out, or the same per club ranked for picking players.
  */
-export default function Gameweek({ st, live, fixtures, ctx, teams }) {
+export default function Gameweek({ st, live, fixtures, ctx, teams, kit }) {
   const cur = live.event;
   const curDone = live.fixtures.length > 0 && live.fixtures.every(isDone);
   const [gw, setGw] = useState(curDone && cur < 38 ? cur + 1 : cur);
@@ -77,7 +77,7 @@ export default function Gameweek({ st, live, fixtures, ctx, teams }) {
         <div className="sp-tabs" role="radiogroup" aria-label="View" style={{ gap: 16 }}>
           <button role="radio" aria-checked={view === 'match'} onClick={() => setView('match')} style={{ height: 34, fontSize: 14 }}>By match</button>
           <button role="radio" aria-checked={view === 'team'} onClick={() => setView('team')} style={{ height: 34, fontSize: 14 }}>By club</button>
-          <button role="radio" aria-checked={view === 'player'} onClick={() => setView('player')} style={{ height: 34, fontSize: 14 }}>By player</button>
+          <button role="radio" aria-checked={view === 'player'} onClick={() => setView('player')} style={{ height: 34, fontSize: 14 }}>Net xG</button>
         </div>
       </div>
 
@@ -145,7 +145,7 @@ export default function Gameweek({ st, live, fixtures, ctx, teams }) {
         </div>
       )}
 
-      {view === 'player' && fixtures && <Leaderboard st={st} fixtures={fixtures} gw={gw} ctx={ctx} teams={teams} />}
+      {view === 'player' && fixtures && <Leaderboard st={st} fixtures={fixtures} gw={gw} ctx={ctx} teams={teams} kit={kit} />}
 
       {view === 'team' && rows.length > 0 && (
         <section className="sp-group" style={{ marginTop: 4 }}>
