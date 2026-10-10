@@ -204,7 +204,7 @@ export function MatchupsToWatch({ data, rates, names }) {
         <b className="sp-dif-name" style={{ display: 'block' }}>{p.name}</b>
         <span className="sp-tiny sp-muted sp-dif-line">{ROLE_ONE[p.role]} · {p.per90.toFixed(2)} xG + xA per 90 lately</span>
         <span className="sp-tiny sp-ink2" style={{ display: 'block' }}>
-          {opp} allow his position {Math.abs(p.factor - 1) < 0.03 ? 'about average' : `${Math.round(Math.abs(p.factor - 1) * 100)}% ${p.factor > 1 ? 'more' : 'less'}`}
+          His position gets {Math.abs(p.factor - 1) < 0.03 ? 'its usual share' : `${Math.round(Math.abs(p.factor - 1) * 100)}% ${p.factor > 1 ? 'more' : 'less'}`} of what {opp} concede
           {p.vs.matches.length ? ` · v ${opp} since 2023/24: ${p.vs.goals}G ${p.vs.assists}A in ${p.vs.matches.length}` : ''}
         </span>
       </span>
@@ -220,7 +220,7 @@ export function MatchupsToWatch({ data, rates, names }) {
         <h2 className="sp-h2">Matchups to watch</h2>
         <span className="sp-tiny sp-muted">{sides.fromLineups ? 'From the lineups' : 'Likely starters'}</span>
       </div>
-      <p className="sp-tiny sp-muted" style={{ margin: '0 0 6px' }}>Expected xG + xA in this match: his recent rate, times how much the opponent allows his position (both seasons, shrunk for small samples), times how open we expect the game to be.</p>
+      <p className="sp-tiny sp-muted" style={{ margin: '0 0 6px' }}>Expected xG + xA in this match: his recent rate, times how many goals his side should score here against how many they usually do, times the share of the opponent’s concessions that usually goes to his position (both seasons, shrunk for small samples).</p>
       <h3 className="sp-h3" style={{ margin: '8px 0 2px' }}>{names.home}</h3>
       {sides.home.map((p) => row(p, names.away))}
       <h3 className="sp-h3" style={{ margin: '12px 0 2px' }}>{names.away}</h3>
