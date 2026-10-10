@@ -166,7 +166,7 @@ export async function getEntry(id, event) {
       .filter((l) => l.league_type === 'x') // private leagues; public ones are the giant system leagues
       .map((l) => ({ id: l.id, name: l.name, rank: l.entry_rank, size: l.rank_count ?? null })),
     gw: picksShape(picks),
-    history: (history?.current ?? []).map((h) => ({ event: h.event, points: h.points, total: h.total_points, overall: h.overall_rank, rank: h.rank, hit: h.event_transfers_cost, bench: h.points_on_bench })),
+    history: (history?.current ?? []).map((h) => ({ event: h.event, points: h.points, total: h.total_points, overall: h.overall_rank, rank: h.rank, hit: h.event_transfers_cost, transfers: h.event_transfers, bench: h.points_on_bench })),
     chips: (history?.chips ?? []).map((c) => ({ name: c.name, event: c.event })),
   };
 }
