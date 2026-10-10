@@ -55,6 +55,7 @@ export async function getStatic() {
       goals: e.goals_scored,
       assists: e.assists,
       ep: num(e.ep_next),
+      epThis: num(e.ep_this),
       opta: e.opta_code,
       // Season totals for the projection model (fpl.mjs projectPlayer).
       minutes: e.minutes,
