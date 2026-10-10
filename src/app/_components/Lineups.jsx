@@ -14,15 +14,15 @@ export default function Lineups({ lineups, colors, names }) {
           <PitchLines />
           <Half lines={away.lines} color={colors.away} top />
           <Half lines={home.lines} color={colors.home} />
-          <span className="sp-tiny sp-ink2" style={{ position: 'absolute', left: 10, top: 8 }}>{names.away} {away.formation}</span>
-          <span className="sp-tiny sp-ink2" style={{ position: 'absolute', left: 10, bottom: 8 }}>{names.home} {home.formation}</span>
+          <span className="sp-pill" style={{ position: 'absolute', left: 10, top: 10, background: 'rgba(5,10,20,0.55)', color: '#fff' }}>{names.away} · {away.formation}</span>
+          <span className="sp-pill" style={{ position: 'absolute', left: 10, bottom: 10, background: 'rgba(5,10,20,0.55)', color: '#fff' }}>{names.home} · {home.formation}</span>
         </div>
       ) : (
         <div className="sp-two">
           {[['home', home], ['away', away]].map(([k, l]) => l && (
             <div key={k}>
               <h3 className="sp-h3" style={{ marginBottom: 6 }}>{names[k]} {l.formation}</h3>
-              <PlayerList players={l.starters} />
+              <PlayerList players={l.starters} color={colors[k]} />
             </div>
           ))}
         </div>
@@ -31,7 +31,7 @@ export default function Lineups({ lineups, colors, names }) {
         {[['home', home], ['away', away]].map(([k, l]) => l && (
           <div key={k}>
             <h3 className="sp-h3" style={{ marginBottom: 4 }}>{names[k]} substitutes</h3>
-            <PlayerList players={l.bench} bench />
+            <PlayerList players={l.bench} bench color={colors[k]} />
           </div>
         ))}
       </div>
@@ -89,13 +89,13 @@ function Player({ p, color }) {
   );
 }
 
-function PlayerList({ players, bench }) {
+function PlayerList({ players, bench, color }) {
   if (!players.length) return <p className="sp-note">None listed.</p>;
   return (
     <ul className="sp-bench">
       {players.map((p) => (
         <li key={p.id} style={bench && p.on == null ? { color: 'var(--sp-ink-2)' } : undefined}>
-          <span className="sp-num sp-muted" style={{ textAlign: 'right' }}>{p.jersey}</span>
+          <span className="sp-jersey" style={{ background: color, color: inkOn(color) }}>{p.jersey}</span>
           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {p.name} <span className="sp-muted sp-tiny">{p.posName && p.posName !== 'Substitute' ? p.posName : ''}</span>
           </span>
