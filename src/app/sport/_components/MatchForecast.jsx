@@ -4,7 +4,7 @@ import { fetchStandings } from '@/lib/sport/espn.mjs';
 import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, ratesFromTable } from '@/lib/sport/forecast.mjs';
 import { mainRole, versus, rolesFromLines, ROLE_ONE } from '@/lib/sport/matchups.mjs';
 import { useLive } from './useLive';
-import { useMatchupIndex, useForecastKit, usePlayerLog } from './matchupData';
+import { useMatchupIndex, useForecastKit, usePlayerLog, useNetXgModel } from './matchupData';
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const minuteOf = (label) => Number(String(label ?? '').match(/^(\d+)/)?.[1] ?? 0);
@@ -17,7 +17,8 @@ export function useMatchRates(data) {
   const m = data?.match;
   const isPl = m?.league === 'eng.1';
   const mx = useMatchupIndex();
-  const kit = useForecastKit(isPl ? mx.data : null);
+  const learned = useNetXgModel();
+  const kit = useForecastKit(isPl ? mx.data : null, learned.data);
   const table = useLive((signal) => (m && !isPl ? fetchStandings(m.league, { signal }) : Promise.resolve(null)), [m?.league, isPl], { every: 3600e3, live: () => false });
   return useMemo(() => {
     if (!m) return null;
