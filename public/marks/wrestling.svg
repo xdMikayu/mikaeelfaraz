@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Matchday wrestling: a luchador's mask, half red and half white with the trims swapped, in front of the ring ropes. -->
+  <defs><clipPath id="wrestling-sq"><rect width="512" height="512" rx="112"/></clipPath><clipPath id="wrestling-obj"><path d="M256 62C346 62 400 126 400 216C400 300 374 368 324 410C302 428 280 440 256 440C232 440 210 428 188 410C138 368 112 300 112 216C112 126 166 62 256 62Z"/></clipPath><clipPath id="wrestling-l"><path d="M0 0h256v512H0z"/></clipPath><clipPath id="wrestling-r"><path d="M256 0h256v512H256z"/></clipPath></defs>
+  <g clip-path="url(#wrestling-sq)"><rect width="512" height="512" fill="#2b2d31"/>
+    <g fill="none" stroke="#fff" stroke-opacity=".62" stroke-width="12"><path d="M0 156H512M0 228H512M0 300H512"/></g>
+    <g clip-path="url(#wrestling-obj)"><path fill="#d6001c" d="M0 0h256v512H0z"/><path fill="#fff" d="M256 0h256v512H256z"/></g>
+    <g clip-path="url(#wrestling-obj)">
+      <g clip-path="url(#wrestling-l)"><path d="M256 96C288 136 294 170 256 204C218 170 224 136 256 96Z" fill="#fff"/></g><g clip-path="url(#wrestling-r)"><path d="M256 96C288 136 294 170 256 204C218 170 224 136 256 96Z" fill="#d6001c"/></g>
+      <path d="M123 248C141 199 233 191 263 214.8C247 273 161 287 123 248Z" fill="#fff"/><path d="M389 248C371 199 279 191 249 214.8C265 273 351 287 389 248Z" fill="#d6001c"/>
+      <path d="M136 248C154 212 220 204 250 220C234 260 174 274 136 248Z" fill="#111"/><path d="M376 248C358 212 292 204 262 220C278 260 338 274 376 248Z" fill="#111"/>
+      <g clip-path="url(#wrestling-l)"><path d="M203 350C236 327 276 327 309 350C276 389 236 389 203 350Z" fill="#fff"/></g><g clip-path="url(#wrestling-r)"><path d="M203 350C236 327 276 327 309 350C276 389 236 389 203 350Z" fill="#d6001c"/></g>
+      <path d="M214 350C236 338 276 338 298 350C276 378 236 378 214 350Z" fill="#111"/>
+    </g></g>
+</svg>
