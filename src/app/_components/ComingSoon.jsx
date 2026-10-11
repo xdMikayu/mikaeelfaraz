@@ -151,6 +151,18 @@ function F1Next() {
 }
 
 const PAGES = {
+  cricket: {
+    title: 'Cricket',
+    intro: 'Live scores and scorecards for internationals and the big leagues are being built, next after football.',
+    plan: [
+      'Live scores ball by ball: Tests, ODIs and T20 internationals, the IPL, the Big Bash, The Hundred and the rest.',
+      'Full scorecards: every batter and bowler, the fall of wickets and the partnerships.',
+      'Win chances and projected totals, from the ball-by-ball record of thousands of past matches.',
+      'Teams and players to follow, with an alert when their match starts.',
+      'Matchday AI for fantasy cricket: your XI, captain and vice-captain, like the FPL advice.',
+    ],
+    data: 'Being worked out: which free feeds carry live cricket reliably.',
+  },
   tennis: {
     title: 'Tennis',
     intro: 'Scores, draws and rankings for the ATP and WTA tours are being built. Meanwhile, here’s what’s on this week.',

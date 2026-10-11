@@ -50,8 +50,23 @@ two earlier versions of this app shipped them.
 - Statuses are text: "FT" in grey, "38'" in red, "20:30" in ink.
 - Fantasy plates follow the same rule: black when the player's match is over, red while it's on, an outline with
   the kick-off time while it's still to come.
-- Tabs and the day picker are words, underlined when active.
+- Tabs and the day picker are words, underlined when active. The sports row at the top of Scores is the one
+  exception: each sport's mark over its name, underlined when active.
 - The tab bar is a plain bar with a hairline top edge.
+
+## Sport marks
+
+Every sport has a mark in `public/sport/marks/`, in the same family as the app icon:
+
+- A rounded square of the sport's own surface: grass, the cricket pitch, a court, asphalt, the ring.
+- One object on it, split down the middle: red on the left, white on the right. A shirt, a ball split along its
+  seam, a car, a mask. Where a split object would read as something else (a red and white tennis ball looks like a
+  baseball), the surface takes the split instead: hard court and clay either side of the net.
+- Flat colours, no outlines, gradients or shadows; ink (`#111`) only for details like a collar or wheels.
+- Checked at 180, 60, 32 and 16 px on light and dark before it ships.
+
+The app icon stays the football mark. A sport page uses its own mark as the browser-tab icon; saved to the home
+screen, it's still Matchday.
 
 ## Team markers
 

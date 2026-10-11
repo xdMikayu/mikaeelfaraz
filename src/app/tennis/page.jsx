@@ -1,7 +1,7 @@
-import SportsBar from '../_components/SportsBar';
+import SportsBar, { sportIcons } from '../_components/SportsBar';
 import ComingSoon from '../_components/ComingSoon';
 
-export const metadata = { title: 'Tennis' };
+export const metadata = { title: 'Tennis', icons: sportIcons('tennis') };
 
 export default function TennisPage() {
   return (
