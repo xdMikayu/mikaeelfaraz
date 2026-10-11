@@ -162,7 +162,7 @@ function useOpta(data) {
       try {
         const st = await fetch('/api/sport/fpl/static').then((r) => (r.ok ? r.json() : null));
         if (!st) return;
-        const live = await fetch(`/api/sport/fpl/live?event=${st.current}`).then((r) => (r.ok ? r.json() : null));
+        const live = await fetch(`/api/sport/fpl/live/${st.current}`).then((r) => (r.ok ? r.json() : null));
         if (!off && live) setFpl({ st, live });
       } catch {}
     })();

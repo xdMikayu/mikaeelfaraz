@@ -1,8 +1,8 @@
 // Club news before a deadline: when the manager faces the press, what was said, and the latest on
-// injuries, found by Claude with web search. FPL's flags lag the press conferences, and a flag
+// injuries, found by Matchday AI with web search. FPL's flags lag the press conferences, and a flag
 // can't tell you to wait for one; this can.
 //
-// Everything Claude reports is checked here before it's used: a source must be one of the pages
+// Everything the model reports is checked here before it's used: a source must be one of the pages
 // the search actually returned, a press conference must fall in the week before the match, and a
 // player must be on the club's FPL roster. Anything that fails is dropped. Server-only.
 import Anthropic from '@anthropic-ai/sdk';
@@ -124,7 +124,7 @@ export async function fetchClubNews(args) {
   for (const model of models) {
     try {
       const out = await ask(model, user);
-      return cleanReport(out.input, { ...args, pages: out.pages, searches: out.searches, model: out.model });
+      return cleanReport(out.input, { ...args, pages: out.pages, searches: out.searches });
     } catch (e) {
       // A model that can't search (or doesn't exist) gets one more try on the backup model.
       if (!(e instanceof Anthropic.BadRequestError || e instanceof Anthropic.NotFoundError)) throw e;
@@ -132,7 +132,7 @@ export async function fetchClubNews(args) {
     }
   }
   if (/web.?search/i.test(last.message) && /not enabled|disabled|turned off/i.test(last.message)) {
-    throw new NewsError('Web search is turned off for this API key. An admin can turn it on in the Claude Console under Settings → Capabilities.', 'web_search_off');
+    throw new NewsError('News checks are turned off for this site’s AI key.', 'web_search_off');
   }
   throw last;
 }
@@ -172,7 +172,7 @@ export function matchPlayer(p, roster) {
  * roster. The press conference has to fall in the six days before the club's first match this
  * gameweek, and one whose time has passed counts as held.
  */
-export function cleanReport(input, { club, fixtures, roster, now, pages, searches = 0, model = null }) {
+export function cleanReport(input, { club, fixtures, roster, now, pages, searches = 0 }) {
   const urls = new Map([...pages.keys()].map((u) => [bare(u), u]));
   const source = (u) => (u && urls.get(bare(u))) || null;
   const day = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s ?? '') && !Number.isNaN(Date.parse(s)) ? s : null);
@@ -221,7 +221,6 @@ export function cleanReport(input, { club, fixtures, roster, now, pages, searche
     summary: String(input?.summary ?? '').slice(0, 400),
     sources: [...new Set([presser.source, ...players.map((p) => p.source)].filter(Boolean))].map((u) => ({ url: u, title: pages.get(u)?.title ?? bare(u) })),
     searches,
-    model,
     at: new Date(now).toISOString(),
   };
 }
