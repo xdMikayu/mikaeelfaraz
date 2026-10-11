@@ -260,13 +260,52 @@ export function withMatchups(model, m) {
 }
 
 /**
- * FPL's chance-of-playing flag for this fixture: "this round" for the live gameweek's matches,
- * "next round" for anything later. No flag means fit.
+ * Chance he's available for this fixture. FPL's "this round" flag for the live gameweek's matches
+ * and its "next round" flag for the next deadline's; for gameweeks after that, laterAvailability.
+ * ctx.from: the next deadline's gameweek (projectAhead sets it). No flag means fit.
  */
 export function availability(el, f, ctx) {
   const thisRound = ctx.fixtures?.some((x) => x.id === f.id);
-  const flag = thisRound ? el.playing : el.chance ?? el.playing;
+  if (thisRound) return el.playing == null ? 1 : el.playing / 100;
+  const k = ctx.from != null && f.event != null ? f.event - ctx.from : 0;
+  if (k > 0) return laterAvailability(el, f, k, ctx.now);
+  const flag = el.chance ?? el.playing;
   return flag == null ? 1 : flag / 100;
+}
+
+const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+const DAY = 864e5;
+
+/** When FPL's news says he's back ("… - Expected back 24 Oct", "Suspended until 18 Oct"), as a timestamp, or null. */
+export function returnDate(news, now = Date.now()) {
+  const m = /(?:expected back|suspended until)\s+(\d{1,2})\s+([a-z]{3})/i.exec(news ?? '');
+  const month = m && MONTHS[m[2].toLowerCase()];
+  if (month == null) return null;
+  // The year that puts the date nearest today, so December news can mean January.
+  const year = new Date(now).getUTCFullYear();
+  return [year - 1, year, year + 1].map((y) => Date.UTC(y, month, Number(m[1]))).reduce((b, t) => (Math.abs(t - now) < Math.abs(b - now) ? t : b));
+}
+
+/**
+ * Chance he's available k gameweeks after the next deadline (k >= 1). FPL's flags only cover the
+ * next round, so further out:
+ *  - a return date in the news ("Expected back", "Suspended until"): out before it, eased in for a
+ *    week after it, then fit;
+ *  - no date: he recovers at a steady weekly rate from the next round's chance, quickly for a knock
+ *    (doubtful), slower for an injury, slower still when he's been out for over four weeks;
+ *  - left the club or ineligible: out.
+ * el.returnAt overrides the news date (set from a press conference or club news).
+ */
+export function laterAvailability(el, f, k, now = Date.now()) {
+  if (!el.status || el.status === 'a') return 1;
+  if (el.status === 'u' || el.status === 'n') return 0;
+  const back = el.returnAt ?? returnDate(el.news, now);
+  const ko = Date.parse(f.kickoff ?? '');
+  if (back != null && Number.isFinite(ko)) return ko < back ? 0 : ko < back + 7 * DAY ? 0.75 : 1;
+  const p = (el.chance ?? (el.status === 'd' ? 50 : 0)) / 100;
+  const flaggedFor = el.newsAt ? (now - Date.parse(el.newsAt)) / DAY : 0;
+  const stay = el.status === 'd' ? 0.5 : flaggedFor > 28 ? 0.9 : 0.75;
+  return 1 - (1 - p) * stay ** k;
 }
 
 /** Expected goals each side scores in this fixture, before kick-off. */
@@ -486,7 +525,10 @@ export function projectAhead(ids, fixtures, gws, ctx) {
     if (!gws.includes(f.event) || f.started) continue;
     for (const t of [f.home, f.away]) ((byTeamGw[t] ??= {})[f.event] ??= []).push(f);
   }
-  const future = { ...ctx, live: {} };
+  // FPL's "next round" flag belongs to the first gameweek after the live one.
+  const liveIds = new Set((ctx.fixtures ?? []).map((x) => x.id));
+  const liveGw = fixtures.find((f) => liveIds.has(f.id))?.event;
+  const future = { ...ctx, live: {}, from: gws.find((g) => g !== liveGw), now: ctx.now ?? Date.now() };
   const out = {};
   for (const id of ids) {
     const el = ctx.elements[id];
@@ -510,6 +552,33 @@ export function projectAhead(ids, fixtures, gws, ctx) {
     out[id] = { per, total };
   }
   return out;
+}
+
+/**
+ * What FPL pays for each player you sell: his purchase price plus half of any rise since, rounded
+ * down to £0.1m, or today's price if he has fallen. Purchase prices come from the public transfer
+ * history (Free Hit weeks skipped, since that squad is undone); a player kept from the first squad
+ * was bought at the opening price if the team started in gameweek 1. Otherwise today's price is
+ * used and the player is listed in `guessed`.
+ * transfers: FPL's /entry/{id}/transfers/ rows; els: { id: { cost, start } } in £m.
+ */
+export function sellingPrices(squad, transfers, { startedEvent, freeHits = [], els }) {
+  const bought = {};
+  const rows = [...(transfers ?? [])].filter((t) => !freeHits.includes(t.event)).sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
+  for (const t of rows) bought[t.element_in] = t.element_in_cost;
+  const sell = {};
+  const guessed = [];
+  for (const id of squad) {
+    const now = Math.round(els[id].cost * 10);
+    let buy = bought[id];
+    if (buy == null && startedEvent === 1 && els[id].start != null) buy = Math.round(els[id].start * 10);
+    if (buy == null) {
+      guessed.push(id);
+      buy = now;
+    }
+    sell[id] = (now <= buy ? now : buy + Math.floor((now - buy) / 2)) / 10;
+  }
+  return { sell, guessed };
 }
 
 /** Chance of at least one goal or assist, and of two or more, from expected goals and assists. */
