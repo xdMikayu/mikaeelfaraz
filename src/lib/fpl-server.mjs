@@ -56,9 +56,11 @@ export async function getStatic() {
       team: e.team,
       type: e.element_type,
       cost: e.now_cost / 10,
+      start: (e.now_cost - (e.cost_change_start ?? 0)) / 10,
       owned: num(e.selected_by_percent),
       status: e.status,
       news: e.news || null,
+      ...(e.news ? { newsAt: e.news_added } : null),
       chance: e.chance_of_playing_next_round,
       form: num(e.form),
       total: e.total_points,
@@ -179,12 +181,34 @@ export async function getEntry(id, event) {
     manager: `${entry.player_first_name} ${entry.player_last_name}`.trim(),
     overall: entry.summary_overall_rank,
     total: entry.summary_overall_points,
+    started: entry.started_event,
     leagues: (entry.leagues?.classic ?? [])
       .filter((l) => l.league_type === 'x') // private leagues; public ones are the giant system leagues
       .map((l) => ({ id: l.id, name: l.name, rank: l.entry_rank, size: l.rank_count ?? null })),
     gw: picksShape(picks),
     history: (history?.current ?? []).map((h) => ({ event: h.event, points: h.points, total: h.total_points, overall: h.overall_rank, rank: h.rank, hit: h.event_transfers_cost, transfers: h.event_transfers, bench: h.points_on_bench })),
     chips: (history?.chips ?? []).map((c) => ({ name: c.name, event: c.event })),
+  };
+}
+
+/**
+ * The squad the next deadline starts from, with the transfer history for selling prices. A Free Hit
+ * squad lasts one gameweek, so after one the team goes back to the squad (and bank) from before it.
+ * Transfers made since the last deadline aren't public until the next one.
+ */
+export async function getNextSquad(id, entry, event) {
+  let gw = entry.gw;
+  let ev = event;
+  for (let i = 0; i < 2 && gw?.chip === 'freehit' && ev > 1; i++) {
+    ev -= 1;
+    gw = picksShape(await fpl(`/entry/${id}/event/${ev}/picks/`, 6 * 3600e3));
+  }
+  const transfers = (await fpl(`/entry/${id}/transfers/`, 60e3)) ?? [];
+  return {
+    picks: gw?.picks ?? [],
+    bank: gw?.bank ?? 0,
+    revertedFreeHit: ev !== event,
+    transfers: transfers.map((t) => ({ element_in: t.element_in, element_in_cost: t.element_in_cost, event: t.event, time: t.time })),
   };
 }
 

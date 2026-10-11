@@ -1,13 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bonusFromBps, teamLive, leagueLive, projectedBonus, buildModel, fixtureRates, poissonTail, poissonFloor, projectPlayer, headToHead } from './fpl.mjs';
+import { bonusFromBps, teamLive, leagueLive, projectedBonus, buildModel, fixtureRates, poissonTail, poissonFloor, projectPlayer, headToHead, returnDate, laterAvailability, availability, sellingPrices } from './fpl.mjs';
 import { xgFor, shotGeometry, shotTraits, PENALTY_XG } from './xg.mjs';
 import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, simulateSeason, ratesFromTable } from './forecast.mjs';
 import { rolesFromLines, versus, roleFactor } from './matchups.mjs';
 import { shotPoint } from './espn.mjs';
 import { netFor, rawFactors, designRow } from './netxg.mjs';
-import { bestXI, nextFree, estimateFree, planTransfers, buildSquad, rotationPairs } from './optimise.mjs';
-import { chipsLeft, validate } from './advice.mjs';
+import { bestXI, nextFree, estimateFree, planTransfers, buildSquad, rotationPairs, committed } from './optimise.mjs';
+import { chipsLeft, validate, whenFor } from './advice.mjs';
+import { londonToUtc, ukLabel, priceWindows, priceMove, breakBefore } from './timing.mjs';
+import { cleanReport, newsPatches, newsTtl, matchPlayer } from './news.mjs';
 import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
 
 test('bonus: plain 3-2-1', () => {
@@ -416,32 +418,273 @@ test('advice: chips reset at the halfway point', () => {
   assert.deepEqual(chipsLeft(used, 25), ['wildcard', 'freehit', 'bboost']);
 });
 
-test('advice: rule-breaking picks are dropped or replaced, and hits are counted here', () => {
-  const { els, ahead, gk, def, mid, fwd } = market();
-  const squad = [gk[0], gk[1], ...def.slice(0, 5), ...mid.slice(0, 5), ...fwd.slice(0, 3)];
-  const packet = { chipsAvailable: ['freehit', '3xc'], _: { squad, bank: 1, free: 1, gw: 7, ahead, els, pool: new Set([gk[2], def[7], mid[7], fwd[4]]) } };
-  const a = validate(
+test('injury news: return dates read from FPL text, December news can mean January', () => {
+  const oct11 = Date.UTC(2026, 9, 11);
+  assert.equal(returnDate('Hamstring injury - Expected back 24 Oct', oct11), Date.UTC(2026, 9, 24));
+  assert.equal(returnDate('Suspended until 3 Jan', Date.UTC(2026, 11, 20)), Date.UTC(2027, 0, 3));
+  assert.equal(returnDate('Knee injury - Unknown return date', oct11), null);
+  assert.equal(returnDate(null, oct11), null);
+});
+
+test('availability beyond the next round: return dates, recovery, departures', () => {
+  const now = Date.UTC(2026, 9, 11);
+  const f = (d) => ({ kickoff: new Date(Date.UTC(2026, 9, d, 14)).toISOString() });
+  const fresh = { status: 'i', chance: 0, news: 'Thigh injury - Unknown return date', newsAt: new Date(now - 5 * 864e5).toISOString() };
+  assert.equal(laterAvailability(fresh, f(24), 1, now), 0.25);
+  assert.ok(Math.abs(laterAvailability(fresh, f(31), 2, now) - 0.4375) < 1e-9);
+  const old = { ...fresh, newsAt: new Date(now - 40 * 864e5).toISOString() };
+  assert.ok(laterAvailability(old, f(24), 1, now) < 0.11);
+  const dated = { status: 'i', chance: 0, news: 'Hamstring injury - Expected back 24 Oct' };
+  assert.equal(laterAvailability(dated, f(18), 1, now), 0);
+  assert.equal(laterAvailability(dated, f(25), 2, now), 0.75);
+  assert.equal(laterAvailability(dated, f(31), 3, now), 1);
+  assert.equal(laterAvailability({ status: 'u', news: 'Has joined Valencia on loan' }, f(24), 1, now), 0);
+  assert.equal(laterAvailability({ status: 'd', chance: 75 }, f(24), 1, now), 0.875);
+  assert.equal(laterAvailability({ status: 'a' }, f(24), 3, now), 1);
+});
+
+test('availability: live round uses this round\'s flag, the next deadline its next-round flag, later weeks recover', () => {
+  const el = { status: 'i', chance: 0, playing: 25, news: 'Knee injury - Unknown return date' };
+  const ctx = { fixtures: [{ id: 1 }], from: 7, now: Date.UTC(2026, 9, 11) };
+  assert.equal(availability(el, { id: 1, event: 6 }, ctx), 0.25);
+  assert.equal(availability(el, { id: 2, event: 7 }, ctx), 0);
+  assert.ok(availability(el, { id: 3, event: 8, kickoff: '2026-10-24T14:00:00Z' }, ctx) > 0);
+  assert.equal(availability({ status: 'a', chance: null }, { id: 2, event: 7 }, {}), 1);
+});
+
+test('selling prices: half the rise rounded down, all of a fall, opening prices for the first squad', () => {
+  const els = { 1: { cost: 9.5 }, 2: { cost: 9.6 }, 3: { cost: 6.3, start: 6.0 }, 4: { cost: 5.0, start: 5.5 } };
+  const transfers = [
+    { element_in: 1, element_in_cost: 85, event: 2, time: '2026-08-20T10:00:00Z' },
+    { element_in: 1, element_in_cost: 90, event: 4, time: '2026-09-10T10:00:00Z' },
+    { element_in: 2, element_in_cost: 100, event: 3, time: '2026-08-30T10:00:00Z' },
+    { element_in: 4, element_in_cost: 45, event: 5, time: '2026-09-18T10:00:00Z' }, // Free Hit week: undone
+  ];
+  const r = sellingPrices([1, 2, 3, 4], transfers, { startedEvent: 1, freeHits: [5], els });
+  assert.deepEqual(r.sell, { 1: 9.2, 2: 9.6, 3: 6.1, 4: 5.0 });
+  assert.deepEqual(r.guessed, []);
+  const late = sellingPrices([3], [], { startedEvent: 4, els });
+  assert.deepEqual([late.sell[3], late.guessed], [6.3, [3]]);
+});
+
+test('optimiser timing: a buy that would sit on the bench this week waits; one that starts goes now', () => {
+  // Fifteen players and one target: replacing the injured forward is the only move on offer.
+  const squadOf = (fwdXp) => {
+    const els = {};
+    const ahead = {};
+    const types = [1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4];
+    types.forEach((type, i) => {
+      els[i + 1] = { id: i + 1, type, cost: 5, team: i + 1, status: 'a', starts: 6 };
+      ahead[i + 1] = { per: { 7: { xp: 4 }, 8: { xp: 4 }, 9: { xp: 4 } } };
+    });
+    ahead[13] = { per: { 7: { xp: 0 }, 8: { xp: 0 }, 9: { xp: 0 } } }; // injured forward
+    els[100] = { id: 100, type: 4, cost: 6, team: 30, status: 'a', starts: 6 };
+    ahead[100] = { per: { 7: { xp: fwdXp[0] }, 8: { xp: fwdXp[1] }, 9: { xp: fwdXp[2] } } };
+    return { els, ahead, squad: types.map((_, i) => i + 1) };
+  };
+  for (const [xp, free, wantGw] of [[[0.5, 9, 9], 1, 8], [[9, 9, 9], 1, 7], [[0.5, 9, 9], 5, 7]]) {
+    const { els, ahead, squad } = squadOf(xp);
+    const r = planTransfers({ squad, bank: 2, free, gws: [7, 8, 9], ahead, els, mode: 'conservative' });
+    assert.equal(r.plan.find((p) => p.moves.some((m) => m.in === 100))?.gw, wantGw, `xp ${xp}, ${free} free`);
+  }
+  assert.equal(committed(1, 1), 1);
+  assert.equal(committed(1, 5), 0); // the cap would waste it
+  assert.equal(committed(2, 5), 1);
+});
+
+test('UK times: press conference clock times through BST and GMT; price windows before a deadline', () => {
+  assert.equal(londonToUtc('2026-10-16', '13:30'), Date.UTC(2026, 9, 16, 12, 30)); // BST
+  assert.equal(londonToUtc('2026-10-30', '13:30'), Date.UTC(2026, 9, 30, 13, 30)); // GMT after 25 Oct
+  assert.equal(ukLabel(Date.UTC(2026, 9, 17, 10, 0)), 'Saturday 17 October, 11:00 UK');
+  // Sunday 10:00 UTC to the Saturday 10:00 UTC deadline: Monday to Saturday at 01:30 UK.
+  assert.equal(priceWindows(Date.UTC(2026, 9, 11, 10), Date.UTC(2026, 9, 17, 10)).length, 6);
+  const el = { price: { nights: [[0, -61, -3], [1, -66.6, -3], [2, -105.8, -5]] } };
+  assert.deepEqual(priceMove(el, 6), { dir: 'fall', night: 2 });
+  assert.equal(priceMove(el, 2), null); // the deadline comes first
+  const fx = [{ event: 6, kickoff: '2026-10-12T19:00:00Z' }, { event: 7, kickoff: '2026-10-17T11:30:00Z' }];
+  assert.deepEqual(breakBefore(fx, 7), { days: 5, international: false });
+});
+
+test('club news: only sourced, dated, on-roster claims survive; a press conference has to be for this match', () => {
+  const now = Date.UTC(2026, 9, 14, 9);
+  const pages = new Map([['https://www.liverpoolfc.com/news/slot-press-conference-brentford', { title: 'Slot press conference' }], ['https://www.bbc.co.uk/sport/football/123', { title: 'Team news' }]]);
+  const roster = [{ id: 379, name: 'Isak', first: 'Alexander', second: 'Isak' }, { id: 380, name: 'Salah', first: 'Mohamed', second: 'Salah' }];
+  const args = { club: { id: 14, short: 'LIV' }, fixtures: [{ kickoff: '2026-10-17T11:30:00Z' }], roster, now, pages };
+  const r = cleanReport(
     {
-      transfers: [
-        { out: def[0], in: def[7], reason: '' }, // 4.0 -> 7.5 with 1.0 in the bank: over budget
-        { out: mid[0], in: fwd[4], reason: '' }, // wrong position
-        { out: gk[1], in: gk[2], reason: '' }, // 4.0 -> 5.0 with 1.0 in the bank: fine
+      press_conference: { status: 'scheduled', date: '2026-10-16', time_uk: '13:30', source_url: 'https://liverpoolfc.com/news/slot-press-conference-brentford/', said: ['ignored until held'] },
+      players: [
+        { id: null, name: 'Alexander Isak', status: 'back_in_training', expected_return: null, detail: 'Slot: Isak trained on Tuesday.', published: '2026-10-13', source_url: 'https://www.bbc.co.uk/sport/football/123' },
+        { id: 380, name: 'Salah', status: 'doubtful', expected_return: null, detail: 'Made up', published: '2026-10-13', source_url: 'https://example.com/not-searched' },
+        { id: 999, name: 'Nobody', status: 'out', expected_return: null, detail: 'x', published: '2026-10-13', source_url: 'https://www.bbc.co.uk/sport/football/123' },
       ],
-      starting_xi: squad.slice(0, 11), // two goalkeepers: illegal
-      bench: [],
-      captain: 999,
-      vice_captain: 999,
-      chip: { play: 'bboost', reason: '' },
+      summary: 'Isak is back in training.',
     },
-    packet,
+    args,
   );
-  assert.deepEqual(a.transfers.map((t) => t.in), [gk[2]]);
-  assert.equal(a.hit, 0);
-  assert.equal(a.chip.play, 'none');
-  assert.equal(a.starting_xi.length, 11);
-  assert.equal(a.starting_xi.filter((id) => els[id].type === 1).length, 1);
-  assert.ok(a.starting_xi.includes(a.captain) && a.captain !== a.vice_captain);
-  assert.equal(els[a.bench[0]].type, 1);
-  assert.equal(a.bankAfter, 0);
-  assert.equal(a.fixes.length, 5);
+  assert.equal(r.presser.status, 'scheduled');
+  assert.equal(r.presser.at, Date.UTC(2026, 9, 16, 12, 30));
+  assert.equal(r.presser.source, 'https://www.liverpoolfc.com/news/slot-press-conference-brentford');
+  assert.deepEqual(r.players.map((p) => [p.id, p.status]), [[379, 'back_in_training']]);
+  // A press conference from last week, or with a source the search never returned, is dropped.
+  const old = cleanReport({ press_conference: { status: 'held', date: '2026-10-03', time_uk: '13:30', source_url: 'https://www.bbc.co.uk/sport/football/123', said: [] }, players: [], summary: '' }, args);
+  assert.equal(old.presser.status, 'not_announced');
+  const unsourced = cleanReport({ press_conference: { status: 'scheduled', date: '2026-10-16', time_uk: '13:30', source_url: 'https://made.up/x', said: [] }, players: [], summary: '' }, args);
+  assert.equal(unsourced.presser.status, 'not_announced');
+  // Once its time has passed it counts as held.
+  assert.equal(cleanReport({ press_conference: { status: 'scheduled', date: '2026-10-16', time_uk: '13:30', source_url: 'https://www.bbc.co.uk/sport/football/123', said: ['Isak is fit'] }, players: [], summary: '' }, { ...args, now: Date.UTC(2026, 9, 16, 15) }).presser.status, 'held');
+  assert.equal(matchPlayer({ id: null, name: 'Isák' }, roster), 379);
+});
+
+test('club news: newer than FPL\'s flag changes the numbers, older doesn\'t; caching follows the press conference', () => {
+  const els = { 379: { status: 'i', chance: 0, newsAt: '2026-09-27T10:30:09Z' } };
+  const rep = (status, published, back = null) => [{ players: [{ id: 379, status, published, back, detail: 'x', source: 'u' }] }];
+  assert.deepEqual(newsPatches(rep('back_in_training', '2026-10-13'), els)[379].chance, 75);
+  assert.equal(newsPatches(rep('back_in_training', '2026-09-20'), els)[379], undefined);
+  const out = newsPatches(rep('out', '2026-10-13', '2026-11-08'), els)[379];
+  assert.deepEqual([out.chance, out.returnAt], [0, Date.UTC(2026, 10, 8)]);
+  const now = Date.UTC(2026, 9, 15, 9);
+  assert.equal(newsTtl({ presser: { status: 'scheduled', at: now + 5 * 3600e3 } }, now, now + 2 * 864e5), 5 * 3600 + 45 * 60);
+  assert.equal(newsTtl({ presser: { status: 'held' } }, now, now + 2 * 864e5), 3 * 3600);
+  assert.equal(newsTtl({ presser: { status: 'held' } }, now, now + 3600e3), 2700);
+});
+
+test('advice timing: wait for next week, a press conference or a price change, from the facts alone', () => {
+  assert.equal(whenFor({ starts: false, deferWastes: false, priceRisk: false, hoursLeft: 100 }), 'next_gameweek');
+  assert.equal(whenFor({ starts: false, deferWastes: true, priceRisk: false, hoursLeft: 100 }), 'closer_to_deadline');
+  assert.equal(whenFor({ starts: true, deferWastes: false, priceRisk: false, waits: [{}], hoursLeft: 100 }), 'after_press_conference');
+  assert.equal(whenFor({ starts: true, deferWastes: false, priceRisk: true, waits: [{}], hoursLeft: 100 }), 'before_price_change');
+  assert.equal(whenFor({ starts: true, deferWastes: false, priceRisk: false, hoursLeft: 10 }), 'now');
+});
+
+// Fifteen fit players at 4 points a week, an injured forward (13) and two possible buys, for validate.
+function advicePacket({ inXp = 0.5, free = 1, nights = null, watch = [] } = {}) {
+  const els = {};
+  const ahead = {};
+  const types = [1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4];
+  types.forEach((type, i) => {
+    els[i + 1] = { id: i + 1, name: `P${i + 1}`, type, cost: 5, team: i + 1, status: 'a' };
+    ahead[i + 1] = { per: { 7: { xp: 4 } } };
+  });
+  els[1].cost = 4.5;
+  Object.assign(els[13], { status: 'i', chance: 0, news: 'Thigh injury - Unknown return date' });
+  ahead[13] = { per: { 7: { xp: 0 } } };
+  els[100] = { id: 100, name: 'Wissa', type: 4, cost: 6, team: 30, status: 'a', price: nights ? { nights } : {} };
+  ahead[100] = { per: { 7: { xp: inXp } } };
+  els[101] = { id: 101, name: 'Mid', type: 3, cost: 5, team: 31, status: 'a' };
+  ahead[101] = { per: { 7: { xp: 3 } } };
+  const squad = types.map((_, i) => i + 1);
+  const xp = (id) => ahead[id]?.per[7]?.xp ?? 0;
+  const lineupOf = (sq) => {
+    const b = bestXI(sq, 7, ahead, els);
+    return { xi: b.xi, bench: b.bench, captain: b.captain, points: b.xi.reduce((t, id) => t + xp(id), 0) + xp(b.captain) };
+  };
+  const evaluate = (moves) => {
+    let sq = [...squad];
+    let money = 1.5;
+    for (const m of moves) {
+      sq = sq.map((x) => (x === m.out ? m.in : x));
+      money += els[m.out].cost - els[m.in].cost;
+    }
+    return { squad: sq, bank: money, hit: Math.max(0, moves.length - free) * 4, ...lineupOf(sq), horizon: 0 };
+  };
+  return { _: { squad, bank: 1.5, free, gw: 7, ahead, els, pool: new Set([100, 101]), sellOf: (id) => els[id].cost, options: [], evaluate, hold: evaluate([]), watch, chipsAvailable: ['wildcard', 'bboost', '3xc'], deadline: 0, windows: 6, newsBy: {}, drafts: { wildcard: [...squad.slice(0, 12), 14, 15, 100] }, lineup: lineupOf } };
+}
+const answer = (over = {}) => ({ headline: 'h', option: 'custom', transfers: [{ out: 13, in: 100, when: 'now', reason: 'Isak is out' }], conditions: [], captain: 3, vice_captain: 4, chip: { play: 'none', reason: '' }, reasoning: [], risks: [], confidence: 'medium', ...over });
+
+test('advice rules: a buy that would sit on the bench waits for next week (the Isak → Wissa case)', () => {
+  const v = validate(answer(), advicePacket({ inXp: 0.5 }));
+  assert.deepEqual(v.transfers, []);
+  assert.deepEqual(v.nextWeek.map((m) => [m.out, m.in, m.when]), [[13, 100, 'next_gameweek']]);
+  assert.match(v.nextWeek[0].note, /wouldn't start/);
+  assert.equal(v.hit, 0);
+  // ...unless it can't wait: a price rise before the deadline, a fifth free transfer, or a Bench Boost.
+  // ...unless it can't wait, and then the move says why.
+  const kept = (a, pk) => validate(a, pk).transfers.map((m) => m.note);
+  assert.match(kept(answer(), advicePacket({ inXp: 0.5, nights: [[0, 120, 4]] }))[0], /price is likely to rise/);
+  assert.match(kept(answer(), advicePacket({ inXp: 0.5, free: 5 }))[0], /waste a free transfer/);
+  assert.match(kept(answer({ chip: { play: 'bboost', reason: '' } }), advicePacket({ inXp: 0.5 }))[0], /Bench Boost counts the bench/);
+});
+
+test('advice rules: selling a doubt waits for his press conference; the eleven is always ours', () => {
+  const watch = [{ team: 13, club: 'LIV', status: 'not_announced', beforeDeadline: true, players: [13] }];
+  const v = validate(answer(), advicePacket({ inXp: 9, watch }));
+  assert.deepEqual(v.transfers.map((m) => [m.in, m.when, m.starts]), [[100, 'after_press_conference', true]]);
+  assert.match(v.transfers[0].note, /press conference/);
+  assert.ok(v.xi.includes(100) && !v.xi.includes(13));
+  assert.equal(v.captain, 100); // 9 against 4: Claude's pick (P3) is replaced, with a note
+  assert.equal(v.notes.length, 1);
+  assert.equal(v.watch.length, 1);
+});
+
+test('advice rules: illegal moves dropped, chips checked, a Wildcard uses our draft', () => {
+  const v = validate(answer({ transfers: [{ out: 12, in: 100, when: 'now', reason: '' }, { out: 99, in: 101, when: 'now', reason: '' }, { out: 13, in: 999, when: 'now', reason: '' }], chip: { play: 'freehit', reason: '' } }), advicePacket());
+  assert.deepEqual(v.transfers, []);
+  assert.equal(v.chip.play, 'none');
+  assert.equal(v.notes.filter((n) => n.startsWith('Dropped')).length, 3);
+  const w = validate(answer({ chip: { play: 'wildcard', reason: 'r' } }), advicePacket());
+  assert.equal(w.chip.play, 'wildcard');
+  assert.ok(w.draft.includes(100) && w.xi.every((id) => w.draft.includes(id)));
+  assert.equal(w.hit, 0);
+});
+
+test('next squad: after a Free Hit the team goes back to the squad and bank from before it', async () => {
+  const { getNextSquad } = await import('./fpl-server.mjs');
+  const real = globalThis.fetch;
+  const picks = (ids, bank) => ({ active_chip: null, entry_history: { bank, event_transfers_cost: 0 }, picks: ids.map((element, i) => ({ element, position: i + 1, multiplier: 1 })) });
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    const body = u.includes('/event/5/picks/') ? picks([1, 2, 3], 12) : u.includes('/transfers/') ? [{ element_in: 3, element_in_cost: 55, event: 4, time: '2026-09-10T10:00:00Z', entry: 77 }] : null;
+    return { ok: body != null, status: body ? 200 : 404, json: async () => body };
+  };
+  try {
+    const entry = { gw: { chip: 'freehit', picks: [{ element: 9 }], bank: 0 } };
+    const r = await getNextSquad(77, entry, 6);
+    assert.deepEqual(r.picks.map((p) => p.element), [1, 2, 3]);
+    assert.equal(r.bank, 1.2);
+    assert.equal(r.revertedFreeHit, true);
+    assert.deepEqual(r.transfers, [{ element_in: 3, element_in_cost: 55, event: 4, time: '2026-09-10T10:00:00Z' }]);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('club news: a model that can\'t search falls back to the backup; web search switched off is reported as such', async () => {
+  const http = await import('node:http');
+  let mode = 'haiku-unsupported';
+  const seen = [];
+  const server = http.createServer((req, res) => {
+    let raw = '';
+    req.on('data', (c) => (raw += c));
+    req.on('end', () => {
+      const { model } = JSON.parse(raw);
+      seen.push(model);
+      const error = (message) => {
+        res.writeHead(400, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message } }));
+      };
+      if (mode === 'off') return error('Web search is not enabled for your organization.');
+      if (model.includes('haiku')) return error('web_search_20250305 is not supported on this model.');
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model, stop_reason: 'tool_use', stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1, server_tool_use: { web_search_requests: 1 } }, content: [
+        { type: 'web_search_tool_result', tool_use_id: 's', content: [{ type: 'web_search_result', url: 'https://club.example/presser', title: 'Presser', encrypted_content: 'x' }] },
+        { type: 'tool_use', id: 't', name: 'report_news', input: { press_conference: { status: 'scheduled', date: '2026-10-16', time_uk: '13:30', source_url: 'https://club.example/presser', said: [] }, players: [], summary: 'All fit.' } },
+      ] }));
+    });
+  });
+  await new Promise((r) => server.listen(0, r));
+  process.env.ANTHROPIC_BASE_URL = `http://127.0.0.1:${server.address().port}`;
+  process.env.ANTHROPIC_API_KEY ||= 'sk-test';
+  try {
+    const { fetchClubNews } = await import('./news.mjs');
+    const args = { club: { id: 14, name: 'Liverpool', short: 'LIV' }, fixtures: [{ home: 14, away: 3, oppName: 'Brentford', kickoff: '2026-10-17T11:30:00Z' }], deadline: '2026-10-17T10:00:00Z', roster: [{ id: 379, name: 'Isak', status: 'i', chance: 0 }], focus: [379], now: Date.UTC(2026, 9, 14) };
+    const r = await fetchClubNews(args);
+    assert.deepEqual([r.presser.status, r.model], ['scheduled', 'claude-sonnet-5-5']);
+    assert.deepEqual(seen, ['claude-haiku-5-5', 'claude-sonnet-5-5']);
+    mode = 'off';
+    await assert.rejects(fetchClubNews(args), (e) => e.code === 'web_search_off');
+  } finally {
+    server.close();
+    delete process.env.ANTHROPIC_BASE_URL;
+  }
 });
