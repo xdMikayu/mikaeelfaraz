@@ -1,4 +1,4 @@
-// Claude-powered helpers: merchant categorization and a monthly spending summary.
+// Mifolio AI: merchant categorization and a monthly spending summary, through the Anthropic API.
 // Both are optional — without ANTHROPIC_API_KEY the tracker falls back to rules.
 import Anthropic from '@anthropic-ai/sdk';
 import { CATEGORIES } from './categories.mjs';
@@ -26,7 +26,7 @@ const effort = (level) => (SMALL ? {} : { effort: level });
 
 function textOf(response) {
   if (response.stop_reason === 'refusal') {
-    throw new Error(`Claude declined the request${response.stop_details?.explanation ? `: ${response.stop_details.explanation}` : ''}`);
+    throw new Error(`Mifolio AI declined the request${response.stop_details?.explanation ? `: ${response.stop_details.explanation}` : ''}`);
   }
   return response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
 }
@@ -90,7 +90,7 @@ export async function spendingInsights(summary) {
     ...FALLBACK,
     ...(SMALL ? {} : { output_config: effort('medium') }),
     system:
-      'You are a friendly, direct personal-finance assistant for someone in the UAE. Amounts are in AED. ' +
+      'You are Mifolio AI, a friendly, direct personal-finance assistant for someone in the UAE. Amounts are in AED. ' +
       'Given a JSON spending summary, write 4–6 short bullet points: where the money went, what changed versus the comparison period and why (name categories and merchants), ' +
       'anything unusual (one-off large purchases, new recurring charges, categories over budget), and one or two concrete, realistic suggestions. ' +
       'Use the numbers given; do not invent transactions. Plain text bullets starting with "• ", no headings, no markdown bold.',

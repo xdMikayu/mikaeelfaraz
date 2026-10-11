@@ -315,7 +315,7 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
 
 /**
  * Categorize transactions that have no category yet: saved rules and keywords
- * first, then Claude for merchants nothing matched. Claude's answers are saved
+ * first, then Mifolio AI for merchants nothing matched. Its answers are saved
  * as merchant rules, so each new merchant is only ever sent once.
  */
 /** Every row of a user, paged past PostgREST's 1,000-row limit. */
@@ -356,7 +356,7 @@ export async function tidyUp(db, userId, { maxWrites = 120 } = {}) {
   const rules = await loadRules(db, userId);
   for (const [name, ids] of planRenames(rows.filter((r) => !dropped.has(r.id)), normalizeMerchantLegacy, normalizeMerchant)) {
     // A keyword category was picked from the old name ("Mcdonalds-enoc Gardens" → Fuel),
-    // so pick it again from the new one. Categories you, the AI or a rule set stay.
+    // so pick it again from the new one. Categories you, Mifolio AI or a rule set stay.
     // Tabby charges are left to reconcileTabby.
     const hit = merchantKey(name).includes('tabby') ? null : ruleCategory(name, rules);
     const groups = new Map();

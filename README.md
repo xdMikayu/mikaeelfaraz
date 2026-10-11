@@ -24,7 +24,7 @@ and every figure is a scale or method fact; no company revenue or customer data 
 ## Finance tracker
 
 Tracks SIB, Mashreq Cashback and Tabby card spending in near real time, categorizes it
-(built-in UAE merchant rules, then Claude for anything unknown), and shows this month vs
+(built-in UAE merchant rules, then Mifolio AI for anything unknown), and shows this month vs
 last month, 3/6/12-month and year-to-date views, per-card balances, budgets and top merchants.
 Portfolio tracking (gold in AED, DFM stocks, Solana) is stubbed as “coming soon”.
 
@@ -32,7 +32,7 @@ Portfolio tracking (gold in AED, DFM stocks, Solana) is stubbed as “coming soo
 iPhone Shortcuts ─ SIB SMS ─────────┐
 iPhone Shortcuts ─ Wallet (Tabby) ──┼─► POST /api/finance/ingest ─► parse ─► dedupe/merge ─► Supabase
 Gmail Apps Script ─ Mashreq email ──┘        (bearer token)                                   │
-Netlify scheduled fn (15 min) ─► rules + Claude categorization ◄──────────────────────────────┤
+Netlify scheduled fn (15 min) ─► rules + Mifolio AI categorization ◄──────────────────────────┤
 /finance dashboard (Supabase Auth + RLS, realtime) ◄───────────────────────────────────────────┘
 ```
 
@@ -66,7 +66,7 @@ Preview without Supabase: `npm run dev` and open `/finance` (demo data).
 | `src/lib/finance/parse.mjs` | SIB SMS / Mashreq email / Wallet parsers, merchant clean-up, Dubai time |
 | `src/lib/finance/categories.mjs` | Categories + UAE keyword rules |
 | `src/lib/finance/server.mjs` | Auth, ingest + cross-channel merge, categorization job |
-| `src/lib/finance/ai.mjs` | Claude calls (categorize merchants, spending summary) |
+| `src/lib/finance/ai.mjs` | Mifolio AI (categorize merchants, spending summary) through the Anthropic API |
 | `src/app/api/finance/*` | `ingest`, `categorize`, `insights` routes |
 | `netlify/functions/finance-categorize.mjs` | Scheduled categorization (every 15 min) |
 | `src/app/finance/*` | Dashboard, transactions, setup, portfolio pages |

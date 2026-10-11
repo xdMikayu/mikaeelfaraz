@@ -256,7 +256,7 @@ function RulesList() {
     f.setData((d) => ({ ...d, rules: d.rules.filter((r) => r.id !== id) }));
   };
   return (
-    <Section icon={Wand2} title={`Merchant rules · ${f.rules.length}`} subtitle="Learned from your edits and from Claude — new purchases from these merchants are sorted instantly">
+    <Section icon={Wand2} title={`Merchant rules · ${f.rules.length}`} subtitle="Learned from your edits and from Mifolio AI — new purchases from these merchants are sorted instantly">
       <ul className="grid gap-1.5 sm:grid-cols-2">
         {f.rules.map((r) => (
           <li key={r.id} className="fin-inset flex items-center gap-2.5 py-1.5 pl-3 pr-1.5">
@@ -264,7 +264,7 @@ function RulesList() {
             <span className="min-w-0 flex-1 truncate text-[13px]" style={{ color: 'var(--fin-ink)' }}>
               {r.match} <span className="fin-muted">→ {r.category}</span>
             </span>
-            <span className={`fin-pill ${r.source === 'ai' ? 'fin-pill-accent' : 'fin-pill-neutral'}`}>{r.source === 'ai' ? 'AI' : 'You'}</span>
+            <span className={`fin-pill ${r.source === 'ai' ? 'fin-pill-accent' : 'fin-pill-neutral'}`}>{r.source === 'ai' ? 'Mifolio AI' : 'You'}</span>
             <button className="fin-btn fin-btn-ghost h-8 w-8 p-0" onClick={() => remove(r.id)} aria-label="Delete rule"><Trash2 size={14} /></button>
           </li>
         ))}
