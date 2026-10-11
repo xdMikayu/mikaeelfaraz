@@ -30,9 +30,9 @@ export default function FantasyView() {
   const [revealed, setRevealed] = useState(false);
   const st = useLive((signal) => api('static', signal), [], { every: 300000, live: () => true });
   const gw = st.data?.current;
-  const live = useLive((signal) => (gw ? api(`live?event=${gw}`, signal) : Promise.resolve(null)), [gw], { every: 30000, live: liveGw });
+  const live = useLive((signal) => (gw ? api(`live/${gw}`, signal) : Promise.resolve(null)), [gw], { every: 30000, live: liveGw });
   const season = useLive((signal) => api('fixtures', signal), [], { every: 600000, live: () => false });
-  const entry = useLive((signal) => (gw && entryId ? api(`entry?id=${entryId}&event=${gw}`, signal) : Promise.resolve(null)), [gw, entryId], {
+  const entry = useLive((signal) => (gw && entryId ? api(`entry/${entryId}/${gw}`, signal) : Promise.resolve(null)), [gw, entryId], {
     every: 60000,
     live: () => liveGw(live.data),
   });
@@ -392,7 +392,7 @@ function TeamList({ team, ctx, teams }) {
 function League({ id, event, entry, ctx, myTeam, teams, live, onPick }) {
   const { prefs, update } = usePrefs();
   const [comparing, setComparing] = useState(false);
-  const lg = useLive((signal) => api(`league?id=${id}&event=${event}`, signal), [id, event], { every: 90000, live: () => true });
+  const lg = useLive((signal) => api(`league/${id}/${event}`, signal), [id, event], { every: 90000, live: () => true });
   const result = useMemo(() => (lg.data ? leagueLive(lg.data.rows, ctx) : null), [lg.data, ctx]);
   useEffect(() => setComparing(false), [id]);
   if (!lg.data) return lg.error ? <p className="sp-empty">Couldn’t load this league ({lg.error}).</p> : <div className="sp-skel" style={{ height: 400, margin: 16 }} />;
@@ -535,7 +535,7 @@ function Setup({ onSave }) {
     setErr(null);
     try {
       const st = await api('static');
-      await api(`entry?id=${id}&event=${st.current}`);
+      await api(`entry/${id}/${st.current}`);
       onSave(id);
     } catch (e2) {
       setErr(`FPL didn’t find team ${id} (${e2.message}).`);

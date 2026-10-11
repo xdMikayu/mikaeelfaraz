@@ -13,13 +13,19 @@ async function attempt(url, signal) {
   return res.json();
 }
 
+/**
+ * The ESPN URL as one path segment for our relay (base64url). The relay's CDN cache is keyed by
+ * path only, so the URL can't go in a query string.
+ */
+export const espnKey = (url) => btoa(url).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
 /** Direct first; in the browser, our own /api/sport/espn relay if ESPN turns the request away. */
 async function get(url, { signal } = {}) {
   try {
     return await attempt(url, signal);
   } catch (e) {
     if (e.name === 'AbortError' || typeof window === 'undefined') throw e;
-    return attempt(`/api/sport/espn?u=${encodeURIComponent(url)}`, signal);
+    return attempt(`/api/sport/espn/${espnKey(url)}`, signal);
   }
 }
 

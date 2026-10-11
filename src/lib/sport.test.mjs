@@ -612,7 +612,7 @@ test('advice rules: selling a doubt waits for his press conference; the eleven i
   assert.deepEqual(v.transfers.map((m) => [m.in, m.when, m.starts]), [[100, 'after_press_conference', true]]);
   assert.match(v.transfers[0].note, /press conference/);
   assert.ok(v.xi.includes(100) && !v.xi.includes(13));
-  assert.equal(v.captain, 100); // 9 against 4: Claude's pick (P3) is replaced, with a note
+  assert.equal(v.captain, 100); // 9 against 4: the model's pick (P3) is replaced, with a note
   assert.equal(v.notes.length, 1);
   assert.equal(v.watch.length, 1);
 });
@@ -626,6 +626,20 @@ test('advice rules: illegal moves dropped, chips checked, a Wildcard uses our dr
   assert.equal(w.chip.play, 'wildcard');
   assert.ok(w.draft.includes(100) && w.xi.every((id) => w.draft.includes(id)));
   assert.equal(w.hit, 0);
+});
+
+test('FPL routes: everything that changes the answer is in the path; the old query form still reads, uncached', async () => {
+  const { fplRequest } = await import('./fpl-server.mjs');
+  const q = (s) => new URLSearchParams(s);
+  assert.deepEqual(fplRequest(['entry', '123', '6']), { kind: 'entry', id: 123, event: 6, legacy: false });
+  assert.deepEqual(fplRequest(['league', '5508', '6']), { kind: 'league', id: 5508, event: 6, legacy: false });
+  assert.deepEqual(fplRequest(['live', '6']), { kind: 'live', event: 6, legacy: false });
+  assert.deepEqual(fplRequest(['static']), { kind: 'static', legacy: false });
+  assert.deepEqual(fplRequest(['entry'], q('id=123&event=6')), { kind: 'entry', id: 123, event: 6, legacy: true });
+  assert.deepEqual(fplRequest(['live'], q('event=6')), { kind: 'live', event: 6, legacy: true });
+  assert.equal(fplRequest(['entry', '123']).status, 404); // a path missing its gameweek isn't guessed
+  assert.equal(fplRequest(['entry', '123', '40']).status, 400);
+  assert.equal(fplRequest(['secrets']).status, 404);
 });
 
 test('next squad: after a Free Hit the team goes back to the squad and bank from before it', async () => {
@@ -679,7 +693,8 @@ test('club news: a model that can\'t search falls back to the backup; web search
     const { fetchClubNews } = await import('./news.mjs');
     const args = { club: { id: 14, name: 'Liverpool', short: 'LIV' }, fixtures: [{ home: 14, away: 3, oppName: 'Brentford', kickoff: '2026-10-17T11:30:00Z' }], deadline: '2026-10-17T10:00:00Z', roster: [{ id: 379, name: 'Isak', status: 'i', chance: 0 }], focus: [379], now: Date.UTC(2026, 9, 14) };
     const r = await fetchClubNews(args);
-    assert.deepEqual([r.presser.status, r.model], ['scheduled', 'claude-sonnet-5-5']);
+    assert.equal(r.presser.status, 'scheduled');
+    assert.equal(r.model, undefined); // the page never names the model
     assert.deepEqual(seen, ['claude-haiku-5-5', 'claude-sonnet-5-5']);
     mode = 'off';
     await assert.rejects(fetchClubNews(args), (e) => e.code === 'web_search_off');
@@ -751,4 +766,13 @@ test('transfer ledger: churn within a week is netted out, a replacement is judge
   );
   assert.equal(wc.length, 1);
   assert.deepEqual([wc[0].wildcard, wc[0].changes, wc[0].net], [true, 4, 13 - 24]);
+});
+
+test('ESPN relay key: the ESPN URL survives the round trip through a path segment', async () => {
+  const { espnKey } = await import('./espn.mjs');
+  const { fromEspnKey } = await import('./espn-relay.mjs');
+  const u = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates=20261011&limit=200';
+  const k = espnKey(u);
+  assert.match(k, /^[A-Za-z0-9_-]+$/);
+  assert.equal(fromEspnKey(k), u);
 });
