@@ -12,6 +12,11 @@ const MAX_XI = { 1: 1, 2: 5, 3: 5, 4: 3 };
 export const SQUAD = { 1: 2, 2: 5, 3: 5, 4: 3 };
 const BENCH_WEIGHT = 0.1; // the bench only scores through autosubs
 const HIT = 4;
+// What a transfer made at this deadline gives up compared with waiting a week: news that could
+// change it, and a free transfer kept for later. A move that only pays off in later weeks is worth
+// less than that now, so it waits; one the free-transfer cap would waste anyway costs nothing.
+const COMMIT = 1;
+const FT_CREDIT = 0.6; // each banked free transfer, up to three, at the end of the plan
 
 const xpOf = (ahead, id, gw) => ahead[id]?.per[gw]?.xp ?? 0;
 
@@ -63,14 +68,21 @@ export function estimateFree(history, chips, upTo) {
   return ft;
 }
 
+/** Moves at this deadline that cost a week's flexibility: all but those the five-transfer cap would waste. */
+export const committed = (moves, free) => Math.max(0, moves - Math.max(0, free - 4));
+
 /**
  * Multi-gameweek transfer plan. Each gameweek it considers no move, the best single transfers and
  * pairs of them, keeps the best `beam` plans by projected points over the rest of the horizon, and
  * returns the best plan: [{ gw, moves: [{ out, in }], hit, points }], total and the no-transfer total.
+ * Plans are compared on points less hits, less COMMIT for each move made at this deadline, plus
+ * FT_CREDIT for each free transfer left at the end.
  * mode: 'conservative' (no hits), 'balanced' (one hit a week at most), 'aggressive' (two).
+ * sell: selling prices for the current squad (£m); others sell at today's price.
  */
-export function planTransfers({ squad, bank, free, gws, ahead, els, mode = 'balanced', beam = 24, pool = 10 }) {
+export function planTransfers({ squad, bank, free, gws, ahead, els, mode = 'balanced', beam = 24, pool = 10, sell = {} }) {
   const maxHits = { conservative: 0, balanced: 1, aggressive: 2 }[mode] ?? 1;
+  const sellOf = (id) => sell[id] ?? els[id].cost;
   const total = (id) => gws.reduce((t, gw) => t + xpOf(ahead, id, gw), 0);
   // Candidates: the best few per position by projected points over the horizon.
   const candidates = { 1: [], 2: [], 3: [], 4: [] };
@@ -82,7 +94,7 @@ export function planTransfers({ squad, bank, free, gws, ahead, els, mode = 'bala
   for (const t of [1, 2, 3, 4]) candidates[t] = candidates[t].sort((a, b) => total(b) - total(a)).slice(0, pool * (t === 1 ? 1 : 2));
 
   const base = valueOver(squad, gws, ahead, els);
-  let states = [{ squad: [...squad], bank, free, hits: 0, plan: [], score: base }];
+  let states = [{ squad: [...squad], bank, free, hits: 0, commit: 0, plan: [], score: base }];
   gws.forEach((gw, gi) => {
     const rest = gws.slice(gi);
     const next = [];
@@ -92,7 +104,7 @@ export function planTransfers({ squad, bank, free, gws, ahead, els, mode = 'bala
       for (const out of s.squad) {
         const eo = els[out];
         for (const inn of candidates[eo.type]) {
-          if (owned.has(inn) || els[inn].cost > eo.cost + s.bank + 1e-9) continue;
+          if (owned.has(inn) || els[inn].cost > sellOf(out) + s.bank + 1e-9) continue;
           const sq = s.squad.map((x) => (x === out ? inn : x));
           if (!clubsOk(sq, els)) continue;
           singles.push({ out, in: inn, gain: total(inn) - total(out) });
@@ -115,20 +127,22 @@ export function planTransfers({ squad, bank, free, gws, ahead, els, mode = 'bala
         let money = s.bank;
         for (const m of moves) {
           sq = sq.map((x) => (x === m.out ? m.in : x));
-          money += els[m.out].cost - els[m.in].cost;
+          money += sellOf(m.out) - els[m.in].cost;
         }
         if (money < -1e-9 || !clubsOk(sq, els)) continue;
         const done = s.plan.reduce((t, p) => t + p.points, 0);
         const ahead2 = valueOver(sq, rest, ahead, els);
         const points = bestXI(sq, gw, ahead, els).points;
+        const commit = s.commit + (gi === 0 ? committed(moves.length, s.free) : 0);
+        const ft = nextFree(s.free, moves.length, false);
         next.push({
           squad: sq,
           bank: money,
-          free: nextFree(s.free, moves.length, false),
+          free: ft,
           hits: s.hits + hits,
+          commit,
           plan: [...s.plan, { gw, moves: moves.map(({ out, in: inn }) => ({ out, in: inn })), hit: hits * HIT, points }],
-          // A banked transfer is worth something later; a small credit stops the search spending it on noise.
-          score: done + ahead2 - (s.hits + hits) * HIT + 0.6 * Math.min(nextFree(s.free, moves.length, false), 3),
+          score: done + ahead2 - (s.hits + hits) * HIT - commit * COMMIT + FT_CREDIT * Math.min(ft, 3),
         });
       }
     }
@@ -142,9 +156,11 @@ export function planTransfers({ squad, bank, free, gws, ahead, els, mode = 'bala
       })
       .slice(0, beam);
   });
-  const best = states.sort((a, b) => b.plan.reduce((t, p) => t + p.points - p.hit, 0) - a.plan.reduce((t, p) => t + p.points - p.hit, 0))[0];
-  const totalPoints = best.plan.reduce((t, p) => t + p.points - p.hit, 0);
-  return { plan: best.plan, total: totalPoints, hold: base, gain: totalPoints - base, squad: best.squad, bank: best.bank };
+  // The same measure the search used, so a plan doesn't win on points it only gets by moving early.
+  const net = (s) => s.plan.reduce((t, p) => t + p.points - p.hit, 0);
+  const best = states.sort((a, b) => b.score - a.score)[0];
+  const totalPoints = net(best);
+  return { plan: best.plan, total: totalPoints, hold: base, gain: totalPoints - base, squad: best.squad, bank: best.bank, free: best.free };
 }
 
 /**
