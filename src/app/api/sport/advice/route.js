@@ -1,14 +1,16 @@
 // GET /api/sport/advice?id=<FPL team>&ft=<free transfers, optional>&stage=prep
 //   Which clubs' news matters for this team (doubts in the squad, the players the options move).
 // GET /api/sport/advice?id=<FPL team>&ft=<optional>&news=<club ids>&league=<mini-league, optional>
-//   Claude's plan for the next deadline (src/lib/sport/advice.mjs), with those clubs' news from
-//   /api/sport/news/<club> applied, and an honest verdict measured against the league. The page fetches the news in between, so each request stays
-//   inside the function time limit and every manager shares each club's news.
-// Public, so it guards the bill: the CDN keeps each answer for 30 minutes, the function keeps its
-// own copy, and a daily ceiling stops runaway use.
+//   Matchday AI's plan for the next deadline (src/lib/sport/advice.mjs), with those clubs' news
+//   from /api/sport/news/<club>/<gameweek> applied, and an honest verdict measured against the
+//   league. The page fetches the news in between, so each request stays inside the function time
+//   limit and every manager shares each club's news.
+// Never cached at the CDN: its cache key ignores query strings on this site, so one manager's
+// answer would be served to the next. The function keeps its own copy per team and news, and a
+// daily ceiling stops runaway use.
 import { getStatic, getFixtures, getEntry, getNextSquad, getLeague, getPoints } from '@/lib/sport/fpl-server.mjs';
 import { makeKit, makeCtx } from '@/lib/sport/kit.mjs';
-import { adviceEnabled, buildPacket, askClaude, validate, newsClubs, MODEL } from '@/lib/sport/advice.mjs';
+import { adviceEnabled, buildPacket, askModel, validate, newsClubs } from '@/lib/sport/advice.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,13 +22,7 @@ const memo = new Map();
 let day = '';
 let used = 0;
 
-const json = (body, status, cacheSeconds = 0) =>
-  Response.json(body, {
-    status,
-    headers: cacheSeconds
-      ? { 'cache-control': 'public, max-age=0, must-revalidate', 'cdn-cache-control': `public, s-maxage=${cacheSeconds}`, 'netlify-cdn-cache-control': `public, s-maxage=${cacheSeconds}, durable` }
-      : { 'cache-control': 'no-store' },
-  });
+const json = (body, status) => Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 
 async function data(path, req) {
   const res = await fetch(new URL(`/sport/data/pl/${path}`, req.url));
@@ -38,9 +34,11 @@ async function data(path, req) {
 async function clubNews(teams, gw, req) {
   const got = await Promise.allSettled(
     teams.map(async (t) => {
-      const res = await fetch(new URL(`/api/sport/news/${t}?gw=${gw}`, req.url), { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(new URL(`/api/sport/news/${t}/${gw}`, req.url), { signal: AbortSignal.timeout(5000) });
       const body = await res.json();
       if (!res.ok) throw Object.assign(new Error(body.error || `News ${res.status}`), { code: body.code });
+      // A report for another gameweek (cached before a deadline passed) doesn't apply.
+      if (body.gw !== gw) throw new Error('News for another gameweek');
       return body;
     }),
   );
@@ -58,16 +56,16 @@ export async function GET(req) {
   const newsTeams = [...new Set((q.get('news') ?? '').split(',').filter((x) => /^\d{1,2}$/.test(x)).map(Number))].filter((t) => t >= 1 && t <= 20).slice(0, 6);
   const leagueParam = /^\d{1,9}$/.test(q.get('league') ?? '') ? Number(q.get('league')) : null;
   if (!id) return json({ error: 'Need an FPL team id' }, 400);
-  if (!adviceEnabled()) return json({ error: 'AI advice is switched off: ANTHROPIC_API_KEY isn’t set on the server.' }, 503);
+  if (!adviceEnabled()) return json({ error: 'AI advice is switched off on this server.' }, 503);
 
-  // The answer depends on the team, free transfers and the news used; the news part of the key is
-  // filled in once the news is in, so changing the URL can't buy a fresh Claude call.
+  // The answer depends on the team, free transfers, league and the news used; the news part of
+  // the key is filled in once the news is in, so changing the URL can't buy a fresh model call.
   const cached = (k, minutes) => {
     const hit = memo.get(k);
     return hit && Date.now() - hit.at < minutes * 60e3 ? hit.body : null;
   };
   const prepKey = `${id}:${ft ?? ''}:prep`;
-  if (prep && cached(prepKey, 10)) return json(cached(prepKey, 10), 200, 600);
+  if (prep && cached(prepKey, 10)) return json(cached(prepKey, 10), 200);
 
   const today = new Date().toISOString().slice(0, 10);
   if (today !== day) {
@@ -89,7 +87,7 @@ export async function GET(req) {
       const short = (t) => st.teams.find((x) => x.id === t)?.short;
       const body = { gw: packet.gameweek, deadline: st.events.find((e) => e.id === packet.gameweek)?.deadline, clubs: newsClubs(packet, NEWS_CLUBS).map((c) => ({ ...c, short: short(c.team) })) };
       memo.set(prepKey, { at: Date.now(), body });
-      return json(body, 200, 600);
+      return json(body, 200);
     }
 
     const gw = st.events.find((e) => Date.parse(e.deadline) > Date.now())?.id;
@@ -104,12 +102,12 @@ export async function GET(req) {
       data('accuracy.json', req).catch(() => null),
     ]);
     const key = `${id}:${ft ?? ''}:${leagueId ?? ''}:${news.reports.map((r) => `${r.team}@${r.at}`).sort().join(',')}`;
-    if (cached(key, 30)) return json(cached(key, 30), 200, 1800);
+    if (cached(key, 30)) return json(cached(key, 30), 200);
     if (used >= DAILY_LIMIT) return json({ error: 'Today’s AI advice limit is used up. The numbers in the Planner still work; try again tomorrow.' }, 429);
     const packet = buildPacket({ ...base, news: news.reports, newsError: news.error, league, pointsByGw: Object.fromEntries(points.filter(Boolean)), record });
     used += 1;
     const started = Date.now();
-    const { advice, usage, model } = await askClaude(packet);
+    const { advice } = await askModel(packet);
     const checked = validate(advice, packet);
     const body = {
       gw: packet.gameweek,
@@ -121,16 +119,13 @@ export async function GET(req) {
       sellingPricesEstimated: packet.manager.sellingPricesEstimated,
       news: news.reports,
       newsError: news.error,
-      model,
-      configuredModel: MODEL,
       seconds: Math.round((Date.now() - started) / 1000),
-      usage: { input: usage.input_tokens, output: usage.output_tokens },
       at: new Date().toISOString(),
       advice: checked,
     };
     memo.set(key, { at: Date.now(), body });
     if (memo.size > 300) memo.delete(memo.keys().next().value);
-    return json(body, 200, 1800);
+    return json(body, 200);
   } catch (e) {
     return json({ error: e.message || 'Something went wrong' }, 502);
   }

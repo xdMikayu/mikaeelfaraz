@@ -5,7 +5,7 @@ import { shirt, heat } from './fplbits';
 const loads = {};
 /** A past gameweek's live data never changes, so each is fetched once per visit. */
 const liveFor = (gw) => {
-  loads[gw] ??= fetch(`/api/sport/fpl/live?event=${gw}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))));
+  loads[gw] ??= fetch(`/api/sport/fpl/live/${gw}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))));
   loads[gw].catch(() => delete loads[gw]);
   return loads[gw];
 };

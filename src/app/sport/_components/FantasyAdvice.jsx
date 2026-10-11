@@ -29,7 +29,7 @@ async function getJson(url) {
 const hash = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7).toString(36);
 const ordinal = (n) => `${n}${[11, 12, 13].includes(n % 100) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 
-/** The numbers behind the verdict, as we computed them (not Claude): one line. */
+/** The numbers behind the verdict, as we computed them (not the model): one line. */
 function factLine(f) {
   if (!f) return [];
   return [
@@ -59,10 +59,10 @@ function addToCalendar(w, club, who) {
 }
 
 /**
- * One button: Claude reads your squad, free transfers, bank and chips next to our projections, the
+ * One button: Matchday AI reads your squad, free transfers, bank and chips next to our projections, the
  * transfer planner's options and this week's club news (press conferences included), then says what
  * to do before the deadline, when, and why. Three steps, so each server call stays short:
- * which clubs matter, their news, then Claude. Checked against the rules on the server.
+ * which clubs matter, their news, then the model. Checked against the rules on the server.
  */
 export default function Advice({ entry, gw, els, teams, league }) {
   const estimate = estimateFree(entry.history ?? [], entry.chips ?? [], gw - 1);
@@ -84,14 +84,19 @@ export default function Advice({ entry, gw, els, teams, league }) {
       };
       const reports = await Promise.all(
         prep.clubs.map((c) =>
-          getJson(`/api/sport/news/${c.team}?gw=${prep.gw}`)
-            .then((r) => (mark(c.team, { state: 'ok', report: r }), r))
+          getJson(`/api/sport/news/${c.team}/${prep.gw}`)
+            .then((r) => {
+              if (r.gw !== prep.gw) throw new Error('News for another gameweek');
+              mark(c.team, { state: 'ok', report: r });
+              return r;
+            })
             .catch((e) => (mark(c.team, { state: 'failed', error: e.message, code: e.code }), null)),
         ),
       );
       const ok = reports.filter(Boolean);
       setRun((r) => ({ ...r, stage: 'advice' }));
       const data = await getJson(`${base}&news=${ok.map((r) => r.team).join(',')}&v=${hash(ok.map((r) => r.at).join('|'))}${league ? `&league=${league}` : ''}`);
+      if (!data?.advice) throw new Error('The advice didn’t come back. Try again.');
       const failed = clubs.filter((c) => c.state === 'failed');
       const problem = failed.find((c) => c.code === 'web_search_off')?.error ?? (failed.length ? `Couldn’t check ${failed.map((c) => c.short).join(', ')} in time.` : null);
       setRun({ stage: 'done', data, clubs, problem });
@@ -133,13 +138,13 @@ export default function Advice({ entry, gw, els, teams, league }) {
     <section className="sp-panel sp-ai">
       <div className="sp-section-head">
         <h2 className="sp-h2">AI advice for gameweek {gw}</h2>
-        <span className="sp-tiny sp-muted">Claude, on our numbers and this week’s news</span>
+        <span className="sp-tiny sp-muted">Matchday AI, on our numbers and this week’s news</span>
       </div>
 
       {!a && (
         <>
           <p className="sp-small sp-ink2" style={{ margin: '0 0 10px' }}>
-            Claude reads your squad, bank and chips next to our projections, the transfer planner’s options and this week’s club news, including when managers face the press. It tells you which transfers to make and when, who to start and captain, and whether to play a chip, with the numbers behind each call.
+            Matchday AI reads your squad, bank and chips next to our projections, the transfer planner’s options and this week’s club news, including when managers face the press. It tells you which transfers to make and when, who to start and captain, and whether to play a chip, with the numbers behind each call.
             It doesn’t sugar-coat: you also get an honest verdict on your squad and your recent transfers, measured against your league.
           </p>
           <div className="sp-opt-ctl">
@@ -169,7 +174,7 @@ export default function Advice({ entry, gw, els, teams, league }) {
                 )}
                 {run.stage === 'prep' || run.clubs?.length ? null : <span className="sp-tiny sp-muted"> nothing to check</span>}
               </li>
-              <li data-state={run.stage === 'advice' ? 'now' : 'todo'}>Claude weighs it up, usually 20–40 seconds</li>
+              <li data-state={run.stage === 'advice' ? 'now' : 'todo'}>Matchday AI weighs it up, usually 20–40 seconds</li>
             </ol>
           )}
           {run.stage === 'error' && <p className="sp-small" style={{ margin: '8px 0 0', color: 'var(--sp-loss)' }}>{run.error}</p>}
@@ -332,7 +337,7 @@ export default function Advice({ entry, gw, els, teams, league }) {
 
           {a.notes.length > 0 && <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0' }}>Checked against the rules before showing: {a.notes.join(' ')}</p>}
           <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0' }}>
-            Written by Claude ({d.model}) from our projections and the news above, {fmt(d.at)}. {d.freeEstimated ? 'Free transfers estimated. ' : ''}
+            Written by Matchday AI from our projections and the news above, {fmt(d.at)}. {d.freeEstimated ? 'Free transfers estimated. ' : ''}
             {d.revertedFreeHit ? 'Your Free Hit squad has been undone, so this starts from the squad before it. ' : ''}
             {d.sellingPricesEstimated ? 'Some selling prices are estimated. ' : ''}
             FPL’s public data shows your team as of the last deadline, so transfers you’ve made since aren’t included. Advice, not a guarantee.
