@@ -1,15 +1,18 @@
 {
+  "id": "/sport",
   "name": "Matchday",
   "short_name": "Matchday",
-  "description": "Football scores, match detail and live Fantasy Premier League points.",
+  "description": "Football scores, match detail, live Fantasy Premier League points and AI gameweek advice. No ads.",
   "start_url": "/sport",
   "scope": "/sport",
   "display": "standalone",
-  "background_color": "#070b16",
-  "theme_color": "#070b16",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "categories": ["sports"],
   "icons": [
-    { "src": "/sport/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/sport/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/sport/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "/sport/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/sport/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/sport/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/sport/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

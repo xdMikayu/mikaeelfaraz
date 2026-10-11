@@ -1,9 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#111316"/>
-  <g fill="none" stroke="#f2f3f5" stroke-width="22" stroke-linejoin="round">
-    <rect x="96" y="132" width="320" height="248" rx="10"/>
-    <path d="M256 132v248"/>
-    <circle cx="256" cy="256" r="50"/>
-    <path d="M96 204h44v104H96M416 204h-44v104h44"/>
+  <!-- Matchday: a half-and-half shirt on the centre spot, split along the halfway line. -->
+  <defs>
+    <clipPath id="sq"><rect width="512" height="512" rx="112"/></clipPath>
+    <clipPath id="shirt"><path d="M212 114C221 134 236 143 256 143C276 143 291 134 300 114L368 134L426 198L392 238L352 212L352 400Q352 412 340 412L172 412Q160 412 160 400L160 212L120 238L86 198L144 134Z"/></clipPath>
+  </defs>
+  <g clip-path="url(#sq)">
+    <rect width="512" height="512" fill="#2f8d4e"/>
+    <path fill="#2a8346" d="M64 0h64v512H64zM192 0h64v512h-64zM320 0h64v512h-64zM448 0h64v512h-64z"/>
+    <g fill="none" stroke="#fff" stroke-opacity=".62" stroke-width="9">
+      <path d="M256 0v512"/>
+      <circle cx="256" cy="262" r="190"/>
+    </g>
+    <g clip-path="url(#shirt)">
+      <path fill="#d6001c" d="M0 0h256v512H0z"/>
+      <path fill="#fff" d="M256 0h256v512H256z"/>
+    </g>
+    <path d="M212 114C221 134 236 143 256 143C276 143 291 134 300 114" fill="none" stroke="#111" stroke-width="14" stroke-linecap="round"/>
   </g>
 </svg>
