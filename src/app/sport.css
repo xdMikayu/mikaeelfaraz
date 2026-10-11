@@ -39,6 +39,10 @@
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  /* Landscape on a notched iPhone: keep content clear of the notch (zero everywhere else). */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 html[data-sport-theme='dark'] .sp-root {
@@ -121,16 +125,24 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 /* ---------- frame ---------- */
 .sp-frame { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 1fr; }
 @media (min-width: 1024px) { .sp-frame { grid-template-columns: 200px minmax(0, 1fr); gap: 48px; padding: 0 32px; } }
-.sp-main { min-width: 0; padding: 0 0 96px; }
+.sp-main { min-width: 0; padding: 0 0 calc(96px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 1024px) { .sp-main { padding: 20px 0 64px; } }
 .sp-pad { padding-left: 16px; padding-right: 16px; }
 @media (min-width: 1024px) { .sp-pad { padding-left: 0; padding-right: 0; } }
 .sp-read { max-width: 760px; }
 
-.sp-top { position: sticky; top: 0; z-index: 20; background: var(--sp-page); border-bottom: 1px solid var(--sp-rule); }
-.sp-top-in { height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+.sp-top { position: sticky; top: 0; z-index: 20; background: var(--sp-page); border-bottom: 1px solid var(--sp-rule); padding-top: env(safe-area-inset-top, 0px); }
+.sp-top-in { height: 54px; display: flex; align-items: center; justify-content: flex-start; gap: 14px; padding: 0 16px; }
+.sp-back { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 2px; font-size: 15px; font-weight: 700; color: var(--sp-ink); }
+.sp-back span { font-size: 24px; line-height: 1; margin-top: -2px; }
 @media (min-width: 1024px) { .sp-top { display: none; } }
-.sp-word { font-weight: 900; font-size: 22px; letter-spacing: -0.01em; font-variation-settings: 'wdth' 75; }
+.sp-word { display: inline-flex; align-items: center; gap: 8px; font-weight: 900; font-size: 22px; letter-spacing: -0.01em; font-variation-settings: 'wdth' 75; }
+.sp-mark { flex: none; display: block; }
+.sp-rail .sp-word { color: var(--sp-ink); }
+.sp-hint { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--sp-rule); font-size: 13.5px; color: var(--sp-ink-2); }
+.sp-hint svg { display: inline-block; vertical-align: -2px; color: var(--sp-ink); }
+.sp-hint button { flex: none; font-size: 13.5px; font-weight: 700; }
+@media (min-width: 1024px) { .sp-hint { padding: 10px 0; } }
 
 .sp-rail { position: sticky; top: 0; align-self: start; height: 100vh; padding: 22px 0; display: none; flex-direction: column; gap: 2px; }
 @media (min-width: 1024px) { .sp-rail { display: flex; } }
@@ -140,7 +152,7 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-rail-sub { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--sp-rule); display: flex; flex-direction: column; }
 .sp-rail-sub a { height: 32px; font-size: 14px; font-weight: 600; }
 
-.sp-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--sp-page); border-top: 1px solid var(--sp-rule); padding: 8px 4px calc(8px + env(safe-area-inset-bottom)); }
+.sp-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--sp-page); border-top: 1px solid var(--sp-rule); padding: 8px max(4px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px)); }
 .sp-tabbar a { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; color: var(--sp-muted); }
 .sp-tabbar a[aria-current='page'] { color: var(--sp-ink); font-weight: 800; }
 @media (min-width: 1024px) { .sp-tabbar { display: none; } }
