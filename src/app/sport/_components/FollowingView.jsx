@@ -195,6 +195,11 @@ function About() {
         directly. Totals are FPL’s own, including the bonus it now projects during matches. Autosubs and vice-captaincy are worked out here as if every
         match ended now, and are marked as projected.
       </p>
+      <p>
+        Until their sections are built, the tennis page lists what’s on from ESPN’s ATP and WTA scoreboards, and the F1 page shows the calendar from
+        Jolpica, the free continuation of the Ergast F1 database. Both come through this site: the tennis list can be up to 10 minutes old, the calendar
+        up to 6 hours.
+      </p>
       <h3 className="sp-h3" id="xg" style={{ margin: '18px 0 6px', color: 'var(--sp-ink)' }}>How the xG estimate works</h3>
       <p>
         Expected goals (xG) is the chance that a shot is scored, judged from shots like it. ESPN gives each shot’s position and Opta’s description of it

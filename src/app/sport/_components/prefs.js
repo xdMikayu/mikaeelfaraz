@@ -16,7 +16,11 @@ export const DEFAULTS = {
   fplLeague: null,
   fplRival: {}, // league id -> the manager you last compared yourself with there
   fplWatch: [], // FPL player ids starred to keep an eye on
+  homeHint: true, // the one-time "Add to Home Screen" note on iPhone and iPad
 };
+
+// The browser bar and the home-screen status bar follow the chosen theme, not just the system's.
+const THEME_COLOR = { light: '#ffffff', dark: '#121212' };
 
 function read() {
   try {
@@ -58,6 +62,10 @@ export function PrefsProvider({ children }) {
     const el = document.documentElement;
     if (prefs.theme === 'system') el.removeAttribute('data-sport-theme');
     else el.setAttribute('data-sport-theme', prefs.theme);
+    for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
+      const own = (m.getAttribute('media') ?? '').includes('dark') ? THEME_COLOR.dark : THEME_COLOR.light;
+      m.setAttribute('content', THEME_COLOR[prefs.theme] ?? own);
+    }
   }, [prefs.theme, ready]);
   const value = useMemo(() => ({ prefs, update, ready }), [prefs, update, ready]);
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;
