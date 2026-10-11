@@ -10,3 +10,6 @@ dist/
 npm-debug.log
 yarn-debug.log
 yarn-error.log 
+# Cricsheet downloads and the cricket model's working files (see scripts/sport/cricket-extract.mjs)
+/data/sport/cricsheet/
+/data/sport/cricket/

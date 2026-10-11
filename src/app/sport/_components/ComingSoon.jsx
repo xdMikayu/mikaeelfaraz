@@ -154,16 +154,17 @@ function F1Next() {
 const PAGES = {
   cricket: {
     title: 'Cricket',
-    intro: 'Cricket is next after football. The live scores below already work; scorecards, ball by ball and win chances are being built.',
+    status: 'Being built',
+    intro: 'Live scores, with the sums done for you, and Matchday’s read on each match: par at the ground, where an innings is heading and each side’s chance of winning, learned from over 23,000 past matches. Scorecards and ball by ball are next.',
     Now: CricketNow,
     plan: [
       'Live scores ball by ball: Tests, ODIs and T20 internationals, the IPL, the Big Bash, The Hundred and the rest.',
       'Full scorecards: every batter and bowler, the fall of wickets and the partnerships.',
-      'Win chances and projected totals, from the ball-by-ball record of thousands of past matches.',
+      'Win chances for Tests, which need the time left in the match as well as the score.',
       'Teams and players to follow, with an alert when their match starts.',
       'Matchday AI for fantasy cricket: your XI, captain and vice-captain. There’s no fantasy API like FPL’s, so you’d enter your team.',
     ],
-    data: 'Scores come from ESPN, the same free source as the football. It also carries full scorecards, ball by ball and tables, which the full section will use. Win chances and projected totals will be trained on Cricsheet’s free ball-by-ball record of over 23,000 matches. There’s no open feed from the ICC or the national boards.',
+    data: 'Scores come from ESPN, the same free source as the football. It also carries full scorecards, ball by ball and tables, which the full section will use. Par, projected totals, win chances and each ground’s record come from Cricsheet’s free ball-by-ball record of over 23,000 matches. There’s no open feed from the ICC or the national boards.',
   },
   tennis: {
     title: 'Tennis',
@@ -212,7 +213,7 @@ export default function ComingSoon({ sport }) {
       <div className="sp-pad" style={{ paddingTop: 14 }}>
         <div className="sp-section-head" style={{ marginBottom: 4 }}>
           <h1 className="sp-h1">{p.title}</h1>
-          <span className="sp-small sp-muted">Coming soon</span>
+          <span className="sp-small sp-muted">{p.status ?? 'Coming soon'}</span>
         </div>
         <p className="sp-prose sp-small" style={{ margin: 0 }}>{p.intro}</p>
       </div>
