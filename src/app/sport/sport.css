@@ -738,3 +738,5 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-ai-steps li[data-state='now'] { font-weight: 800; }
 .sp-ai-steps li[data-state='done'] { color: var(--sp-ink-2); }
 .sp-ai-steps li[data-state='done']::marker { content: '✓  '; }
+.sp-ai-verdict { margin-top: 12px; padding: 10px 0 12px; border-top: 2px solid var(--sp-ink); border-bottom: 1px solid var(--sp-rule); }
+.sp-ai-verdict-line { margin: 4px 0 8px; font-size: 16px; font-weight: 800; line-height: 1.35; }

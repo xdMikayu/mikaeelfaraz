@@ -27,6 +27,21 @@ async function getJson(url) {
   return body;
 }
 const hash = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7).toString(36);
+const ordinal = (n) => `${n}${[11, 12, 13].includes(n % 100) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+
+/** The numbers behind the verdict, as we computed them (not Claude): one line. */
+function factLine(f) {
+  if (!f) return [];
+  return [
+    f.shareOfBest != null && `${f.shareOfBest}% of the best squad your budget buys over five gameweeks`,
+    f.league && `${ordinal(f.league.projectedRank)} of ${f.league.managers} in ${f.league.name} by projection this week (${ordinal(f.league.tableRank)} in the table)`,
+    f.benchCost - f.cheapestBench >= 2 && `£${f.benchCost.toFixed(1)}m on the bench`,
+    f.bank >= 1.5 && `£${f.bank.toFixed(1)}m unspent`,
+    f.season?.hitPoints > 0 && `−${f.season.hitPoints} in hits this season`,
+    f.season && `${f.season.benchPoints} points left on the bench`,
+    f.season && `above the average in ${f.season.beatAverage} of ${f.season.gameweeks} gameweeks`,
+  ].filter(Boolean);
+}
 
 /** A 30-minute calendar entry for a press conference, with a reminder ten minutes before. */
 function addToCalendar(w, club, who) {
@@ -49,7 +64,7 @@ function addToCalendar(w, club, who) {
  * to do before the deadline, when, and why. Three steps, so each server call stays short:
  * which clubs matter, their news, then Claude. Checked against the rules on the server.
  */
-export default function Advice({ entry, gw, els, teams }) {
+export default function Advice({ entry, gw, els, teams, league }) {
   const estimate = estimateFree(entry.history ?? [], entry.chips ?? [], gw - 1);
   const [free, setFree] = useState(estimate);
   const [run, setRun] = useState({ stage: 'idle' });
@@ -76,7 +91,7 @@ export default function Advice({ entry, gw, els, teams }) {
       );
       const ok = reports.filter(Boolean);
       setRun((r) => ({ ...r, stage: 'advice' }));
-      const data = await getJson(`${base}&news=${ok.map((r) => r.team).join(',')}&v=${hash(ok.map((r) => r.at).join('|'))}`);
+      const data = await getJson(`${base}&news=${ok.map((r) => r.team).join(',')}&v=${hash(ok.map((r) => r.at).join('|'))}${league ? `&league=${league}` : ''}`);
       const failed = clubs.filter((c) => c.state === 'failed');
       const problem = failed.find((c) => c.code === 'web_search_off')?.error ?? (failed.length ? `Couldn’t check ${failed.map((c) => c.short).join(', ')} in time.` : null);
       setRun({ stage: 'done', data, clubs, problem });
@@ -125,6 +140,7 @@ export default function Advice({ entry, gw, els, teams }) {
         <>
           <p className="sp-small sp-ink2" style={{ margin: '0 0 10px' }}>
             Claude reads your squad, bank and chips next to our projections, the transfer planner’s options and this week’s club news, including when managers face the press. It tells you which transfers to make and when, who to start and captain, and whether to play a chip, with the numbers behind each call.
+            It doesn’t sugar-coat: you also get an honest verdict on your squad and your recent transfers, measured against your league.
           </p>
           <div className="sp-opt-ctl">
             <span className="sp-small">
@@ -167,6 +183,29 @@ export default function Advice({ entry, gw, els, teams }) {
             <b className="sp-num" style={{ color: 'var(--sp-ink)' }}>{one(a.projected)}</b> projected this gameweek with this week’s moves
             {a.hit ? `, after a −${a.hit} hit` : ''}, against {one(a.holdProjected)} if you change nothing. Confidence: {a.confidence}.
           </p>
+
+          {a.verdict && (
+            <div className="sp-ai-verdict">
+              <span className="sp-ai-when">The honest verdict</span>
+              <p className="sp-ai-verdict-line">{a.verdict.line}</p>
+              {a.verdict.problems.length > 0 && <ul className="sp-ai-list">{a.verdict.problems.map((p, i) => <li key={i}>{p}</li>)}</ul>}
+              {a.verdict.working && (
+                <p className="sp-small sp-ink2" style={{ margin: '6px 0 0' }}>
+                  <b style={{ color: 'var(--sp-ink)' }}>Working:</b> {a.verdict.working}
+                </p>
+              )}
+              {factLine(a.facts).length > 0 && <p className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>Our numbers: {factLine(a.facts).join(' · ')}.</p>}
+              {a.facts?.transfers?.length > 0 && (
+                <p className="sp-tiny sp-muted" style={{ margin: '4px 0 0' }}>
+                  Your recent transfers, points since (in against out):{' '}
+                  {a.facts.transfers
+                    .slice(0, 4)
+                    .map((t) => `GW${t.gw} ${t.changes ? `${t.wildcard ? 'Wildcard' : 'transfers'} (${t.changes} changes)` : `${name(t.out)} → ${name(t.in)}`} ${t.net > 0 ? '+' : t.net < 0 ? '−' : '±'}${Math.abs(t.net)}`)
+                    .join(' · ')}.
+                </p>
+              )}
+            </div>
+          )}
 
           {(a.watch.length > 0 || a.pending?.length > 0) && (
             <div className="sp-ai-box">

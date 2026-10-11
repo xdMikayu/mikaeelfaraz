@@ -208,8 +208,19 @@ export async function getNextSquad(id, entry, event) {
     picks: gw?.picks ?? [],
     bank: gw?.bank ?? 0,
     revertedFreeHit: ev !== event,
-    transfers: transfers.map((t) => ({ element_in: t.element_in, element_in_cost: t.element_in_cost, event: t.event, time: t.time })),
+    transfers: transfers.map((t) => ({ element_in: t.element_in, element_in_cost: t.element_in_cost, element_out: t.element_out, element_out_cost: t.element_out_cost, event: t.event, time: t.time })),
   };
+}
+
+const pointsMemo = new Map();
+/** Every player's points in one gameweek, { id: points }; only the totals are kept, for a day once it's finished. */
+export async function getPoints(event, finished) {
+  const hit = pointsMemo.get(event);
+  if (hit && Date.now() - hit.at < (finished ? 24 * 3600e3 : 60e3)) return hit.map;
+  const live = await fpl(`/event/${event}/live/`);
+  const map = Object.fromEntries((live?.elements ?? []).map((e) => [e.id, e.stats.total_points]));
+  pointsMemo.set(event, { at: Date.now(), map });
+  return map;
 }
 
 /** First page of a classic league (50 managers) with every manager's picks for the gameweek. */
