@@ -7,7 +7,7 @@ import { rolesFromLines, versus, roleFactor } from './matchups.mjs';
 import { shotPoint } from './espn.mjs';
 import { netFor, rawFactors, designRow } from './netxg.mjs';
 import { bestXI, nextFree, estimateFree, planTransfers, buildSquad, rotationPairs, committed } from './optimise.mjs';
-import { chipsLeft, validate, whenFor } from './advice.mjs';
+import { chipsLeft, validate, whenFor, honestFacts, transferLedger } from './advice.mjs';
 import { londonToUtc, ukLabel, priceWindows, priceMove, breakBefore } from './timing.mjs';
 import { cleanReport, newsPatches, newsTtl, matchPlayer } from './news.mjs';
 import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
@@ -643,7 +643,7 @@ test('next squad: after a Free Hit the team goes back to the squad and bank from
     assert.deepEqual(r.picks.map((p) => p.element), [1, 2, 3]);
     assert.equal(r.bank, 1.2);
     assert.equal(r.revertedFreeHit, true);
-    assert.deepEqual(r.transfers, [{ element_in: 3, element_in_cost: 55, event: 4, time: '2026-09-10T10:00:00Z' }]);
+    assert.deepEqual(r.transfers, [{ element_in: 3, element_in_cost: 55, element_out: undefined, element_out_cost: undefined, event: 4, time: '2026-09-10T10:00:00Z' }]);
   } finally {
     globalThis.fetch = real;
   }
@@ -687,4 +687,68 @@ test('club news: a model that can\'t search falls back to the backup; web search
     server.close();
     delete process.env.ANTHROPIC_BASE_URL;
   }
+});
+
+test('honest verdict facts: dead weight, league rank by projection, what recent transfers cost, the season so far', () => {
+  const els = {};
+  const types = [1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4];
+  types.forEach((type, i) => (els[i + 1] = { id: i + 1, type, cost: i === 1 ? 4 : 5.5, status: 'a' }));
+  els[13] = { ...els[13], cost: 9, status: 'i' }; // £9m, injured: 2 points over five
+  els[14] = { ...els[14], status: 'u' }; // left the club
+  els[20] = { id: 20, type: 4, cost: 8, status: 'a' };
+  const totals = { 2: 0, 13: 2, 14: 0 };
+  const total = (id) => totals[id] ?? 20;
+  const squad = types.map((_, i) => i + 1);
+  const hold = { points: 55, horizon: 270, bench: [2, 7, 12, 15] };
+  const pk = (first) => Array.from({ length: 15 }, (_, i) => ({ element: first + i }));
+  const f = honestFacts({
+    squad, hold, bestOver5: 300, els, total, bank: 2.4, gws: [7, 8, 9, 10, 11],
+    history: [{ event: 5, points: 40, hit: 4, bench: 9, overall: 900000 }, { event: 6, points: 70, hit: 0, bench: 3, overall: 700000 }],
+    events: [{ id: 5, finished: true, average: 50 }, { id: 6, finished: true, average: 60 }],
+    league: { name: 'Djangos Mangoes', more: false, rows: [{ entry: 1, rank: 2, total: 400, manager: 'Me', picks: pk(1) }, { entry: 2, rank: 1, total: 425, manager: 'Raza', picks: pk(100) }, { entry: 3, rank: 3, total: 380, manager: 'Ali', picks: pk(200) }] },
+    projectSquad: (ids) => (ids[0] === 100 ? 61 : 50),
+    entryId: 1,
+    transfers: [{ event: 5, element_out: 20, element_in: 13 }, { event: 6, element_out: 15, element_in: 1 }, { event: 4, element_out: 3, element_in: 4 }],
+    pointsByGw: { 5: { 13: 2, 20: 10 }, 6: { 13: 0, 20: 6, 1: 1, 15: 7 } },
+    current: 6,
+    freeHits: [6],
+    record: { season: { weeks: 2, maeOurs: 2.1, maeFpl: 2.4, beatFplWeeks: 2 } },
+  });
+  assert.equal(f.shareOfBest, 90);
+  assert.deepEqual(f.deadWeight.map((d) => d.id), [13, 14]); // not the £4m reserve keeper
+  assert.deepEqual([f.league.projectedRank, f.league.managers, f.league.tableRank, f.league.gapToLeader], [2, 3, 2, 25]);
+  // Selling the GW5 striker for the injured one cost 14 points; the Free Hit week and the older move aren't counted.
+  assert.deepEqual(f.transfers, [{ gw: 5, out: 20, in: 13, to: 6, outPoints: 16, inPoints: 2, net: -14 }]);
+  assert.deepEqual(f.season, { gameweeks: 2, beatAverage: 1, hitPoints: 4, benchPoints: 12, overallRanks: [900000, 700000] });
+  assert.match(f.record, /2\.1 points a player against FPL's 2\.4/);
+  assert.equal(f.benchCost, 20.5);
+});
+
+test('advice rules: the verdict comes through trimmed, problems capped at four', () => {
+  const v = validate(answer({ verdict: { line: '  Your squad is 90% of what it could be. ', problems: ['a', 'b', '', 'c', 'd', 'e'], working: '' } }), advicePacket({ inXp: 9 }));
+  assert.deepEqual(v.verdict, { line: 'Your squad is 90% of what it could be.', problems: ['a', 'b', 'c', 'd'], working: '' });
+  assert.equal(validate(answer(), advicePacket({ inXp: 9 })).verdict, null);
+});
+
+test('transfer ledger: churn within a week is netted out, a replacement is judged only while kept, a Wildcard is one line', () => {
+  const els = { 1: { type: 4, cost: 9 }, 2: { type: 4, cost: 6 }, 3: { type: 4, cost: 7 }, 4: { type: 4, cost: 6.5 }, 5: { type: 3, cost: 8 }, 6: { type: 3, cost: 7.5 }, 7: { type: 2, cost: 5 }, 8: { type: 2, cost: 4.5 }, 9: { type: 1, cost: 5 }, 10: { type: 1, cost: 4.5 } };
+  const pointsByGw = { 3: { 1: 10, 2: 1, 3: 6, 4: 2 }, 4: { 1: 8, 2: 0, 3: 5, 4: 9 }, 5: { 1: 6, 3: 2, 4: 7 } };
+  // GW3: 1 → 2, then 2 → 3 before the deadline: really 1 → 3. GW4: 3 → 4.
+  const t = [
+    { event: 3, element_out: 1, element_in: 2 },
+    { event: 3, element_out: 2, element_in: 3 },
+    { event: 4, element_out: 3, element_in: 4 },
+  ];
+  const lines = transferLedger(t, { pointsByGw, current: 5, els });
+  // 1 → 3 counted for GW3 only (3 was sold in GW4): 6 against 10. 3 → 4 over GW4–5: 16 against 7.
+  assert.deepEqual(lines, [
+    { gw: 3, out: 1, in: 3, to: 3, outPoints: 10, inPoints: 6, net: -4 },
+    { gw: 4, out: 3, in: 4, to: 5, outPoints: 7, inPoints: 16, net: 9 },
+  ]);
+  const wc = transferLedger(
+    [{ event: 3, element_out: 1, element_in: 3 }, { event: 3, element_out: 5, element_in: 6 }, { event: 3, element_out: 7, element_in: 8 }, { event: 3, element_out: 9, element_in: 10 }],
+    { pointsByGw, current: 5, wildcards: [3], els },
+  );
+  assert.equal(wc.length, 1);
+  assert.deepEqual([wc[0].wildcard, wc[0].changes, wc[0].net], [true, 4, 13 - 24]);
 });

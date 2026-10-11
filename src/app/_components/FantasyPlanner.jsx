@@ -12,7 +12,7 @@ const shade = (v, max) => Math.max(0, Math.min(1, v / max));
 const oppLabel = (teams, f) => `${teams[f.opp]?.short ?? ''}${f.home ? '' : ' (A)'}`;
 
 /** The weeks ahead: projected points, captaincy, transfers and fixtures, all from our model. */
-export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, entry }) {
+export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, entry, leagueId }) {
   const [horizon, setHorizon] = useState(5);
   const [view, setView] = useState('overview');
   const [ticker, setTicker] = useState('att');
@@ -87,7 +87,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
 
       {view === 'overview' && (
         <>
-          <Advice entry={entry} gw={gws[0]} els={ctx.elements} teams={teams} />
+          <Advice entry={entry} gw={gws[0]} els={ctx.elements} teams={teams} league={leagueId} />
           <Record />
 
           <section className="sp-panel">

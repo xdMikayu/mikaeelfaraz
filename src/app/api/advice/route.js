@@ -1,12 +1,12 @@
 // GET /api/sport/advice?id=<FPL team>&ft=<free transfers, optional>&stage=prep
 //   Which clubs' news matters for this team (doubts in the squad, the players the options move).
-// GET /api/sport/advice?id=<FPL team>&ft=<optional>&news=<club ids>
+// GET /api/sport/advice?id=<FPL team>&ft=<optional>&news=<club ids>&league=<mini-league, optional>
 //   Claude's plan for the next deadline (src/lib/sport/advice.mjs), with those clubs' news from
-//   /api/sport/news/<club> applied. The page fetches the news in between, so each request stays
+//   /api/sport/news/<club> applied, and an honest verdict measured against the league. The page fetches the news in between, so each request stays
 //   inside the function time limit and every manager shares each club's news.
 // Public, so it guards the bill: the CDN keeps each answer for 30 minutes, the function keeps its
 // own copy, and a daily ceiling stops runaway use.
-import { getStatic, getFixtures, getEntry, getNextSquad } from '@/lib/sport/fpl-server.mjs';
+import { getStatic, getFixtures, getEntry, getNextSquad, getLeague, getPoints } from '@/lib/sport/fpl-server.mjs';
 import { makeKit, makeCtx } from '@/lib/sport/kit.mjs';
 import { adviceEnabled, buildPacket, askClaude, validate, newsClubs, MODEL } from '@/lib/sport/advice.mjs';
 
@@ -56,6 +56,7 @@ export async function GET(req) {
   const ft = /^[0-5]$/.test(q.get('ft') ?? '') ? Number(q.get('ft')) : null;
   const prep = q.get('stage') === 'prep';
   const newsTeams = [...new Set((q.get('news') ?? '').split(',').filter((x) => /^\d{1,2}$/.test(x)).map(Number))].filter((t) => t >= 1 && t <= 20).slice(0, 6);
+  const leagueParam = /^\d{1,9}$/.test(q.get('league') ?? '') ? Number(q.get('league')) : null;
   if (!id) return json({ error: 'Need an FPL team id' }, 400);
   if (!adviceEnabled()) return json({ error: 'AI advice is switched off: ANTHROPIC_API_KEY isn’t set on the server.' }, 503);
 
@@ -92,11 +93,20 @@ export async function GET(req) {
     }
 
     const gw = st.events.find((e) => Date.parse(e.deadline) > Date.now())?.id;
-    const news = newsTeams.length && gw ? await clubNews(newsTeams, gw, req) : { reports: [], error: null };
-    const key = `${id}:${ft ?? ''}:${news.reports.map((r) => `${r.team}@${r.at}`).sort().join(',')}`;
+    // Only a league the team is in; recent gameweeks' points for judging its recent transfers.
+    const leagueId = leagueParam && entry.leagues.some((l) => l.id === leagueParam) ? leagueParam : null;
+    const recent = [...new Set(next.transfers.map((t) => t.event).filter((e) => e >= st.current - 5 && e <= st.current))];
+    const from = recent.length ? Math.min(...recent) : null;
+    const [news, league, points, record] = await Promise.all([
+      newsTeams.length && gw ? clubNews(newsTeams, gw, req) : { reports: [], error: null },
+      leagueId ? getLeague(leagueId, st.current).catch(() => null) : null,
+      from ? Promise.all(Array.from({ length: st.current - from + 1 }, (_, i) => from + i).map((g) => getPoints(g, st.events.find((e) => e.id === g)?.finished).then((m) => [g, m]).catch(() => null))) : [],
+      data('accuracy.json', req).catch(() => null),
+    ]);
+    const key = `${id}:${ft ?? ''}:${leagueId ?? ''}:${news.reports.map((r) => `${r.team}@${r.at}`).sort().join(',')}`;
     if (cached(key, 30)) return json(cached(key, 30), 200, 1800);
     if (used >= DAILY_LIMIT) return json({ error: 'Today’s AI advice limit is used up. The numbers in the Planner still work; try again tomorrow.' }, 429);
-    const packet = buildPacket({ ...base, news: news.reports, newsError: news.error });
+    const packet = buildPacket({ ...base, news: news.reports, newsError: news.error, league, pointsByGw: Object.fromEntries(points.filter(Boolean)), record });
     used += 1;
     const started = Date.now();
     const { advice, usage, model } = await askClaude(packet);
