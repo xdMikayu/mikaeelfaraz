@@ -5,10 +5,13 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PrefsProvider, usePrefs } from './prefs';
 import { ScoresIcon, FantasyIcon, TablesIcon, FollowIcon } from './glyphs';
 import Crest from './Crest';
+import { SPORTS } from './SportsBar';
 import { LEAGUES } from '@/lib/sport/leagues.mjs';
 
+// Scores covers the match and team pages, and the other sports' pages.
+const SCORES = ['/sport/match', '/sport/team', ...SPORTS.filter((s) => s.soon).map((s) => s.href)];
 const NAV = [
-  { href: '/sport', label: 'Scores', icon: ScoresIcon, match: (p) => p === '/sport' || p.startsWith('/sport/match') || p.startsWith('/sport/team') },
+  { href: '/sport', label: 'Scores', icon: ScoresIcon, match: (p) => p === '/sport' || SCORES.some((h) => p.startsWith(h)) },
   { href: '/sport/fantasy', label: 'Fantasy', icon: FantasyIcon, match: (p) => p.startsWith('/sport/fantasy') },
   { href: '/sport/table/eng.1', label: 'Tables', icon: TablesIcon, match: (p) => p.startsWith('/sport/table') },
   { href: '/sport/following', label: 'Following', icon: FollowIcon, match: (p) => p.startsWith('/sport/following') },
