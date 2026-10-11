@@ -752,3 +752,24 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-ai-steps li[data-state='done']::marker { content: '✓  '; }
 .sp-ai-verdict { margin-top: 12px; padding: 10px 0 12px; border-top: 2px solid var(--sp-ink); border-bottom: 1px solid var(--sp-rule); }
 .sp-ai-verdict-line { margin: 4px 0 8px; font-size: 16px; font-weight: 800; line-height: 1.35; }
+
+/* ---------- other sports, while they're coming ---------- */
+.sp-sports { gap: 16px; }
+.sp-sports a { display: inline-flex; align-items: center; gap: 4px; }
+.sp-soon { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-muted); }
+/* All four sports fit across a 360 px phone without scrolling. */
+@media (max-width: 400px) { .sp-sports { gap: 14px; } .sp-sports a { font-variation-settings: 'wdth' 92; } }
+.sp-plan { margin: 0; padding-left: 18px; list-style: disc; display: grid; gap: 6px; max-width: 62ch; font-size: 14.5px; color: var(--sp-ink-2); }
+.sp-events { list-style: none; margin: 8px 0 0; padding: 0; }
+.sp-event { padding: 10px 0; border-top: 1px solid var(--sp-rule); }
+.sp-event-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sp-event-top b { min-width: 0; font-size: 15.5px; font-weight: 800; font-variation-settings: 'wdth' 88; }
+.sp-event-top span { flex: none; }
+.sp-event p { margin: 2px 0 0; font-size: 13.5px; }
+.sp-event p b { color: var(--sp-ink); font-weight: 750; }
+.sp-event-top .sp-f1-name { font-size: 24px; line-height: 1.1; font-weight: 900; font-variation-settings: 'wdth' 75; }
+.sp-sessions { list-style: none; margin: 10px 0 0; padding: 0; }
+.sp-session { display: grid; grid-template-columns: 6.6em 4.5em minmax(0, 1fr); gap: 10px; align-items: center; min-height: 40px; border-top: 1px solid var(--sp-rule); font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.sp-session b { font-weight: 800; }
+.sp-session-done { color: var(--sp-muted); }
+.sp-session-live { font-weight: 700; }
