@@ -196,9 +196,9 @@ function About() {
         match ended now, and are marked as projected.
       </p>
       <p>
-        Until their sections are built, the tennis page lists what’s on from ESPN’s ATP and WTA scoreboards, and the F1 page shows the calendar from
-        Jolpica, the free continuation of the Ergast F1 database. Both come through this site: the tennis list can be up to 10 minutes old, the calendar
-        up to 6 hours.
+        Until their sections are built, the cricket and tennis pages show what’s on from ESPN, and the F1 page shows the calendar from Jolpica, the free
+        continuation of the Ergast F1 database. They come through this site: cricket scores can be up to 30 seconds old, the tennis list up to 10
+        minutes, cricket fixtures up to 3 hours and the F1 calendar up to 6 hours.
       </p>
       <h3 className="sp-h3" id="xg" style={{ margin: '18px 0 6px', color: 'var(--sp-ink)' }}>How the xG estimate works</h3>
       <p>

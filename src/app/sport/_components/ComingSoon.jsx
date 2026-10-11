@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLive, useAge } from './useLive';
 import { nextRace, sessionEnd } from '@/lib/sport/othersports.mjs';
 import { kickoff, shortDate, until, zoneLabel } from './time';
+import CricketNow from './CricketNow';
 
 const DAY = 864e5;
 
@@ -153,15 +154,16 @@ function F1Next() {
 const PAGES = {
   cricket: {
     title: 'Cricket',
-    intro: 'Live scores and scorecards for internationals and the big leagues are being built, next after football.',
+    intro: 'Cricket is next after football. The live scores below already work; scorecards, ball by ball and win chances are being built.',
+    Now: CricketNow,
     plan: [
       'Live scores ball by ball: Tests, ODIs and T20 internationals, the IPL, the Big Bash, The Hundred and the rest.',
       'Full scorecards: every batter and bowler, the fall of wickets and the partnerships.',
       'Win chances and projected totals, from the ball-by-ball record of thousands of past matches.',
       'Teams and players to follow, with an alert when their match starts.',
-      'Matchday AI for fantasy cricket: your XI, captain and vice-captain, like the FPL advice.',
+      'Matchday AI for fantasy cricket: your XI, captain and vice-captain. There’s no fantasy API like FPL’s, so you’d enter your team.',
     ],
-    data: 'Being worked out: which free feeds carry live cricket reliably.',
+    data: 'Scores come from ESPN, the same free source as the football. It also carries full scorecards, ball by ball and tables, which the full section will use. Win chances and projected totals will be trained on Cricsheet’s free ball-by-ball record of over 23,000 matches. There’s no open feed from the ICC or the national boards.',
   },
   tennis: {
     title: 'Tennis',
