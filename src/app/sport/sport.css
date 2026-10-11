@@ -754,11 +754,13 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-ai-verdict-line { margin: 4px 0 8px; font-size: 16px; font-weight: 800; line-height: 1.35; }
 
 /* ---------- other sports, while they're coming ---------- */
-.sp-sports { gap: 16px; }
-.sp-sports a { display: inline-flex; align-items: center; gap: 4px; }
-.sp-soon { font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-muted); }
-/* All four sports fit across a 360 px phone without scrolling. */
-@media (max-width: 400px) { .sp-sports { gap: 14px; } .sp-sports a { font-variation-settings: 'wdth' 92; } }
+/* The sports: each one's mark over its name, underlined when it's the page you're on. */
+.sp-sportsnav { border-bottom: 1px solid var(--sp-rule); }
+.sp-sports { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 480px; }
+.sp-sports a { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 0 7px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: 12.5px; font-weight: 700; color: var(--sp-muted); white-space: nowrap; }
+.sp-sports a:hover { color: var(--sp-ink); }
+.sp-sports a[aria-current='page'] { color: var(--sp-ink); font-weight: 800; border-bottom-color: var(--sp-ink); }
+.sp-sports img { display: block; width: 32px; height: 32px; }
 .sp-plan { margin: 0; padding-left: 18px; list-style: disc; display: grid; gap: 6px; max-width: 62ch; font-size: 14.5px; color: var(--sp-ink-2); }
 .sp-events { list-style: none; margin: 8px 0 0; padding: 0; }
 .sp-event { padding: 10px 0; border-top: 1px solid var(--sp-rule); }
