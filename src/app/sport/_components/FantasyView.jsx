@@ -288,11 +288,6 @@ function Pitch({ team, ctx, teams, forecast, fixtures }) {
           <div className="sp-fplrow" style={{ padding: 0 }}>{bench.map((l) => kit(l, true))}</div>
         </div>
       </div>
-      <div className="sp-legend sp-pad" aria-hidden>
-        <span><i className="sp-kit-pts sp-lg-done">6</i>Played</span>
-        <span><i className="sp-kit-pts sp-lg-live">2</i>Playing now</span>
-        <span><i className="sp-kit-pts sp-lg-todo">Sun 16:30</i>To play</span>
-      </div>
       {cur ? <PlayerCard l={cur} ctx={ctx} teams={teams} kit={forecast} fixtures={fixtures} /> : (
         <p className="sp-note sp-pad" style={{ margin: '8px 0 0' }}>
           Tap a player for his points. Arrows mark projected autosubs.
