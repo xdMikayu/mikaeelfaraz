@@ -85,6 +85,11 @@ appear only on white discs inside kit-colour blocks.
 - Projections always say so ("projected", "expected") and the page explains how they're made. Chances never read
   0% or 100% while anything is left to play.
 - No marketing words, no exclamation marks, no emoji.
+- Never make the viewer do the maths. Say what a score means in words under it: in cricket, who leads or trails
+  and by how much (adding up every innings), what a chasing side needs from how many balls, the target once it's
+  set. Bold the answer; the rest of the sentence gives the context.
+- Explain shorthand where it appears, plainly and once ("How to read cricket scores"), rather than assuming everyone
+  reads it.
 
 ## Trust
 

@@ -775,3 +775,39 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-session b { font-weight: 800; }
 .sp-session-done { color: var(--sp-muted); }
 .sp-session-live { font-weight: 700; }
+
+/* ---------- cricket, while its section is built ---------- */
+.sp-cms, .sp-cu, .sp-cl { list-style: none; margin: 8px 0 0; padding: 0; }
+.sp-cm { padding: 10px 0; border-top: 1px solid var(--sp-rule); }
+.sp-cm-meta { margin: 0 0 4px; font-size: 12px; color: var(--sp-muted); }
+.sp-cm-team { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 28px; font-size: 15.5px; font-weight: 600; font-variation-settings: 'wdth' 90; }
+.sp-cm-team .sp-tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-cm-runs { justify-self: end; font-weight: 900; font-size: 17px; font-variation-settings: 'wdth' 72; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sp-cm-runs small { font-size: 12px; font-weight: 650; color: var(--sp-muted); font-variation-settings: 'wdth' 90; }
+.sp-cm-bat .sp-tn, .sp-cm-team.sp-won .sp-tn { font-weight: 800; }
+.sp-cm-team.sp-lost, .sp-cm-team.sp-lost .sp-cm-runs { color: var(--sp-muted); }
+.sp-cm-status { margin: 4px 0 0; font-size: 13.5px; color: var(--sp-ink-2); }
+.sp-cm-status b { color: var(--sp-ink); font-weight: 750; }
+/* The sums done for you: who leads or trails, what a side needs. */
+.sp-cm-sit { margin: 6px 0 0; font-size: 14.5px; line-height: 1.4; color: var(--sp-ink-2); }
+.sp-cm-sit b { color: var(--sp-ink); font-weight: 800; }
+.sp-cm-batting { margin-left: 7px; font-size: 11.5px; font-weight: 700; color: var(--sp-muted); font-variation-settings: 'wdth' 100; }
+.sp-cl > li { border-top: 1px solid var(--sp-rule); }
+.sp-cl summary, .sp-cl-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; font-size: 14px; }
+.sp-cl summary, .sp-cread summary { cursor: pointer; list-style: none; }
+.sp-cl summary::-webkit-details-marker, .sp-cread summary::-webkit-details-marker { display: none; }
+.sp-cl summary > span:first-child, .sp-cl-line > span:first-child { min-width: 0; }
+.sp-cl summary > span:last-child, .sp-cl-line > span:last-child { flex: none; color: var(--sp-ink-2); }
+.sp-chev { display: inline-block; width: 14px; color: var(--sp-muted); font-weight: 800; }
+details[open] > summary .sp-chev { transform: rotate(90deg); }
+.sp-cms-in { margin: 0 0 8px 14px; }
+.sp-cread { margin-top: 14px; font-size: 13.5px; color: var(--sp-ink-2); }
+.sp-cread summary { font-weight: 750; color: var(--sp-ink); }
+.sp-cread ul { margin: 6px 0 0; padding-left: 18px; list-style: disc; display: grid; gap: 5px; max-width: 62ch; }
+.sp-cread b { color: var(--sp-ink); }
+.sp-cu li { display: grid; grid-template-columns: 6.6em minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--sp-rule); }
+.sp-cu-when { display: flex; flex-direction: column; font-size: 12.5px; color: var(--sp-muted); line-height: 1.25; }
+.sp-cu-when b { color: var(--sp-ink); font-size: 15px; font-weight: 800; }
+.sp-cu-what { min-width: 0; display: flex; flex-direction: column; }
+.sp-cu-what b { font-size: 15px; font-weight: 750; }
+.sp-cu-what small { font-size: 12.5px; color: var(--sp-muted); }
