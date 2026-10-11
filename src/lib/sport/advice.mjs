@@ -1,12 +1,13 @@
-// Gameweek advice written by Claude, grounded in our numbers and this week's club news.
+// Matchday AI: gameweek advice written by a language model, grounded in our numbers and this week's
+// club news.
 //
-// The server does the arithmetic; Claude does the judgement. Here every player is projected (with
+// The server does the arithmetic; the model does the judgement. Here every player is projected (with
 // any newer club news from news.mjs applied), the transfer planner runs, and each sensible option for
 // this deadline is priced: the eleven our optimiser picks after it, points this week and over five,
 // and the facts that decide *when* to act. Does the new player start this week? Is a price change
 // due before the deadline? Is a doubtful player's manager speaking before it?
 //
-// Claude picks an option, says when to make each move, and what to do if the news goes the other
+// The model picks an option, says when to make each move, and what to do if the news goes the other
 // way. Then the picks are held to the rules: illegal moves are dropped; a buy that wouldn't start
 // this week waits for next week unless something forces it now; a doubtful player isn't sold before
 // his manager has spoken. The eleven, bench and points shown are always the optimiser's for the
@@ -18,7 +19,8 @@ import { planTransfers, buildSquad, bestXI, estimateFree } from './optimise.mjs'
 import { newsPatches } from './news.mjs';
 import { priceWindows, priceMove, breakBefore, matchesBefore, ukLabel, londonToUtc } from './timing.mjs';
 
-// Sonnet 5.5 reasons better than Haiku 5.5 for a multi-week plan; override with MATCHDAY_AI_MODEL.
+// The model behind Matchday AI: Sonnet 5.5 reasons better than Haiku 5.5 for a multi-week plan;
+// override with MATCHDAY_AI_MODEL.
 export const MODEL = process.env.MATCHDAY_AI_MODEL || 'claude-sonnet-5-5';
 export const adviceEnabled = () => Boolean(process.env.ANTHROPIC_API_KEY);
 
@@ -55,7 +57,7 @@ function lineup(sq, gw, ahead, els) {
 }
 
 /**
- * Everything Claude sees, and everything validate needs (under `_`, not sent).
+ * Everything the model sees, and everything validate needs (under `_`, not sent).
  * next: getNextSquad's { picks, bank, transfers, revertedFreeHit }; news: cleaned club reports.
  */
 export function buildPacket({ st, fixtures, entry, next, kit, ctx, learned, nx, free: freeIn, news = [], newsError = null, league = null, pointsByGw = {}, record = null, now = Date.now() }) {
@@ -152,7 +154,7 @@ export function buildPacket({ st, fixtures, entry, next, kit, ctx, learned, nx, 
   for (const [mode, p] of Object.entries(plans)) addOption(`plan-${mode}`, `Planner, ${mode}`, p.plan.find((s) => s.gw === gw)?.moves ?? []);
   for (const s of swaps.slice(0, 4)) addOption(`swap-${s.out}-${s.in}`, 'Best swap for this player', [{ out: s.out, in: s.in }]);
 
-  // Players Claude may bring in: the best by position over the horizon, plus everyone the planner named.
+  // Players the model may bring in: the best by position over the horizon, plus everyone the planner named.
   const named = new Set([...Object.values(plans).flatMap((p) => p.plan.flatMap((s) => s.moves.map((m) => m.in))), ...wildcard.squad, ...freeHit.squad, ...swaps.map((s) => s.in)]);
   const byType = { 1: [], 2: [], 3: [], 4: [] };
   for (const e of st.elements) if (!squad.includes(e.id) && !['u', 'i', 's', 'n'].includes(els[e.id].status) && ahead[e.id]) byType[e.type].push(e.id);
@@ -549,10 +551,11 @@ Don't describe the formation or list the eleven; the page shows the eleven our o
 let client;
 const getClient = () => (client ??= new Anthropic({ timeout: 45_000, maxRetries: 0 }));
 
-/** Ask Claude for the plan. Returns the parsed JSON and token usage. */
-export async function askClaude(packet) {
+/** Ask the model for the plan. Returns the parsed JSON and token usage. */
+export async function askModel(packet) {
   const { _, ...send } = packet;
-  const response = await getClient().beta.messages.create({
+  const response = await getClient()
+    .beta.messages.create({
     model: MODEL,
     max_tokens: 8000,
     // A declined request is re-run on Anthropic's recommended fallback model instead of failing.
@@ -562,15 +565,20 @@ export async function askClaude(packet) {
     output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
     system: SYSTEM,
     messages: [{ role: 'user', content: `Advise for gameweek ${packet.gameweek}.\n\n${JSON.stringify(send)}` }],
-  });
-  if (response.stop_reason === 'refusal') throw new Error('Claude declined to advise on this one');
+    })
+    .catch((e) => {
+      if (e instanceof Anthropic.APIConnectionTimeoutError) throw new Error('Matchday AI took too long to answer. Try again in a minute.');
+      if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.InternalServerError) throw new Error('Matchday AI is busy right now. Try again in a minute.');
+      throw e;
+    });
+  if (response.stop_reason === 'refusal') throw new Error('Matchday AI couldn’t advise on this one. Try again.');
   if (response.stop_reason === 'max_tokens') throw new Error('The advice ran too long; try again');
   const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
   return { advice: JSON.parse(text), usage: response.usage, model: response.model };
 }
 
 /**
- * Hold Claude's plan to the rules and to its own timing logic, then work out the team ourselves.
+ * Hold the model's plan to the rules and to its own timing logic, then work out the team ourselves.
  * Returns what the page shows; every change is listed in `notes`, or on the move it changed.
  */
 export function validate(advice, packet) {
@@ -582,7 +590,7 @@ export function validate(advice, packet) {
   if (advice.chip?.play && advice.chip.play !== 'none' && chip === 'none') notes.push(`${CHIP_NAME[advice.chip.play] ?? advice.chip.play} isn't available, so no chip.`);
   const draftChip = chip === 'wildcard' || chip === 'freehit';
 
-  // The moves: Claude's, checked one by one; if it named an option and listed none, the option's.
+  // The moves: the model's, checked one by one; if it named an option and listed none, the option's.
   const option = options.find((o) => o.id === advice.option);
   // A Wildcard or Free Hit replaces the squad with our draft, so single moves don't apply.
   const listed = draftChip ? [] : advice.transfers?.length ? advice.transfers : (option?.facts ?? []).map((f) => ({ out: f.out, in: f.in, when: f.suggested, reason: '' }));

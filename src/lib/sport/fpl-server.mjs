@@ -136,6 +136,28 @@ export async function getLive(event) {
   };
 }
 
+const num10 = (v) => (/^\d{1,10}$/.test(v ?? '') ? Number(v) : null);
+const KINDS = { static: 0, fixtures: 0, live: 1, entry: 2, league: 2 };
+
+/**
+ * What /api/sport/fpl/... asks for: { kind, id, event, legacy } or { error, status }.
+ * Path form: static, fixtures, live/<gw>, entry/<team>/<gw>, league/<league>/<gw>. The old query
+ * form (entry?id=&event=) is still read, and flagged `legacy` so it isn't cached.
+ */
+export function fplRequest(parts = [], q = new URLSearchParams()) {
+  const [kind, ...rest] = parts;
+  if (!(kind in KINDS)) return { error: 'Unknown', status: 404 };
+  const legacy = rest.length === 0 && KINDS[kind] > 0;
+  if (!legacy && rest.length !== KINDS[kind]) return { error: 'Unknown', status: 404 };
+  if (KINDS[kind] === 0) return { kind, legacy: false };
+  const event = num10(legacy ? q.get('event') : rest[rest.length - 1]);
+  if (!event || event > 38) return { error: 'Need a gameweek', status: 400 };
+  if (kind === 'live') return { kind, event, legacy };
+  const id = num10(legacy ? q.get('id') : rest[0]);
+  if (!id) return { error: 'Need an id', status: 400 };
+  return { kind, id, event, legacy };
+}
+
 /** Every fixture of the season, for looking several gameweeks ahead. */
 export async function getFixtures() {
   const all = await fpl('/fixtures/', 300e3);
