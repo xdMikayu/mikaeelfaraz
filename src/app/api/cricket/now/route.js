@@ -1,7 +1,7 @@
 // GET /api/sport/cricket/now: the cricket on now, just finished or starting today, from ESPN's
-// header feed (about 240 KB). This keeps the internationals in full and one line per domestic
-// league. No query string, so the CDN's path-only key is right; it keeps an answer for 30
-// seconds, about the time a ball takes.
+// header feed (about 240 KB). This keeps the fields the page shows, internationals and domestic
+// matches apart, with a line per domestic league. No query string, so the CDN's path-only key is
+// right; it keeps an answer for 30 seconds, about the time a ball takes.
 import { cricketNow, leaguesOn } from '@/lib/sport/cricket.mjs';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,10 @@ export async function GET() {
     const res = await fetch(FEED, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' }, cache: 'no-store' });
     if (!res.ok) throw new Error(`ESPN ${res.status}`);
     const all = cricketNow(await res.json());
-    return Response.json({ at: new Date().toISOString(), internationals: all.filter((m) => m.international), leagues: leaguesOn(all) }, { headers: headers(30) });
+    return Response.json(
+      { at: new Date().toISOString(), internationals: all.filter((m) => m.international), domestic: all.filter((m) => !m.international), leagues: leaguesOn(all) },
+      { headers: headers(30) },
+    );
   } catch (e) {
     return failed(e.message || 'ESPN didn’t answer');
   }
