@@ -121,15 +121,15 @@ export default function Overview() {
       const r = await f.api('categorize');
       await f.reload();
       setCatBusy(
-        r.aiError ? `AI error: ${r.aiError}` :
-        `Done: ${r.byRule} by rules, ${r.byAi} by Claude${r.remaining ? `, ${r.remaining} left` : ''}${!r.ai ? ' (add ANTHROPIC_API_KEY for AI)' : ''}`
+        r.aiError ? `Mifolio AI error: ${r.aiError}` :
+        `Done: ${r.byRule} by rules, ${r.byAi} by Mifolio AI${r.remaining ? `, ${r.remaining} left` : ''}${!r.ai ? ' (add ANTHROPIC_API_KEY to turn on Mifolio AI)' : ''}`
       );
     } catch (e) {
       setCatBusy(e.message);
     }
   };
 
-  const askClaude = async () => {
+  const askAi = async () => {
     setInsight({ busy: true, text: null, error: null });
     try {
       const summary = {
@@ -170,7 +170,7 @@ export default function Overview() {
                 <Tags size={16} /> <span className="hidden sm:inline">Sort</span> {totalUncategorized}
               </button>
             )}
-            <button className="fin-btn" onClick={askClaude} disabled={insight.busy}>
+            <button className="fin-btn" onClick={askAi} disabled={insight.busy}>
               <Sparkles size={16} /> {insight.busy ? 'Thinking…' : 'Insights'}
             </button>
           </div>
@@ -203,7 +203,7 @@ export default function Overview() {
       {(insight.text || insight.error) && (
         <section className="fin-card fin-card-hero fin-fade-in p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="fin-h2 flex items-center gap-2"><span className="fin-pill fin-pill-accent"><Sparkles size={12} /> Claude</span> {scopeLabel}</h2>
+            <h2 className="fin-h2 flex items-center gap-2"><span className="fin-pill fin-pill-accent"><Sparkles size={12} /> Mifolio AI</span> {scopeLabel}</h2>
             <button className="fin-btn fin-btn-ghost fin-icon-btn" onClick={() => setInsight({ busy: false, text: null, error: null })} aria-label="Close insights"><X size={16} /></button>
           </div>
           {insight.error ? (

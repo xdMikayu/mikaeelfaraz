@@ -179,7 +179,7 @@ export default function TransactionEditor({ tx, preset, onSaved, onClose }) {
               </label>
             )}
             {tx?.category_source && !categoryChanged && (
-              <p className="mt-1.5 text-xs fin-muted">Set by {({ keyword: 'built-in rules', rule: 'your merchant rule', ai: 'Claude', user: 'you' })[tx.category_source]}</p>
+              <p className="mt-1.5 text-xs fin-muted">Set by {({ keyword: 'built-in rules', rule: 'your merchant rule', ai: 'Mifolio AI', user: 'you' })[tx.category_source]}</p>
             )}
           </div>
           <div className="col-span-2">

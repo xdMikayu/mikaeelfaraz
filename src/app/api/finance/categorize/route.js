@@ -1,5 +1,5 @@
 // POST /api/finance/categorize — categorize uncategorized transactions now
-// (rules first, then Claude). The same job also runs every 15 minutes from
+// (rules first, then Mifolio AI). The same job also runs every 15 minutes from
 // netlify/functions/finance-categorize.mjs.
 import { authenticate, getAdmin, categorizePending, jsonError } from '@/lib/finance/server.mjs';
 

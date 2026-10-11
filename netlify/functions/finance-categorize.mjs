@@ -1,5 +1,5 @@
 // Netlify Scheduled Function: every 15 minutes, categorize new transactions
-// for the owner (saved rules + keywords, then Claude for unknown merchants), and keep
+// for the owner (saved rules + keywords, then Mifolio AI for unknown merchants), and keep
 // today's net worth snapshot current. Calls no AI when there is nothing to categorize.
 import { getAdmin, categorizePending, reconcileTabby, tidyUp } from '../../src/lib/finance/server.mjs';
 import { snapshotNetWorth } from '../../src/lib/finance/networth-server.mjs';
