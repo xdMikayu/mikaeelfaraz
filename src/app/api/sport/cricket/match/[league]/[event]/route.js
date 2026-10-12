@@ -7,25 +7,15 @@
 import { matchFromSummary, asListMatch, ballsOf, inningsBalls, phasesOf, quotaOf } from '@/lib/sport/cricket-match.mjs';
 import { readMatch, formatOf } from '@/lib/sport/cricket-read.mjs';
 import { formFor, matchupsFor } from '@/lib/sport/cricket-form.mjs';
-import model from '@/lib/sport/cricket/model.json';
-import grounds from '@/lib/sport/cricket/grounds.json';
-import ratings from '@/lib/sport/cricket/ratings.json';
+import { cricketTable, modelTables } from '@/lib/sport/cricket-data.mjs';
 
 export const dynamic = 'force-dynamic';
 
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/cricket';
 const UA = { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' };
-const tables = { model, grounds: grounds.grounds, ratings };
-// Each format's player records, loaded the first time a match in that format is asked for.
-const PLAYERS = {
-  't20-male': () => import('@/lib/sport/cricket/players/t20-male.json'),
-  't20-female': () => import('@/lib/sport/cricket/players/t20-female.json'),
-  'odi-male': () => import('@/lib/sport/cricket/players/odi-male.json'),
-  'odi-female': () => import('@/lib/sport/cricket/players/odi-female.json'),
-  'test-male': () => import('@/lib/sport/cricket/players/test-male.json'),
-  'test-female': () => import('@/lib/sport/cricket/players/test-female.json'),
-  'fc-male': () => import('@/lib/sport/cricket/players/fc-male.json'),
-};
+// The formats with player records (src/lib/sport/cricket/players), read the first time a match in
+// that format is asked for.
+const PLAYER_FORMATS = new Set(['t20-male', 't20-female', 'odi-male', 'odi-female', 'test-male', 'test-female', 'fc-male']);
 const headers = (s) => ({ 'cache-control': 'public, max-age=0, must-revalidate', 'cdn-cache-control': `public, s-maxage=${s}`, 'netlify-cdn-cache-control': `public, s-maxage=${s}, durable` });
 const failed = (status, error) => Response.json({ error }, { status, headers: { 'cache-control': 'no-store' } });
 
@@ -72,11 +62,12 @@ export async function GET(_req, { params }) {
   // Matchday's read: the model sees the match as the scores list does.
   const list = asListMatch(sum, league);
   const oneDay = m.innings.slice(0, 2).map((inn) => ({ team: inn.team, runs: inn.runs, target: inn.target, ballLimit: inn.ballLimit, overs: inn.byOver }));
-  const read = readMatch(list, tables, now, { whole: true, innings: oneDay });
+  const tables = await modelTables().catch(() => null);
+  const read = tables && readMatch(list, tables, now, { whole: true, innings: oneDay });
 
   // Every player's record in this format, and the batters in against the side in the field.
   const key = formatOf(list);
-  const table = key && PLAYERS[key] ? (await PLAYERS[key]()).default : null;
+  const table = PLAYER_FORMATS.has(key) ? await cricketTable(`players/${key}`).catch(() => null) : null;
   const form = table ? formFor(Object.keys(m.players), table) : {};
   const live = m.innings.find((inn) => inn.current) ?? null;
   const batters = live ? live.batting.filter((b) => !b.out).map((b) => b.id) : [];
