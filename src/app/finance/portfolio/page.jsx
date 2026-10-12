@@ -117,7 +117,10 @@ function usePortfolio() {
   // What a normal month of spending costs, for "how long would my cash last".
   const monthlySpend = useMemo(() => typicalMonth(f.transactions, new Date()).total, [f.transactions]);
 
-  return { holdings, history, prices, gold, liabilities, monthlySpend, setup, error, save, remove, demo: f.demo };
+  // Debit cards whose alerts can keep a bank balance current.
+  const debitCards = useMemo(() => f.accounts.filter((a) => a.kind === 'debit' && !a.closed_at), [f.accounts]);
+
+  return { holdings, history, prices, gold, liabilities, monthlySpend, debitCards, setup, error, save, remove, demo: f.demo };
 }
 
 // ---------- page ----------
@@ -274,6 +277,7 @@ export default function Portfolio() {
         <HoldingSheet
           holding={editing}
           prices={p.prices}
+          debitCards={p.debitCards}
           onClose={() => setEditing(null)}
           onSave={async (row) => { await p.save(row, editing.id); setEditing(null); }}
           onDelete={editing.id ? async () => { await p.remove(editing.id); setEditing(null); } : null}
@@ -378,7 +382,12 @@ function title(h) {
 }
 
 function detail(h) {
-  if (h.asset === 'cash') return h.currency === 'AED' ? 'AED' : `${h.currency} ${fmtQty(h.quantity, 2)}`;
+  if (h.asset === 'cash') {
+    const parts = [h.currency === 'AED' ? 'AED' : `${h.currency} ${fmtQty(h.quantity, 2)}`];
+    if (h.last4) parts.push(`•• ${h.last4}`);
+    if (h.last4 || h.card_slug) parts.push(`auto-updates${h.updated_at ? ` · ${relative(h.updated_at)}` : ''}`);
+    return parts.join(' · ');
+  }
   if (h.asset === 'stock') return `${fmtQty(h.quantity, 0)} shares${h.unitAed ? ` × ${h.unitAed.toFixed(2)}` : ''}`;
   if (h.asset === 'crypto') return `${fmtQty(h.quantity, 6)} ${String(h.symbol).toUpperCase()}${h.unitAed ? ` × $${(h.unitAed / AED_PER_USD).toFixed(2)}` : ''}`;
   return `${fmtQty(h.grams, 3)} g${h.unitAed ? ` × ${h.unitAed.toFixed(2)}` : ''}`;
@@ -397,7 +406,7 @@ function PriceNotes({ prices, gold }) {
 }
 
 // ---------- add / edit ----------
-function HoldingSheet({ holding, prices, onClose, onSave, onDelete }) {
+function HoldingSheet({ holding, prices, debitCards = [], onClose, onSave, onDelete }) {
   const kind = holding.asset;
   const [form, setForm] = useState({
     name: holding.name || '',
@@ -408,6 +417,8 @@ function HoldingSheet({ holding, prices, onClose, onSave, onDelete }) {
     grams: holding.grams ?? '',
     cost_aed: holding.cost_aed ?? '',
     note: holding.note || '',
+    last4: holding.last4 || '',
+    card_slug: holding.card_slug || '',
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -423,7 +434,15 @@ function HoldingSheet({ holding, prices, onClose, onSave, onDelete }) {
     if (kind === 'cash') {
       if (!form.name.trim()) return setErr('Name the account');
       if (num(form.quantity) == null || Number.isNaN(num(form.quantity))) return setErr('Enter the balance');
-      row = { asset: 'cash', name: form.name.trim(), currency: form.currency, quantity: num(form.quantity) };
+      if (form.last4 && !/^\d{4}$/.test(form.last4)) return setErr('Account number: the last 4 digits');
+      // A balance you type is the truth as of now: bank emails from before it are already in it.
+      const balanceChanged = !holding.id || Number(holding.quantity) !== num(form.quantity);
+      row = {
+        asset: 'cash', name: form.name.trim(), currency: form.currency, quantity: num(form.quantity),
+        ...((form.last4 || holding.last4) && { last4: form.last4 || null }),
+        ...((form.card_slug || holding.card_slug) && { card_slug: form.card_slug || null }),
+        ...(balanceChanged && (form.last4 || form.card_slug || holding.balance_at) && { balance_at: new Date().toISOString() }),
+      };
     } else if (kind === 'stock' || kind === 'crypto') {
       if (!sym) return setErr('Enter a symbol');
       if (!(num(form.quantity) > 0)) return setErr(kind === 'stock' ? 'Enter how many shares' : 'Enter how much you hold');
@@ -438,7 +457,7 @@ function HoldingSheet({ holding, prices, onClose, onSave, onDelete }) {
     try {
       await onSave(row);
     } catch (x) {
-      setErr(/check constraint|column|schema cache/.test(x.message) ? 'Run the portfolio migration first (see the note at the top).' : x.message);
+      setErr(/last4|card_slug|balance_at/.test(x.message) ? 'Run supabase/migrations/20260928000000_cash_sync.sql first, then save again.' : /check constraint|column|schema cache/.test(x.message) ? 'Run the portfolio migration first (see the note at the top).' : x.message);
       setBusy(false);
     }
   };
@@ -462,6 +481,17 @@ function HoldingSheet({ holding, prices, onClose, onSave, onDelete }) {
                 </Field>
                 <Field label="Balance"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" value={form.quantity} onChange={set('quantity')} placeholder="0.00" /></Field>
               </div>
+              <Field label="Account number ends with" hint="optional · Mashreq salary and transfer emails then update this balance">
+                <input className="fin-input fin-num" inputMode="numeric" maxLength={4} value={form.last4} onChange={(e) => setForm((f) => ({ ...f, last4: e.target.value.replace(/\D/g, '').slice(0, 4) }))} placeholder="1234" />
+              </Field>
+              {debitCards.length > 0 && (
+                <Field label="Debit card on this account" hint="optional · its alerts carry the balance">
+                  <select className="fin-select" value={form.card_slug} onChange={set('card_slug')}>
+                    <option value="">None</option>
+                    {debitCards.map((a) => <option key={a.id} value={a.slug}>{a.name}{a.last4 ? ` •• ${a.last4}` : ''}</option>)}
+                  </select>
+                </Field>
+              )}
             </>
           )}
           {kind === 'stock' && (

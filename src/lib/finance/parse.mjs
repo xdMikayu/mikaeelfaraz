@@ -209,6 +209,34 @@ export function parseMashreqEmail(text) {
 }
 
 /**
+ * Mashreq account movement, e.g. "Your AC No: XXXXXXXX1234 is credited with AED 14000.00 for
+ * Salary." (or "is debited with … for Transfer"). Not a purchase: it moves the balance of the
+ * bank account ending in those digits on the Net worth page. The email has no date of its
+ * own, so it takes when it arrived.
+ */
+export function parseMashreqAccount(text, now = new Date()) {
+  const s = collapse(text);
+  if (!/mashreq/i.test(s)) return null;
+  const m = s.match(/(?:\bAC|A\/C|account)\s*(?:no\.?|number)?\s*:?\s*[x*]*(\d{4})\s+(?:is|has been|was)\s+(credited|debited)\s+(?:with\s+|by\s+|for\s+)?([A-Z]{3})\s*(\d[\d,]*(?:\.\d+)?|\.\d+)(?:\s+(?:for|towards|as|being)\s+([^.]+?))?(?:\.(?:\s|$)|$)/i);
+  if (!m) return null;
+  const [, last4, dir, cur, amt, memo] = m;
+  const amount = toNumber(amt);
+  if (!(amount > 0)) return { ok: false, status: 'unparsed', reason: 'Mashreq account alert without a readable amount' };
+  const when = findDateTime(s.slice(m.index + m[0].length));
+  return {
+    ok: true,
+    kind: 'cash',
+    last4,
+    direction: dir.toLowerCase() === 'credited' ? 'credit' : 'debit',
+    amount,
+    currency: cur.toUpperCase(),
+    memo: memo ? memo.trim() : null,
+    occurredAt: (when ? dubaiDate(when.y, when.mo, when.d, when.hh, when.mi) : now).toISOString(),
+    source: 'email',
+  };
+}
+
+/**
  * Tabby Card alert, e.g. "Transaction of AED 1.00 At DU Apple Pay was successful.
  * Your available Tabby Card limit is AED 1,974.76." No timestamp in the text, so
  * it uses when the alert was received.
@@ -331,7 +359,7 @@ export function parseEvent(event, now = new Date()) {
   const extras = [event.notification, event.input, event.extra, event.name].map((x) => String(x ?? '').trim()).filter(Boolean).join(' ');
   const text = String(event.text ?? '').trim() || pieces || extras;
   if (!text) return { ok: false, status: 'unparsed', reason: 'No text in event (notification arrived empty)' };
-  const parsed = parseSibSms(text, now) || parseMashreqEmail(text) || parseTabbyAlert(text, now, event.source);
+  const parsed = parseSibSms(text, now) || parseMashreqEmail(text) || parseMashreqAccount(text, now) || parseTabbyAlert(text, now, event.source);
   if (parsed) return parsed;
   // App-notification automations also forward chats, promos and reminders; those aren't purchases.
   if (event.source === 'alert') return { ok: false, status: 'ignored', reason: 'Not a purchase notification' };
