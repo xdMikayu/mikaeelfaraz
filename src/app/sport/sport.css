@@ -374,16 +374,11 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-kit-badge { position: absolute; top: 0; right: 10px; width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 900; background: #111; color: #fff; border: 2px solid #fff; font-style: normal; }
 /* The points plate says where he is: black when his match is over, red while it's on, an outline
    (with the kick-off time while he has nothing yet) when it's still to come. */
-.sp-kit-live .sp-kit-pts, .sp-lg-live { background: #d6001c; color: #fff; }
+.sp-kit-live .sp-kit-pts { background: #d6001c; color: #fff; }
 .sp-kit-todo .sp-kit-pts, .sp-kit-bench .sp-kit-pts { background: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
 .sp-kit-live .sp-kit-fx { color: #fff; font-weight: 800; }
 .sp-kit.sp-kit-blank { opacity: 0.55; }
 .sp-benchrow .sp-kit-todo .sp-kit-pts, .sp-benchrow .sp-kit-bench .sp-kit-pts { color: var(--sp-bench-ink); box-shadow: inset 0 0 0 1.5px var(--sp-bench-ink); }
-.sp-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-top: 10px; font-size: 12.5px; font-weight: 650; color: var(--sp-ink-2); }
-.sp-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.sp-legend .sp-kit-pts { font-style: normal; border-radius: 4px; font-size: 12px; padding: 1px 7px; min-width: 0; }
-.sp-legend .sp-lg-done { background: var(--sp-ink); color: var(--sp-page); }
-.sp-legend .sp-lg-todo { background: transparent; color: var(--sp-ink); box-shadow: inset 0 0 0 1.5px var(--sp-ink); }
 .sp-kit-sub { position: absolute; top: 18px; left: 4px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #fff; }
 .sp-kit.sp-kit-out { opacity: 0.55; }
 .sp-kit-fx { margin-top: 3px; font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, 0.92); max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
