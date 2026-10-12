@@ -31,8 +31,9 @@ const NONE = { r: { home: null, away: null }, o: { home: null, draw: null, away:
  */
 export default function Gameweek({ st, live, fixtures, ctx, teams, kit, oddsAt }) {
   const cur = live.event;
-  const curDone = live.fixtures.length > 0 && live.fixtures.every(isDone);
-  const [gw, setGw] = useState(curDone && cur < 38 ? cur + 1 : cur);
+  // The gameweek still to play: the next one once every match in this one has kicked off.
+  const curStarted = live.fixtures.length > 0 && live.fixtures.every((f) => f.started);
+  const [gw, setGw] = useState(curStarted && cur < 38 ? cur + 1 : cur);
   const [view, setView] = useState('match');
   const [sortBy, setSortBy] = useState('goals');
   const [source, setSource] = useState('market');
@@ -52,6 +53,13 @@ export default function Gameweek({ st, live, fixtures, ctx, teams, kit, oddsAt }
   const rows = both.map(({ f, model, market }) => ({ f, ...(src === 'model' ? model : market ?? NONE) }));
   const gaps = src === 'market' && rows.some((x) => x.r.home == null);
   const provider = both.find((x) => x.market?.provider)?.market.provider ?? 'the bookmakers';
+  // Where this gameweek has no prices, the nearest one with a priced match still to come.
+  const pricedGw = useMemo(() => {
+    if (priced) return null;
+    const started = new Set((fixtures ?? live.fixtures).filter((f) => f.started).map((f) => f.id));
+    const gws = Object.entries(ctx.model.byFixture ?? {}).filter(([id]) => !started.has(Number(id))).map(([, v]) => v.event);
+    return [...new Set(gws)].filter((g) => g !== gw).sort((a, b) => Math.abs(a - gw) - Math.abs(b - gw))[0] ?? null;
+  }, [priced, fixtures, live.fixtures, ctx.model, gw]);
   // Opta's xG from FPL's live data, for matches under way or played in the live gameweek.
   const liveXg = useMemo(() => {
     if (gw !== cur) return {};
@@ -104,6 +112,13 @@ export default function Gameweek({ st, live, fixtures, ctx, teams, kit, oddsAt }
               <button key={k} role="radio" aria-checked={src === k} onClick={() => setSource(k)} style={{ height: 30, fontSize: 13 }}>{l}</button>
             ))}
           </div>
+        )}
+        {pricedGw && view !== 'player' && (
+          <p className="sp-small" style={{ margin: '10px 0 0' }}>
+            <button className="sp-link" style={{ fontWeight: 750 }} onClick={() => setGw(pricedGw)}>
+              The bookmakers’ odds for gameweek {pricedGw} {pricedGw > gw ? '→' : '←'}
+            </button>
+          </p>
         )}
       </div>
 
