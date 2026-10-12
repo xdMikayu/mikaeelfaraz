@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useLive, useAge } from './useLive';
 import { ShirtMark } from './glyphs';
 import { kickoff, shortDate, zoneLabel } from './time';
@@ -13,22 +14,22 @@ async function getJson(url, signal) {
 }
 
 // "Australia tour of South Africa 2026/27" → "Australia tour of South Africa".
-const series = (name) => name.replace(/\s+\d{4}(\/\d{2,4})?$/, '');
+export const series = (name) => name.replace(/\s+\d{4}(\/\d{2,4})?$/, '');
 // "Kingsmead, Durban" → "Durban".
-const town = (venue) => venue?.split(',').pop().trim() ?? null;
+export const town = (venue) => venue?.split(',').pop().trim() ?? null;
 const sameDay = (iso) => new Date(iso).toDateString() === new Date().toDateString();
 const when = (iso) => (sameDay(iso) ? kickoff(iso) : `${shortDate(iso)}, ${kickoff(iso)}`);
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : word.endsWith('h') ? 'es' : 's'}`;
 // ESPN's line repeats what situation() already says in words; then it's left out.
 const repeats = (status) => /\b(lead|trail|require|need)s?\b/i.test(status);
 // Chances never read 0% or 100% while there's anything left to play.
-const pct = (p) => (p < 0.01 ? 'under 1%' : p > 0.99 ? 'over 99%' : `${Math.round(p * 100)}%`);
-const share = (n, of) => `${Math.round((n / of) * 100)}%`;
+export const pct = (p) => (p < 0.01 ? 'under 1%' : p > 0.99 ? 'over 99%' : `${Math.round(p * 100)}%`);
+export const share = (n, of) => `${Math.round((n / of) * 100)}%`;
 const scoreOf = ([, runs, wkts]) => (runs == null ? '' : wkts >= 10 ? `${runs}` : `${runs}/${wkts}`);
-const dayOf = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+export const dayOf = (iso) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 /** Under the scores: what's happening (live in red), the day of a long match, and the result or start. */
-function Status({ m, said }) {
+export function Status({ m, said }) {
   const day = m.session ? (m.days ? `${m.session} of ${m.days}` : m.session) : null;
   const extra = m.status && !(said && repeats(m.status)) ? m.status : null;
   if (m.state === 'in' && !started(m)) return <p className="sp-cm-status">{extra && !/scheduled to begin/i.test(extra) ? `${extra} · ` : ''}No score yet</p>;
@@ -79,12 +80,17 @@ function Match({ m }) {
       <Status m={m} said={Boolean(words)} />
       {m.read && <MatchRead m={m} read={m.read} />}
       {m.read?.record && <GroundRecord m={m} read={m.read} />}
+      {m.league?.id && (
+        <Link className="sp-cm-more" href={`/sport/cricket/match?l=${m.league.id}&id=${m.id}`}>
+          {m.state === 'pre' ? 'Teams and preview' : 'Scorecard, players and stats'} <span aria-hidden="true">›</span>
+        </Link>
+      )}
     </li>
   );
 }
 
 /** Two-way bar in the sides' colours, each side's chance under it. */
-function Chances({ m, chances }) {
+export function Chances({ m, chances }) {
   const [a, b] = m.teams;
   // Two sides in the same colour (or none) fall back to ink and grey.
   const same = !a.color || !b.color || a.color.toLowerCase() === b.color.toLowerCase();
@@ -112,7 +118,7 @@ const competitionOf = (m) => (m.international ? (m.women ? 'women’s internatio
  * Matchday's read under the score: where the innings is heading or what a chase usually brings,
  * par at the ground, each side's chance, and in a Test's last innings how chases that size went.
  */
-function MatchRead({ m, read }) {
+export function MatchRead({ m, read }) {
   const now = read.now;
   const before = m.state === 'pre' || !started(m);
   const chances = now?.chances ?? (before ? read.pre : null);
@@ -183,7 +189,7 @@ function lastLine(x) {
 }
 
 /** The ground's record for this kind of match, folded away under the card. */
-function GroundRecord({ m, read }) {
+export function GroundRecord({ m, read }) {
   const r = read.record;
   const [kind, gender] = read.format.split('-');
   const women = gender === 'female' ? 'Women’s ' : '';
