@@ -4,16 +4,13 @@
 // for 3 hours; the page drops any that have started since.
 import { upcomingInternationals } from '@/lib/sport/cricket.mjs';
 import { readMatch } from '@/lib/sport/cricket-read.mjs';
-import model from '@/lib/sport/cricket/model.json';
-import grounds from '@/lib/sport/cricket/grounds.json';
-import ratings from '@/lib/sport/cricket/ratings.json';
+import { modelTables } from '@/lib/sport/cricket-data.mjs';
 
 export const dynamic = 'force-dynamic';
 
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/cricket/scorepanel';
 const headers = (s) => ({ 'cache-control': 'public, max-age=0, must-revalidate', 'cdn-cache-control': `public, s-maxage=${s}`, 'netlify-cdn-cache-control': `public, s-maxage=${s}, durable` });
 const ymd = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, '');
-const tables = { model, grounds: grounds.grounds, ratings };
 
 export async function GET() {
   const days = Array.from({ length: 8 }, (_, i) => ymd(Date.now() + i * 864e5));
@@ -28,8 +25,9 @@ export async function GET() {
   if (!feeds.length) return Response.json({ error: 'ESPN didn’t answer' }, { status: 502, headers: { 'cache-control': 'no-store' } });
   try {
     const now = Date.now();
+    const tables = await modelTables().catch(() => null);
     const matches = upcomingInternationals(feeds, now).map((m) => {
-      const read = readMatch(m, tables, now, { record: false });
+      const read = tables && readMatch(m, tables, now, { record: false });
       return read ? { ...m, read } : m;
     });
     return Response.json({ at: new Date(now).toISOString(), matches }, { headers: headers(3 * 3600) });

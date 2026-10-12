@@ -5,24 +5,23 @@
 // path-only key is right; it keeps an answer for 30 seconds, about the time a ball takes.
 import { cricketNow, leaguesOn } from '@/lib/sport/cricket.mjs';
 import { readMatch } from '@/lib/sport/cricket-read.mjs';
-import model from '@/lib/sport/cricket/model.json';
-import grounds from '@/lib/sport/cricket/grounds.json';
-import ratings from '@/lib/sport/cricket/ratings.json';
+import { modelTables } from '@/lib/sport/cricket-data.mjs';
 
 export const dynamic = 'force-dynamic';
 
 const FEED = 'https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket';
 const headers = (s) => ({ 'cache-control': 'public, max-age=0, must-revalidate', 'cdn-cache-control': `public, s-maxage=${s}`, 'netlify-cdn-cache-control': `public, s-maxage=${s}, durable` });
 const failed = (error) => Response.json({ error }, { status: 502, headers: { 'cache-control': 'no-store' } });
-const tables = { model, grounds: grounds.grounds, ratings };
 
 export async function GET() {
   try {
     const res = await fetch(FEED, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' }, cache: 'no-store' });
     if (!res.ok) throw new Error(`ESPN ${res.status}`);
     const now = Date.now();
+    // Scores come first: if the model's tables can't be read, the matches go out without a read.
+    const tables = await modelTables().catch(() => null);
     const all = cricketNow(await res.json()).map((m) => {
-      const read = readMatch(m, tables, now);
+      const read = tables && readMatch(m, tables, now);
       return read ? { ...m, read } : m;
     });
     return Response.json(
