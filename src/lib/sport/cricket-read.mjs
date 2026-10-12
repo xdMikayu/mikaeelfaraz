@@ -53,9 +53,9 @@ function strengthOf(F, table, m, here) {
   return { chances: [p, 1 - p], home: home === 1 ? m.teams[0].name : home === -1 ? m.teams[1].name : null };
 }
 
-// "Sri Lanka won the toss and elected to bat" → the side batting first, or null.
+// "Sri Lanka won the toss and elected to bat", "Victoria won toss & fielded" → the side batting first, or null.
 function battingFirst(m) {
-  const t = String(m.status ?? '').match(/^(.+?) won the toss and (?:elected|chose) to (bat|field|bowl)/i);
+  const t = String(m.status ?? '').match(/^(.+?) won (?:the )?toss (?:and|&) (?:elected to |chose to )?(bat|field|bowl)/i);
   if (!t) return null;
   const caller = m.teams.find((x) => x.name === t[1] || x.short === t[1]);
   if (!caller) return null;
@@ -112,6 +112,43 @@ function oneDayNow(m, F, par, strength) {
   return null;
 }
 
+/**
+ * Each side's chance after every over of a one-day match, as the model would have given it then:
+ * [{ inn, over, chances }] in m.teams order, from before a ball (over 0). innings: the match's first
+ * two innings, { team, runs, target, ballLimit, overs: [{ n, total, down, balls }] }, where balls is
+ * the legal balls bowled by the end of the over. Null for a match shortened by the weather.
+ */
+function chancesByOver(m, F, par, strength, innings) {
+  const N = F.balls;
+  const [one, two] = innings;
+  if (!one || (one.ballLimit && one.ballLimit !== N) || (two?.ballLimit && two.ballLimit !== N)) return null;
+  const sideOf = (id) => m.teams.find((t) => t.id === id);
+  const blend = (p, side, rest, gamma) => {
+    const st = strength ? strength.chances[m.teams.indexOf(side)] : null;
+    return st == null ? p : withStrength(p, st, rest, gamma);
+  };
+  const out = strength ? [{ inn: 1, over: 0, chances: strength.chances }] : [];
+  const first = sideOf(one.team);
+  for (const o of one.overs) {
+    const state = { runs: o.total, balls: Math.min(o.balls, N), wickets: Math.min(o.down, 10) };
+    out.push({ inn: 1, over: o.n, chances: order(m, first, blend(firstWin(F.shape, F.first, state, par), first, (2 * N - state.balls) / (2 * N), F.gamma.first)) });
+  }
+  if (!two) return out;
+  const chaser = sideOf(two.team);
+  const target = two.target ?? one.runs + 1;
+  out.push({ inn: 2, over: 0, chances: order(m, chaser, blend(chaseWin(F.shape, F.chase, { need: target, left: N, wickets: 0, target }, par), chaser, 0.5, F.gamma.chase)) });
+  for (const o of two.overs) {
+    const need = target - o.total;
+    const left = N - o.balls;
+    let p;
+    if (need <= 0) p = 1;
+    else if (o.down >= 10 || left <= 0) p = need === 1 ? 0.5 : 0;
+    else p = blend(chaseWin(F.shape, F.chase, { need, left, wickets: o.down, target }, par), chaser, left / (2 * N), F.gamma.chase);
+    out.push({ inn: 2, over: o.n, chances: order(m, chaser, p) });
+  }
+  return out;
+}
+
 /** How fourth-innings chases of this size have gone in Tests, once a side is set a target. */
 function testChase(m, key, tables) {
   const s = situation(m);
@@ -134,11 +171,13 @@ function testChase(m, key, tables) {
  *              projected (first innings: { mean, lo, hi }, lo and hi bracketing the middle 80%),
  *              need and usual (chase: what it needs and what a side usually adds from there) }
  *   testChase  in a Test's last innings, how chases of that size have gone
- * opts.record: false leaves the ground's record out (for lists of fixtures).
+ * opts.record: false leaves the ground's record out (for lists of fixtures). opts.whole: for the match
+ * page, a finished match gets its read too, and opts.innings (see chancesByOver) adds `byOver`: each
+ * side's chance after every over.
  */
 export function readMatch(m, tables, now = Date.now(), opts = {}) {
   const key = formatOf(m);
-  if (!key || m.teams.length !== 2 || m.state === 'post') return null;
+  if (!key || m.teams.length !== 2 || (m.state === 'post' && !opts.whole)) return null;
   const g = m.venue ? findGround(tables.grounds, m.venue) : null;
   const here = g?.formats?.[key] ?? null;
   const ground = g ? { name: g.name, place: g.place } : null;
@@ -162,5 +201,6 @@ export function readMatch(m, tables, now = Date.now(), opts = {}) {
     pre: strength?.chances ?? null,
     home: strength?.home ?? null,
     now: m.state === 'post' ? null : oneDayNow(m, F, par, strength),
+    ...(opts.innings ? { byOver: chancesByOver(m, F, par, strength, opts.innings) } : null),
   };
 }
