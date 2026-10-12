@@ -252,8 +252,17 @@ export function buildPacket({ st, fixtures, entry, next, kit, ctx, learned, nx, 
     record,
   });
   const nm = (id) => els[id]?.name ?? String(id);
+  // Which matches' expected goals come from the bookmakers' prices rather than our ratings.
+  const priced = gws
+    .map((g) => {
+      const fx = fixtures.filter((f) => f.event === g);
+      const n = fx.filter((f) => ctx.model.byFixture?.[f.id]).length;
+      return n ? `gameweek ${g} (${n === fx.length ? 'every match' : `${n} of ${fx.length} matches`})` : null;
+    })
+    .filter(Boolean);
   return {
     gameweek: gw,
+    goalRatesFrom: priced.length ? `bookmakers' prices for ${priced.join(', ')}; our team ratings for the rest` : "our team ratings (no bookmakers' prices yet)",
     now: ukLabel(now),
     deadline: { uk: ukLabel(deadline), hoursAway: Math.round((deadline - now) / 36e5) },
     timing: {
@@ -524,7 +533,7 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-const SYSTEM = `You are an expert Fantasy Premier League adviser inside Matchday, a stats site. You get one manager's situation as JSON. The numbers come from our models: xp is expected FPL points per gameweek (first entry is this deadline's gameweek), from team ratings fitted on xG since 2023/24, each player's xG and xA, likely minutes, and how much each opponent concedes to his position. News comes from a web search run minutes ago; FPL's own injury flags are in each player's status.
+const SYSTEM = `You are an expert Fantasy Premier League adviser inside Matchday, a stats site. You get one manager's situation as JSON. The numbers come from our models: xp is expected FPL points per gameweek (first entry is this deadline's gameweek), from each side's expected goals (the bookmakers' prices where they've priced the match, as goalRatesFrom says, otherwise team ratings fitted on xG since 2023/24), each player's xG and xA, likely minutes, and how much each opponent concedes to his position. News comes from a web search run minutes ago; FPL's own injury flags are in each player's status.
 
 Decide what the manager should do before this deadline, and when. Think in this order:
 

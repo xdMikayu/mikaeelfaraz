@@ -310,6 +310,9 @@ export function laterAvailability(el, f, k, now = Date.now()) {
 
 /** Expected goals each side scores in this fixture, before kick-off. */
 export function fixtureRates(f, model) {
+  // The bookmakers' expected goals where they've priced the match (see /api/sport/odds).
+  const odds = model.byFixture?.[f.id];
+  if (odds) return { home: odds.home, away: odds.away, odds };
   const r = model.rates?.(f.home, f.away);
   if (r) return r;
   const h = model.teams[f.home] ?? { for: model.avg, against: model.avg };

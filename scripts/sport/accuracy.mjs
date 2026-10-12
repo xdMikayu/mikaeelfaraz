@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { getStatic, getFixtures, getLive } from '../../src/lib/sport/fpl-server.mjs';
 import { projectAhead } from '../../src/lib/sport/fpl.mjs';
 import { netBoard } from '../../src/lib/sport/netxg.mjs';
+import { bookmakersByFixture } from '../../src/lib/sport/odds-feed.mjs';
 import { ROOT, DATA, readJson, loadKit, makeCtx } from './kit.mjs';
 
 const SNAP = join(ROOT, 'data/sport/projections');
@@ -25,7 +26,9 @@ const now = Date.now();
 const target = st.events.find((e) => new Date(e.deadline).getTime() > now);
 if (target) {
   const { kit, learned, nx } = await loadKit();
-  const ctx = makeCtx(st, kit);
+  // As the page projects them: the bookmakers' expected goals for the matches they've priced.
+  const odds = await bookmakersByFixture(st.teams, fixtures, now).catch(() => ({ fixtures: {} }));
+  const ctx = makeCtx(st, kit, undefined, odds.fixtures);
   const gw = target.id;
   const ids = st.elements.map((e) => e.id);
   const ahead = projectAhead(ids, fixtures, [gw], ctx);
@@ -38,8 +41,9 @@ if (target) {
     if (!c?.fx.length) continue;
     players[e.id] = [r2(c.xp), r2(c.xg), r2(c.xa), r2(net[e.id]?.xg ?? 0), r2(net[e.id]?.xa ?? 0), r2(fplEp(e))];
   }
-  await writeFile(join(SNAP, `gw${gw}.json`), JSON.stringify({ gw, deadline: target.deadline, at: new Date().toISOString(), fields: ['xp', 'xg', 'xa', 'netXg', 'netXa', 'fplEp'], players }));
-  console.log(`Saved gameweek ${gw} projections for ${Object.keys(players).length} players`);
+  const priced = Object.values(odds.fixtures).filter((v) => v.event === gw).length;
+  await writeFile(join(SNAP, `gw${gw}.json`), JSON.stringify({ gw, deadline: target.deadline, at: new Date().toISOString(), pricedMatches: priced, fields: ['xp', 'xg', 'xa', 'netXg', 'netXa', 'fplEp'], players }));
+  console.log(`Saved gameweek ${gw} projections for ${Object.keys(players).length} players (${priced} matches from bookmakers' prices)`);
 }
 
 /* ------------------------------------------------------------- grade finished gameweeks */

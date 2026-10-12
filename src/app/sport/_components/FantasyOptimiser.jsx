@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { planTransfers, buildSquad, rotationPairs, bestXI, estimateFree } from '@/lib/sport/optimise.mjs';
-import { shirt, one, Face } from './fplbits';
+import { one, heat, Face } from './fplbits';
 import { priceOutlook } from './FantasyPrices';
 
 const MODES = [
@@ -170,7 +170,7 @@ export function Rotations({ gws, ahead, els, teams, teamsPlayed }) {
     <section className="sp-panel">
       <h2 className="sp-h2">Fixture rotation</h2>
       <p className="sp-small sp-ink2" style={{ margin: '4px 0 10px' }}>
-        For the last spots in your eleven: two cheap regular starters from clubs whose fixtures alternate, so one of them always has the better week. Each week, start whichever projects higher.
+        For the last spots in your eleven: two cheap regular starters from clubs whose fixtures alternate, so one of them always has the better week. Each week, start whichever projects higher, the filled square. Each square shows his opponent, in capitals at home, over his projected points.
       </p>
       <div className="sp-opt-ctl">
         <div className="sp-tabs" role="radiogroup" aria-label="Position" style={{ border: 0, gap: 12 }}>
@@ -197,17 +197,32 @@ export function Rotations({ gws, ahead, els, teams, teamsPlayed }) {
             <span className="sp-rot-val"><b className="sp-num">{one(p.total)}</b><span className="sp-tiny sp-muted">£{p.cost.toFixed(1)}m</span></span>
           </div>
           <div className="sp-rot-weeks">
-            {p.weeks.map((w) => {
-              const pick = els[w.pick];
-              return (
-                <span key={w.gw} title={`GW${w.gw}: ${els[p.a].name} ${one(w.a)}, ${els[p.b].name} ${one(w.b)}`}>
-                  <span className="sp-tiny sp-muted">GW{w.gw}</span>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={shirt(teams[pick.team]?.code, pick.type === 1)} alt="" width="20" height="20" />
-                  <b className="sp-tiny sp-num">{one(w.best)}</b>
-                </span>
-              );
-            })}
+            <table className="sp-heat">
+              <thead>
+                <tr>
+                  <th />
+                  {p.weeks.map((w) => <th key={w.gw}>GW{w.gw}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {[p.a, p.b].map((id) => (
+                  <tr key={id}>
+                    <th><span className="sp-rot-name">{els[id].name}</span></th>
+                    {p.weeks.map((w) => {
+                      const c = ahead[id]?.per[w.gw];
+                      if (!c?.fx.length) return <td key={w.gw} className="sp-heat-blank" title={`GW${w.gw}: no match`}>–</td>;
+                      const start = w.pick === id;
+                      return (
+                        <td key={w.gw} className={start ? '' : 'sp-heat-blank'} style={start ? heat(0.9) : undefined} title={`GW${w.gw}: ${els[id].name} v ${c.fx.map((x) => `${teams[x.opp]?.short} (${x.home ? 'H' : 'A'})`).join(' and ')}, ${one(c.xp)} projected${start ? ', start him' : ''}`}>
+                          <span className="sp-heat-opp">{c.fx.map((x) => (x.home ? teams[x.opp]?.short : teams[x.opp]?.short.toLowerCase())).join(' ')}</span>
+                          <b className="sp-num">{one(c.xp)}</b>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       ))}
