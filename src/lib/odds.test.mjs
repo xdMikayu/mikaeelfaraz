@@ -94,6 +94,17 @@ test('prices from an ESPN scoreboard match', () => {
   assert.equal(pricesOf(noDraw), null);
 });
 
+test('a match summary’s prices read the same as the scoreboard’s', () => {
+  // ESPN's summary (pickcenter) lays the same DraftKings prices out flat.
+  const summary = { odds: [{ provider: { name: 'DraftKings' }, details: 'MNC -450', overUnder: 3.5, overOdds: -110, underOdds: -120, homeTeamOdds: { moneyLine: -450 }, awayTeamOdds: { moneyLine: 950 }, drawOdds: { moneyLine: 600 } }] };
+  const board = { odds: [{ provider: { name: 'DraftKings' }, overUnder: 3.5, moneyline: { home: { close: { odds: '-450' } }, draw: { close: { odds: '+600' } }, away: { close: { odds: '+950' } } }, total: { over: { close: { odds: '-110' } }, under: { close: { odds: '-120' } } } }] };
+  const a = pricesOf(summary);
+  const b = pricesOf(board);
+  for (const k of ['home', 'draw', 'away', 'over', 'margin']) near(a[k], b[k], 1e-12, k);
+  assert.equal(a.line, 3.5);
+  near(a.home, 0.7746, 1e-4, 'Man City at home to Ipswich');
+});
+
 test('what FPL needs from a priced match', () => {
   const v = bookmakersView(pricesOf(espn()));
   assert.equal(v.provider, 'DraftKings');

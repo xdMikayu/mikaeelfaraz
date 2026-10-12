@@ -2,6 +2,7 @@
 // so live scores cost no server calls at all. Everything here turns ESPN's JSON into the small
 // shapes the pages use; nothing downstream touches ESPN field names.
 import { xgFor } from './xg.mjs';
+import { pricesOf } from './odds.mjs';
 
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 const WEB = 'https://site.web.api.espn.com/apis/v2/sports/soccer';
@@ -455,6 +456,8 @@ export async function fetchMatch(slug, id, opts) {
     lineups: { home: lineupFrom(rHome, events), away: lineupFrom(rAway, events) },
     commentary,
     form: { home: formFrom(d.lastFiveGames, match.home.id), away: formFrom(d.lastFiveGames, match.away.id) },
+    // The bookmakers' prices, before kick-off only: once a match starts, ESPN's are in-play ones.
+    prices: match.status.state === 'pre' ? pricesOf({ odds: d.pickcenter ?? d.odds }) : null,
     h2h: (d.headToHeadGames?.[0]?.events ?? d.seasonseries?.[0]?.events ?? []).slice(0, 5).map((g) => {
       const hc = g.competitors?.find((c) => c.homeAway === 'home');
       const ac = g.competitors?.find((c) => c.homeAway === 'away');

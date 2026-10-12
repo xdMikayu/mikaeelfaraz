@@ -7,6 +7,7 @@ import { usePlayerLog } from './matchupData';
 import { one } from './fplbits';
 
 const seasonLabel = (y) => `${y}/${String(Number(y) + 1).slice(2)}`;
+const pc = (p) => `${Math.min(99, Math.max(1, Math.round(p * 100)))}%`;
 const shortDay = (d) => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' });
 
 /** Line chart of a series with a dashed reference level; ink only. */
@@ -78,6 +79,14 @@ export default function MatchupPanel({ el, ctx, teams, kit, fixtures, nextFx }) 
     return Number.isFinite(first) ? Array.from({ length: 5 }, (_, i) => first + i).filter((g) => g <= 38) : [];
   }, [fixtures, el.team]);
   const ahead = useMemo(() => (gws.length ? projectAhead([el.id], fixtures, gws, ctx)[el.id] : null), [el.id, fixtures, gws, ctx]);
+  // The bookmakers' view of his club's next match still to start, where they've priced it.
+  const book = useMemo(() => {
+    const f = (fixtures ?? []).filter((x) => !x.started && (x.home === el.team || x.away === el.team)).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))[0];
+    const b = f && ctx.model.byFixture?.[f.id];
+    if (!b) return null;
+    const home = f.home === el.team;
+    return { f, home, opp: home ? f.away : f.home, goals: home ? b.home : b.away, against: home ? b.away : b.home, cs: home ? b.csHome : b.csAway, win: home ? b.win[0] : b.win[2], provider: b.provider };
+  }, [fixtures, el.team, ctx.model]);
 
   if (!kit) return <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0' }}>Loading matchup data…</p>;
   const maxAhead = Math.max(6, ...(ahead ? Object.values(ahead.per).map((c) => c.xp) : [0]));
@@ -99,6 +108,25 @@ export default function MatchupPanel({ el, ctx, teams, kit, fixtures, nextFx }) 
               );
             })}
           </div>
+        </div>
+      )}
+
+      {book && (
+        <div className="sp-mu-block">
+          <h4 className="sp-mu-h">Bookmakers, gameweek {book.f.event}: v {teams[book.opp]?.short} ({book.home ? 'H' : 'A'})</h4>
+          <p className="sp-tiny sp-ink2" style={{ margin: 0 }}>
+            {teams[el.team]?.name}:{' '}
+            {el.type <= 2 ? (
+              <>
+                <b style={{ color: 'var(--sp-ink)' }}>{pc(book.cs)} chance of a clean sheet</b>, {book.goals.toFixed(2)} expected goals for and {book.against.toFixed(2)} against
+              </>
+            ) : (
+              <>
+                <b style={{ color: 'var(--sp-ink)' }}>{book.goals.toFixed(2)} expected goals</b>, {book.against.toFixed(2)} against and a {pc(book.cs)} chance of a clean sheet
+              </>
+            )}
+            ; {pc(book.win)} to win. From {book.provider ?? 'the bookmakers'}’ prices via ESPN, with the margin taken out; his projection uses them.
+          </p>
         </div>
       )}
 
