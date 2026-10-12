@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { fetchStandings } from '@/lib/sport/espn.mjs';
 import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, ratesFromTable } from '@/lib/sport/forecast.mjs';
 import { mainRole, versus, rolesFromLines, ROLE_ONE } from '@/lib/sport/matchups.mjs';
+import { bookmakersView } from '@/lib/sport/odds.mjs';
 import { useLive } from './useLive';
 import { useMatchupIndex, useForecastKit, usePlayerLog, useNetXgModel } from './matchupData';
 
@@ -91,6 +92,29 @@ export function ForecastPanel({ data, rates, colors, names }) {
         {rates.source === 'xg'
           ? 'Team ratings from every Premier League match since 2023/24, mostly xG with some weight on goals, recent matches counting more; goals as Poisson with a small correction for low scores.'
           : 'From goals for and against in the league table so far, with home advantage. Cruder than our Premier League model, which uses xG.'}
+      </p>
+    </section>
+  );
+}
+
+/** Before kick-off: what the bookmakers' prices say, with their margin out, as the same numbers as ours. */
+export function BookmakersPanel({ prices, colors, names }) {
+  const v = useMemo(() => bookmakersView(prices), [prices]);
+  return (
+    <section className="sp-panel">
+      <div className="sp-section-head">
+        <h2 className="sp-h2">Bookmakers</h2>
+        <span className="sp-tiny sp-muted">{prices.provider ?? 'Their prices'} via ESPN</span>
+      </div>
+      <Split p={prices} colors={colors} names={names} />
+      <dl className="sp-fc-grid">
+        <div><dt>Expected goals</dt><dd className="sp-num">{v.home.toFixed(2)}–{v.away.toFixed(2)}</dd></div>
+        <div><dt>Both score</dt><dd className="sp-num">{pct(v.btts)}</dd></div>
+        {prices.over != null && <div><dt>Over {prices.line} goals</dt><dd className="sp-num">{pct(prices.over)}</dd></div>}
+        <div><dt>Clean sheet</dt><dd className="sp-num">{names.home} {pct(v.csHome)} · {names.away} {pct(v.csAway)}</dd></div>
+      </dl>
+      <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0' }}>
+        Their win, draw and over/under prices with the bookmaker’s margin ({Math.round(prices.margin * 100)}%) taken out. Expected goals are the scoring rates that best fit those prices; both scoring and clean sheets follow from them.
       </p>
     </section>
   );

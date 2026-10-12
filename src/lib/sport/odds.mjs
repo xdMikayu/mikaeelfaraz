@@ -87,8 +87,9 @@ export function fitGoals({ home, draw, away, over = null, line = 2.5 }) {
 const pick = (side) => side?.close?.odds ?? side?.open?.odds ?? null;
 
 /**
- * The prices ESPN carries for a match (a scoreboard competition), as fair chances:
- * { provider, home, draw, away, over, line, margin } (over and line when the total is priced), or null.
+ * The prices ESPN carries for a match, as fair chances: { provider, home, draw, away, over, line,
+ * margin } (over and line when the total is priced), or null. Takes a scoreboard competition, or
+ * { odds: summary.pickcenter } from a match summary (the same prices, laid out differently).
  */
 export function pricesOf(competition) {
   const o = (competition?.odds ?? []).find((x) => x?.moneyline || x?.drawOdds);
@@ -98,8 +99,8 @@ export function pricesOf(competition) {
   if (raw.some((p) => p == null)) return null;
   const [home, draw, away] = fair(raw);
   const out = { provider: o.provider?.displayName ?? o.provider?.name ?? null, home, draw, away, margin: raw.reduce((s, p) => s + p, 0) - 1 };
-  const ov = implied(pick(o.total?.over));
-  const un = implied(pick(o.total?.under));
+  const ov = implied(pick(o.total?.over) ?? o.overOdds);
+  const un = implied(pick(o.total?.under) ?? o.underOdds);
   const line = Number(o.overUnder ?? String(o.total?.over?.close?.line ?? '').replace(/^o/, ''));
   if (ov != null && un != null && Number.isFinite(line) && line > 0) {
     out.over = fair([ov, un])[0];
