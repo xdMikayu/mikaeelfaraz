@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { projectAhead, returnOdds, suggestTransfers } from '@/lib/sport/fpl.mjs';
+import { projectAhead, returnOdds, suggestTransfers, fixtureRates } from '@/lib/sport/fpl.mjs';
 import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
 import Record from './FantasyRecord';
@@ -42,7 +42,8 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
     if (!gws.includes(f.event) || f.started) continue;
     for (const side of ['home', 'away']) {
       const t = f[side];
-      const r = kit?.ratings && ctx.model.rates?.(f.home, f.away);
+      // The bookmakers' expected goals where they've priced the match, as in the projections.
+      const r = kit?.ratings ? fixtureRates(f, ctx.model) : null;
       const forG = r ? (side === 'home' ? r.home : r.away) : null;
       const agst = r ? (side === 'home' ? r.away : r.home) : null;
       ((fxByTeam[t] ??= {})[f.event] ??= []).push({ opp: side === 'home' ? f.away : f.home, home: side === 'home', forG, agst });
@@ -229,7 +230,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
               </div>
             </header>
             <p className="sp-tiny sp-muted sp-pad" style={{ margin: '0 0 6px' }}>
-              {ticker === 'att' ? 'Goals each club is expected to score; darker is more.' : 'Goals each club is expected to concede; darker is fewer, better for clean sheets.'} From our ratings on every match since 2023/24.
+              {ticker === 'att' ? 'Goals each club is expected to score; darker is more.' : 'Goals each club is expected to concede; darker is fewer, better for clean sheets.'} From {ctx.model.byFixture ? 'the bookmakers’ prices where they’re out, then ' : ''}our ratings on every match since 2023/24.
             </p>
             <div className="sp-heat-wrap">
               <table className="sp-heat sp-ticker">
@@ -283,7 +284,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
       )}
 
       <p className="sp-note sp-pad" style={{ margin: '12px 0 0' }}>
-        Our projections, not FPL’s. Goal rates come from team ratings fitted on every Premier League match since 2023/24 (xG and goals, recent matches weighted more); each player’s share from his xG and xA per 90 and how often he starts;
+        Our projections, not FPL’s. Goal rates come from {ctx.model.byFixture ? 'the bookmakers’ prices for matches they’ve priced (about a week ahead; see Gameweek), then from ' : ''}team ratings fitted on every Premier League match since 2023/24 (xG and goals, recent matches weighted more); each player’s share from his xG and xA per 90 and how often he starts;
         {kit ? ' then tilted by how much of what each opponent concedes usually goes to his position.' : ' matchup data is still loading.'} Rotation, injuries after today and price changes aren’t modelled.
       </p>
     </div>

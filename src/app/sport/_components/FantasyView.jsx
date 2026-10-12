@@ -22,6 +22,13 @@ async function api(path, signal) {
   return json;
 }
 
+// The bookmakers' expected goals for priced Premier League matches; the page works without them.
+async function oddsApi(signal) {
+  const res = await fetch('/api/sport/odds', { signal });
+  if (!res.ok) throw new Error(`odds ${res.status}`);
+  return res.json();
+}
+
 const liveGw = (live) => live?.fixtures.some((f) => (f.started && !f.finished) || (!f.started && new Date(f.kickoff) - Date.now() < 15 * 60e3 && new Date(f.kickoff) > Date.now() - 3 * 3600e3));
 
 export default function FantasyView() {
@@ -32,6 +39,7 @@ export default function FantasyView() {
   const gw = st.data?.current;
   const live = useLive((signal) => (gw ? api(`live/${gw}`, signal) : Promise.resolve(null)), [gw], { every: 30000, live: liveGw });
   const season = useLive((signal) => api('fixtures', signal), [], { every: 600000, live: () => false });
+  const odds = useLive((signal) => oddsApi(signal), [], { every: 1800000, live: () => true });
   const entry = useLive((signal) => (gw && entryId ? api(`entry/${entryId}/${gw}`, signal) : Promise.resolve(null)), [gw, entryId], {
     every: 60000,
     live: () => liveGw(live.data),
@@ -56,16 +64,18 @@ export default function FantasyView() {
         <button className="sp-btn" onClick={() => update({ fplEntry: null })}>Use a different team ID</button>
       </div>
     );
-  return <Live st={st.data} live={live.data} entry={entry.data} fixtures={season.data} liveAt={live.at} liveErr={live.error} />;
+  return <Live st={st.data} live={live.data} entry={entry.data} fixtures={season.data} odds={odds.data?.fixtures ?? null} oddsAt={odds.data?.at ?? null} liveAt={live.at} liveErr={live.error} />;
 }
 
-function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
+function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr }) {
   const { prefs, update } = usePrefs();
   const mx = useMatchupIndex();
   const learned = useNetXgModel();
   const kit = useForecastKit(mx.data, learned.data);
   // FPL's season numbers first; the longer matchup history replaces them once its file has loaded.
-  const model = useMemo(() => (kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements)), [st, kit]);
+  const base = useMemo(() => (kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements)), [st, kit]);
+  // Where the bookmakers have priced a match, their expected goals stand in for the model's.
+  const model = useMemo(() => (odds && Object.keys(odds).length ? { ...base, byFixture: odds } : base), [base, odds]);
   const ctx = useMemo(
     () => ({ elements: Object.fromEntries(st.elements.map((e) => [e.id, e])), live: live.elements, fixtures: live.fixtures, bonus: projectedBonus(live.fixtures), model }),
     [st, live, model]
@@ -162,7 +172,7 @@ function Live({ st, live, entry, fixtures, liveAt, liveErr }) {
       {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} entry={entry} leagueId={leagueId} />}
       {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
-      {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} />}
+      {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} oddsAt={oddsAt} />}
       {tab === 'players' && <Players st={st} ctx={ctx} teams={teams} squad={picks?.picks.map((p) => p.element) ?? []} fixtures={fixtures} kit={kit} />}
       {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
     </div>

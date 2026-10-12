@@ -22,13 +22,18 @@ export function makeKit(ix, learned) {
   };
 }
 
-/** ctx as the Fantasy page builds it, from getStatic() and a live gameweek (or none). */
-export function makeCtx(st, kit, live = { elements: {}, fixtures: [] }) {
+/**
+ * ctx as the Fantasy page builds it, from getStatic() and a live gameweek (or none). byFixture: the
+ * bookmakers' expected goals by FPL fixture id (/api/sport/odds), used in place of the model's
+ * where a match is priced.
+ */
+export function makeCtx(st, kit, live = { elements: {}, fixtures: [] }, byFixture = null) {
+  const model = kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements);
   return {
     elements: Object.fromEntries(st.elements.map((e) => [e.id, e])),
     live: live.elements,
     fixtures: live.fixtures,
     bonus: projectedBonus(live.fixtures),
-    model: kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements),
+    model: byFixture && Object.keys(byFixture).length ? { ...model, byFixture } : model,
   };
 }
