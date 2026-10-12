@@ -822,6 +822,71 @@ details[open] > summary .sp-chev { transform: rotate(90deg); }
 .sp-cm-rec-h { margin-top: 10px !important; color: var(--sp-muted); font-weight: 650; }
 .sp-cm-last { list-style: none; margin: 4px 0 4px; padding: 0; display: grid; gap: 3px; color: var(--sp-ink); }
 .sp-cu-odds { color: var(--sp-ink-2) !important; }
+.sp-cm-more { display: inline-block; margin-top: 6px; font-size: 13.5px; font-weight: 750; color: var(--sp-ink); text-decoration: underline; text-decoration-color: var(--sp-rule-2); text-underline-offset: 3px; }
+
+/* The cricket match page */
+.sp-cmh { padding-top: 12px; }
+.sp-cmh-back { font-size: 13.5px; font-weight: 700; color: var(--sp-ink-2); }
+.sp-cmh-team { min-height: 34px; font-size: 18px; }
+.sp-cmh-team .sp-cm-runs { font-size: 22px; }
+.sp-cm-form { margin: 3px 0 0; font-size: 13px; line-height: 1.4; color: var(--sp-ink-2); }
+.sp-cm-form b { color: var(--sp-ink); font-weight: 750; }
+.sp-crease { list-style: none; margin: 6px 0 0; padding: 0; }
+.sp-crease > li { padding: 10px 0; border-top: 1px solid var(--sp-rule); }
+.sp-crease-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sp-crease-name { font-size: 15.5px; font-weight: 750; font-variation-settings: 'wdth' 90; min-width: 0; }
+.sp-crease-name small { margin-left: 6px; font-size: 12px; font-weight: 650; color: var(--sp-muted); font-variation-settings: 'wdth' 100; }
+.sp-crease-score { white-space: nowrap; font-size: 14px; color: var(--sp-ink-2); }
+.sp-crease-score b { font-size: 20px; font-weight: 900; color: var(--sp-ink); font-variation-settings: 'wdth' 72; }
+.sp-overs { display: grid; gap: 6px; margin-top: 12px; }
+.sp-over { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.sp-over-h { font-size: 13px; font-weight: 750; min-width: 9.5em; }
+.sp-over-h small { font-weight: 600; color: var(--sp-muted); }
+.sp-over-balls { display: flex; flex-wrap: wrap; gap: 4px; }
+.sp-over-balls i { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 4px; font-style: normal; font-size: 12.5px; font-weight: 800; box-shadow: inset 0 0 0 1px var(--sp-rule-2); font-variant-numeric: tabular-nums; }
+.sp-over-balls .sp-ball-b { background: var(--sp-ink); color: var(--sp-page); box-shadow: none; }
+.sp-over-balls .sp-ball-w { background: var(--sp-ink); color: var(--sp-page); box-shadow: none; text-decoration: underline; }
+.sp-over-balls .sp-ball-x { color: var(--sp-ink-2); font-weight: 650; }
+.sp-sc { border-top: 1px solid var(--sp-rule); }
+.sp-sc > summary { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; cursor: pointer; list-style: none; font-size: 15.5px; font-weight: 750; }
+.sp-sc > summary::-webkit-details-marker, .sp-sc-more > summary::-webkit-details-marker, .sp-xi summary::-webkit-details-marker { display: none; }
+.sp-sc > summary small { font-size: 12.5px; font-weight: 600; color: var(--sp-muted); }
+.sp-sc > summary b { font-size: 17px; font-weight: 900; white-space: nowrap; font-variation-settings: 'wdth' 75; }
+.sp-sct { width: 100%; border-collapse: collapse; margin: 4px 0 8px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.sp-sct th, .sp-sct td { padding: 6px 0 6px 8px; border-top: 1px solid var(--sp-rule); text-align: right; vertical-align: top; }
+.sp-sct thead th { border-top: 0; font-size: 12px; font-weight: 650; color: var(--sp-muted); }
+.sp-sct th:first-child { padding-left: 0; text-align: left; font-weight: 700; }
+.sp-sct tbody th small { display: block; margin-top: 1px; font-size: 12px; font-weight: 550; color: var(--sp-muted); }
+.sp-sct td { color: var(--sp-ink-2); }
+.sp-sct td b { color: var(--sp-ink); font-weight: 850; }
+.sp-sct-in th:first-child { color: var(--sp-ink); }
+.sp-sct-in th:first-child::after { content: ''; }
+.sp-sc-line { margin: 4px 0 8px; font-size: 13px; line-height: 1.45; color: var(--sp-ink-2); }
+.sp-sc-line b { color: var(--sp-ink); }
+.sp-sc-more { margin: 2px 0 12px; font-size: 13px; color: var(--sp-ink-2); }
+.sp-sc-more > summary { cursor: pointer; list-style: none; font-weight: 750; color: var(--sp-ink); padding: 4px 0; }
+.sp-sc-more ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.sp-sc-more li b { color: var(--sp-ink); }
+.sp-sc-more li small { display: block; color: var(--sp-muted); }
+.sp-phase td small { display: block; font-size: 11.5px; font-weight: 600; color: var(--sp-muted); }
+.sp-xi { list-style: none; margin: 4px 0 0; padding: 0; }
+.sp-xi > li { border-top: 1px solid var(--sp-rule); }
+.sp-xi summary { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; cursor: pointer; list-style: none; }
+.sp-xi-name { min-width: 0; font-size: 14.5px; font-weight: 750; font-variation-settings: 'wdth' 90; }
+.sp-xi-name small { display: block; margin-left: 14px; font-size: 12px; font-weight: 550; color: var(--sp-muted); font-variation-settings: 'wdth' 100; }
+.sp-xi-brief { flex: none; max-width: 48%; text-align: right; font-size: 12.5px; color: var(--sp-ink-2); }
+.sp-xi-more { padding: 0 0 12px 14px; }
+.sp-xi-more .sp-h3 { margin: 8px 0 4px; }
+.sp-xi-dl { display: grid; grid-template-columns: minmax(8em, auto) minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.sp-xi-dl dt { color: var(--sp-muted); font-weight: 650; }
+.sp-xi-dl dd { margin: 0; color: var(--sp-ink); }
+.sp-xi-recent { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 0; padding: 0; font-size: 13px; }
+.sp-xi-recent small { color: var(--sp-muted); }
+.sp-cht { position: relative; touch-action: pan-y; }
+.sp-cht-tip { position: absolute; top: 0; transform: translate(-50%, -100%); display: grid; gap: 1px; padding: 5px 8px; border-radius: 4px; background: var(--sp-ink); color: var(--sp-page); font-size: 12px; white-space: nowrap; pointer-events: none; }
+.sp-runs { display: block; width: 100%; height: 130px; }
+.sp-tabs-small button { font-size: 13px; }
+.sp-phase td { color: var(--sp-ink); font-weight: 700; }
 .sp-cu li { display: grid; grid-template-columns: 6.6em minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--sp-rule); }
 .sp-cu-when { display: flex; flex-direction: column; font-size: 12.5px; color: var(--sp-muted); line-height: 1.25; }
 .sp-cu-when b { color: var(--sp-ink); font-size: 15px; font-weight: 800; }
