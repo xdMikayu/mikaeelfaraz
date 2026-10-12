@@ -14,7 +14,7 @@ import ShotMap from './ShotMap';
 import Lineups from './Lineups';
 import { Ball, Card, SecondYellow, SubArrows, Missed, Screen, Star } from './glyphs';
 import { kickoff, longDate, until } from './time';
-import { useMatchRates, ForecastPanel, WinPathChart, Deserved, MatchupsToWatch } from './MatchForecast';
+import { useMatchRates, ForecastPanel, BookmakersPanel, WinPathChart, Deserved, MatchupsToWatch } from './MatchForecast';
 
 const hot = (d) => {
   if (!d) return false;
@@ -72,6 +72,7 @@ export default function MatchView() {
         <div className="sp-two" style={{ marginTop: 14 }}>
           <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
             {rates && (pre || (live && showStuff)) && <ForecastPanel data={data} rates={rates} colors={colors} names={names} />}
+            {pre && data.prices && <BookmakersPanel prices={data.prices} colors={colors} names={names} />}
             {rates && !pre && showStuff && <WinPathChart data={data} rates={rates} colors={colors} names={names} />}
             {m.status.state === 'post' && showStuff && data.shots.length > 0 && <Deserved data={data} rates={rates} colors={colors} names={names} />}
             {rates?.kit && (pre || live) && <MatchupsToWatch data={data} rates={rates} names={names} />}
