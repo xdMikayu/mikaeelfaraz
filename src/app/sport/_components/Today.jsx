@@ -71,7 +71,7 @@ export default function Today() {
           })}
         </div>
         <p className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>
-          {zoneLabel()} · <Freshness at={at} error={error} />
+          {zoneLabel()} · <Freshness at={at} error={error} live={live.length > 0} />
         </p>
       </div>
 

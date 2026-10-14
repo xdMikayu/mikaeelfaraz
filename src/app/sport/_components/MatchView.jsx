@@ -279,7 +279,7 @@ function TableBand({ m, table, names }) {
   if (!r) return null;
   return (
     <div className="sp-band" aria-live="polite">
-      <span className="sp-band-label">{live ? 'As it stands' : m.status.state === 'post' ? 'Full time' : 'With a win'}</span>
+      <span className="sp-band-label">{live ? 'As it stands' : m.status.state === 'post' ? 'In the table' : 'With a win'}</span>
       <span className="sp-band-main">
         <Move name={names.home} move={r.home} />
         <Move name={names.away} move={r.away} />
