@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { kitHex } from './kit-colors.mjs';
 import { splitScore, cricketNow, cricketDay, leaguesOn, upcomingInternationals, fullMember, bigMatch, isLive, inningsOf, ballsOf, oversOf, situation, describe } from './cricket.mjs';
 
 test('cricket scores: runs and overs apart, Test innings joined, declarations kept', () => {
@@ -32,7 +33,7 @@ test('cricket now: internationals first, live before scheduled before results, t
   assert.deepEqual(all.map((m) => m.id), ['t1', 'i1', 'q1', 'r1']);
   const [t] = all;
   assert.deepEqual([t.international, t.format, t.title, t.session, t.status, t.venue], [true, 'Test', '1st Test', 'Day 3', 'South Africa trail by 143 runs', 'Somewhere, Town']);
-  assert.deepEqual(t.teams.map((x) => [x.name, x.runs, x.overs, x.batting, x.color]), [['South Africa', '247/8', '69 ov', true, '#ace411'], ['Australia', '390', null, false, '#f3f702']]);
+  assert.deepEqual(t.teams.map((x) => [x.name, x.runs, x.overs, x.batting, x.color]), [['South Africa', '247/8', '69 ov', true, kitHex('#ace411')], ['Australia', '390', null, false, kitHex('#f3f702')]]);
   assert.equal(isLive(t), true);
   assert.equal(isLive(all.find((m) => m.id === 'r1')), false); // stumps: nothing is happening
   assert.equal(all.find((m) => m.id === 'q1').teams[0].winner, true);
@@ -58,7 +59,7 @@ test('cricket fixtures: a match on several days counts once; only internationals
     day([ev('soon', '2026-10-13T14:00:00Z', 'pre'), ev('later', '2026-10-15T14:00:00Z', 'pre')]),
   ], now);
   assert.deepEqual(list.map((m) => m.id), ['soon', 'later']);
-  assert.deepEqual(list[0].teams.map((t) => [t.short, t.color, t.winner, t.batting]), [['PAK', '#07df52', false, false], ['SL', null, false, false]]);
+  assert.deepEqual(list[0].teams.map((t) => [t.short, t.color, t.winner, t.batting]), [['PAK', kitHex('07df52'), false, false], ['SL', null, false, false]]);
   assert.equal(cricketDay(day([ev('x', '2026-10-13T14:00:00Z', 'pre')]))[0].venue, 'Rawalpindi Cricket Stadium');
 });
 
@@ -130,4 +131,20 @@ test('cricket: once the scores settle it, say who won, before ESPN calls the res
   assert.equal(said(game('T20I', ['Pakistan', '180/5'], ['Sri Lanka', '170', '19.2/20 ov, target 181', true])), 'Pakistan have won by 10 runs. The official result follows shortly.');
   assert.equal(said(game('T20I', ['Pakistan', '180/5'], ['Sri Lanka', '180/6', '20/20 ov, target 181', true])), 'The match is tied. The official result follows shortly.');
   assert.equal(said(game('Test', ['Queensland', '307 & 68'], ['Western Australia', '175 & 201/8', '72.5 ov, target 201', true], 4)), 'Western Australia have won by 2 wickets. The official result follows shortly.');
+});
+
+test('situation: at a T20 innings break ESPN drops the overs limit; the format still sets the target', () => {
+  const team = (id, name, runs, overs, batting) => ({ id, name, runs, overs, batting });
+  // West Indies 247/3 after their 20 overs, the score line reading "20 ov": India need 248.
+  const brk = situation({ state: 'in', format: 'T20I', teams: [team('6', 'India', '', null, false), team('4', 'West Indies', '247/3', '20 ov', true)] });
+  assert.equal(brk.kind, 'set');
+  assert.equal(brk.team, 'India');
+  assert.equal(brk.runs, 248);
+  assert.equal(brk.maxOvers, 20);
+  // Then the chase, its score line without the limit too: the balls left still come out.
+  const chase = situation({ state: 'in', format: 'T20I', teams: [team('6', 'India', '86/2', '9.4 ov', true), team('4', 'West Indies', '247/3', '20 ov', false)] });
+  assert.equal(chase.kind, 'chase');
+  assert.equal(chase.runs, 162);
+  assert.equal(chase.balls, 62);
+  assert.equal(chase.bowled, 58);
 });

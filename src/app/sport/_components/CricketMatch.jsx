@@ -6,9 +6,10 @@ import { useLive, useAge } from './useLive';
 import { ShirtMark } from './glyphs';
 import { teamColors, useDark } from './colors';
 import { zoneLabel } from './time';
-import { situation, describe } from '@/lib/sport/cricket.mjs';
+import { situation } from '@/lib/sport/cricket.mjs';
 import { oversOf } from '@/lib/sport/cricket-form.mjs';
 import { Status, Chances, MatchRead, GroundRecord, pct, series, dayOf } from './CricketNow';
+import { Scoreboard, ThisOver, Crease, Bowling, SameStage, Wickets, useKits, settle, inningsDone } from './CricketLive';
 
 async function getJson(url, signal) {
   const res = await fetch(url, { signal });
@@ -51,11 +52,12 @@ export default function CricketMatch() {
 
   const colors = teamColors(d.teams[0] ?? {}, d.teams[1] ?? {}, dark);
   const live = d.innings.find((inn) => inn.current) && d.state === 'in';
+  const sit = settle(d, situation(d.card));
   const tabs = [...(live ? [['live', 'Live']] : []), ...(d.innings.length ? [['card', 'Scorecard']] : []), ['players', 'Players'], ['insights', d.state === 'pre' ? 'Preview' : 'Insights']];
   const current = tabs.find(([k]) => k === tab)?.[0] ?? tabs[0][0];
   return (
     <div className="sp-read">
-      <Header d={d} />
+      <Header d={d} sit={sit} />
       <div className="sp-pad" style={{ marginTop: 10 }}>
         <div className="sp-tabs" role="tablist">
           {tabs.map(([k, label]) => (
@@ -65,7 +67,7 @@ export default function CricketMatch() {
           ))}
         </div>
       </div>
-      {current === 'live' && <LiveTab d={d} />}
+      {current === 'live' && <LiveTab d={d} colors={colors} />}
       {current === 'card' && <Scorecard d={d} />}
       {current === 'players' && <Players d={d} />}
       {current === 'insights' && <Insights d={d} colors={colors} />}
@@ -77,44 +79,24 @@ export default function CricketMatch() {
   );
 }
 
-/** The match and its score, with what the score means in words. */
-function Header({ d }) {
-  const m = d.card;
-  const sit = situation(m);
-  const words = describe(sit);
-  const inId = sit && !sit.allOut && !sit.declared && sit.kind !== 'set' ? sit.bat : null;
-  const done = d.state === 'post';
+/** The match: the scoreboard in the sides' colours, then the series, the ground and the toss. */
+function Header({ d, sit }) {
+  const kits = useKits(d);
+  const toss = d.toss && !/toss/i.test(d.card.status ?? '') ? `Toss: ${d.toss}` : null;
   return (
-    <header className="sp-pad sp-cmh">
-      <Link className="sp-cmh-back" href="/sport/cricket">
-        <span aria-hidden="true">‹</span> Cricket
-      </Link>
-      <p className="sp-cm-meta" style={{ marginTop: 8 }}>{[series(d.series), d.title, d.venue].filter(Boolean).join(' · ')}</p>
-      {m.teams.map((t) => {
-        const batting = t.id === inId;
-        return (
-          <div key={t.id} className={`sp-cm-team sp-cmh-team${batting ? ' sp-cm-bat' : ''}${done && t.winner ? ' sp-won' : ''}${done && !t.winner && m.teams.some((x) => x.winner) ? ' sp-lost' : ''}`}>
-            <ShirtMark color={t.color} size={22} />
-            <span className="sp-tn">
-              {t.name}
-              {batting && <small className="sp-cm-batting">batting</small>}
-            </span>
-            <span className="sp-cm-runs">
-              {t.runs}
-              {t.overs && <small> ({t.overs})</small>}
-            </span>
-          </div>
-        );
-      })}
-      {words && (
-        <p className="sp-cm-sit">
-          <b>{words.bold}</b>
-          {words.rest}
-        </p>
-      )}
-      <Status m={m} said={Boolean(words)} />
-      {d.toss && <p className="sp-tiny sp-muted" style={{ margin: '4px 0 0' }}>Toss: {d.toss}</p>}
-    </header>
+    <>
+      <div className="sp-pad sp-cmh">
+        <Link className="sp-cmh-back" href="/sport/cricket">
+          <span aria-hidden="true">‹</span> Cricket
+        </Link>
+      </div>
+      <Scoreboard d={d} sit={sit} kits={kits} />
+      <div className="sp-pad">
+        <p className="sp-cm-meta" style={{ margin: '8px 0 0' }}>{[series(d.series), d.venue].filter(Boolean).join(' · ')}</p>
+        {d.state === 'in' && <Status m={d.card} said />}
+        {toss && <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0' }}>{toss}</p>}
+      </div>
+    </>
   );
 }
 
@@ -145,132 +127,68 @@ function FormLine({ f, kind, what, missing }) {
   );
 }
 
-// The commentary lags the score now and then: its last over ends short of the balls bowled.
-const behind = (inn) => {
-  const last = inn.byOver?.at(-1);
-  return last ? inn.balls - last.balls > 3 : false;
-};
-
-function LiveTab({ d }) {
+function LiveTab({ d, colors }) {
   const inn = d.innings.find((x) => x.current);
   const what = kindOf(d);
+  const kits = useKits(d);
   const bowler = inn.bowling.find((b) => b.now === 'bowling');
-  const last = inn.bowling.find((b) => b.now === 'bowled last');
-  const batters = inn.batting.filter((b) => !b.out).sort((a, b) => (a.now === 'striker' ? -1 : b.now === 'striker' ? 1 : 0));
-  const pair = inn.partnerships.at(-1);
-  const unbroken = pair && pair.batters.every((x) => batters.some((b) => b.id === x.id));
   const quota = inn.ballLimit ? Math.ceil(inn.ballLimit / 30) * 6 : null;
-  return (
-    <div className="sp-pad">
-      {d.read && <MatchRead m={d.card} read={d.read} />}
-      <section className="sp-section">
-        <h2 className="sp-h2">At the crease</h2>
-        <ul className="sp-crease">
-          {batters.map((b) => {
-            const vs = bowler ? d.matchups.find((x) => x.batter === b.id && x.bowler === bowler.id) : null;
-            const p = d.players[b.id];
-            return (
-              <li key={b.id}>
-                <div className="sp-crease-row">
-                  <span className="sp-crease-name">
-                    {p?.name}
-                    {b.now === 'striker' && <small> on strike</small>}
-                  </span>
-                  <span className="sp-crease-score sp-num">
-                    <b>{b.runs}</b> ({b.balls})
-                  </span>
-                </div>
-                <p className="sp-cm-form">
-                  {count(b.fours, 'four')}, {count(b.sixes, 'six', 'sixes')}, strike rate {sr(b.runs, b.balls)}
-                  {p?.batStyle ? ` · ${p.batStyle}` : ''}
-                </p>
-                <FormLine f={d.form[b.id]?.bat} kind="bat" what={what} missing={noRecord(d, b.id, what)} />
-                {vs && (
-                  <p className="sp-cm-form">
-                    Against {shortOf(d, bowler.id)}: <b>{vs.runs} off {vs.balls}</b>, out {times(vs.outs)}, in the last five years.
-                  </p>
-                )}
-                {(() => {
-                  const others = d.matchups.filter((x) => x.batter === b.id && x.bowler !== bowler?.id).slice(0, 4);
-                  return others.length ? (
-                    <p className="sp-cm-form">
-                      Against the rest of this attack:{' '}
-                      {others.map((x, i) => (
-                        <span key={x.bowler}>
-                          {i > 0 && '; '}
-                          {shortOf(d, x.bowler)} <b>{x.runs} off {x.balls}</b>, out {times(x.outs)}
-                        </span>
-                      ))}
-                      .
-                    </p>
-                  ) : null;
-                })()}
-              </li>
-            );
-          })}
-        </ul>
-        {unbroken && pair.batters.length === 2 && (
-          <p className="sp-small sp-ink2" style={{ margin: '8px 0 0' }}>
-            Partnership: <b style={{ color: 'var(--sp-ink)' }}>{pair.runs}</b> off {count(pair.balls, 'ball')} ({pair.batters.map((x) => `${shortOf(d, x.id)} ${x.runs} off ${x.balls}`).join(', ')}).
+  const limited = d.innings.filter((x) => x.ballLimit && x.byOver?.length);
+  // Form, records and match-ups wait behind a tap on each card, so the live picture stays short.
+  const details = (id, kind) => {
+    const vs = kind === 'bat' && bowler ? d.matchups.find((x) => x.batter === id && x.bowler === bowler.id) : null;
+    const others = kind === 'bat' ? d.matchups.filter((x) => x.batter === id && x.bowler !== bowler?.id).slice(0, 4) : [];
+    const style = kind === 'bat' ? d.players[id]?.batStyle : d.players[id]?.bowlStyle;
+    return (
+      <details className="sp-ccard-more">
+        <summary>
+          <span className="sp-chev" aria-hidden="true">›</span>Form{kind === 'bat' && (vs || others.length) ? ' and match-ups' : ''}
+        </summary>
+        {style && <p className="sp-cm-form">{style}</p>}
+        <FormLine f={d.form[id]?.[kind]} kind={kind} what={what} missing={noRecord(d, id, what)} />
+        {vs && (
+          <p className="sp-cm-form">
+            Against {shortOf(d, bowler.id)}: <b>{vs.runs} off {vs.balls}</b>, out {times(vs.outs)}, in the last five years.
           </p>
         )}
-      </section>
-      <section className="sp-section">
-        <h2 className="sp-h2">Bowling</h2>
-        <ul className="sp-crease">
-          {[bowler, last].filter(Boolean).map((b) => (
-            <li key={b.id}>
-              <div className="sp-crease-row">
-                <span className="sp-crease-name">
-                  {d.players[b.id]?.name}
-                  <small> {b.now === 'bowling' ? 'bowling' : 'bowled the last over'}</small>
-                </span>
-                <span className="sp-crease-score sp-num">
-                  <b>
-                    {b.wickets}/{b.runs}
-                  </b>{' '}
-                  ({oversOf(b.balls)})
-                </span>
-              </div>
-              <p className="sp-cm-form">
-                Economy {econ(b.runs, b.balls)}
-                {b.dots != null ? `, ${b.dots} dot balls` : ''}
-                {b.left != null ? `. ${b.left ? `${oversOf(b.left)} ${b.left === 6 ? 'over' : 'overs'} left` : 'No overs left'}` : ''}
-                {d.players[b.id]?.bowlStyle ? ` · ${d.players[b.id].bowlStyle}` : ''}
-              </p>
-              <FormLine f={d.form[b.id]?.bowl} kind="bowl" what={what} missing={noRecord(d, b.id, what)} />
-            </li>
-          ))}
-        </ul>
-        {inn.recent?.length > 0 && (
-          <div className="sp-overs">
-            {behind(inn) && <p className="sp-tiny sp-muted" style={{ margin: 0 }}>ESPN’s ball-by-ball is a few balls behind the score.</p>}
-            {[...inn.recent].reverse().map((o) => (
-              <div key={o.n} className="sp-over">
-                <span className="sp-over-h">
-                  {nth(o.n)} over <small>({shortOf(d, o.bowler)})</small>
-                </span>
-                <span className="sp-over-balls">
-                  {o.balls.map((b, j) => (
-                    <i key={j} className={b === 'W' ? 'sp-ball-w' : b === '4' || b === '6' ? 'sp-ball-b' : /[a-z]/.test(b) ? 'sp-ball-x' : ''}>
-                      {b}
-                    </i>
-                  ))}
-                </span>
-              </div>
+        {others.length > 0 && (
+          <p className="sp-cm-form">
+            Against the rest of this attack:{' '}
+            {others.map((x, i) => (
+              <span key={x.bowler}>
+                {i > 0 && '; '}
+                {shortOf(d, x.bowler)} <b>{x.runs} off {x.balls}</b>, out {times(x.outs)}
+              </span>
             ))}
-          </div>
-        )}
-        {quota && (
-          <p className="sp-small sp-ink2" style={{ margin: '10px 0 0' }}>
-            <b style={{ color: 'var(--sp-ink)' }}>Overs left</b> (each bowler can bowl {quota / 6}):{' '}
-            {inn.bowling
-              .map((b) => `${shortOf(d, b.id)} ${oversOf(b.left ?? 0)}`)
-              .join(', ')}
             .
           </p>
         )}
-      </section>
+      </details>
+    );
+  };
+  return (
+    <div className="sp-pad">
+      <ThisOver d={d} inn={inn} kits={kits} />
+      <Crease d={d} inn={inn} kits={kits} details={details} />
+      <Bowling d={d} inn={inn} kits={kits} details={details} />
+      {d.read && (
+        <section className="sp-section">
+          <h2 className="sp-h2">Who’s winning</h2>
+          <MatchRead m={d.card} read={d.read} said />
+          <SameStage d={d} inn={inn} />
+        </section>
+      )}
+      {limited.length > 0 && <RunsChart d={d} innings={limited} colors={colors} />}
+      <Wickets d={d} inn={inn} />
+      {quota && !inningsDone(inn) && (
+        <p className="sp-small sp-ink2" style={{ margin: '14px 0 0' }}>
+          <b style={{ color: 'var(--sp-ink)' }}>Overs left</b> (each bowler can bowl {quota / 6}):{' '}
+          {inn.bowling
+            .map((b) => `${shortOf(d, b.id)} ${oversOf(b.left ?? 0)}`)
+            .join(', ')}
+          .
+        </p>
+      )}
     </div>
   );
 }
@@ -279,10 +197,12 @@ function LiveTab({ d }) {
 
 function Scorecard({ d }) {
   const list = d.innings;
+  const kits = useKits(d);
   return (
     <div className="sp-pad">
       {list.map((inn, i) => (
-        <details key={inn.number} className="sp-sc" open={i === list.length - 1}>
+        // Each innings carries its side's colour: a band down the edge of its heading, and its fifties.
+        <details key={inn.number} className="sp-sc" open={i === list.length - 1} style={{ '--kit': kits[inn.team]?.line ?? 'var(--sp-ink)' }}>
           <summary>
             <span>
               <span className="sp-chev" aria-hidden="true">›</span>
@@ -327,7 +247,10 @@ function Innings({ d, inn }) {
                 <small>{b.out ? outWords(b) : b.now === 'striker' ? 'not out, on strike' : 'not out'}</small>
               </th>
               <td>
-                <b>{b.runs}</b>
+                <b className={b.runs >= 50 ? 'sp-sct-fifty' : undefined}>
+                  {b.runs}
+                  {b.out ? '' : '*'}
+                </b>
               </td>
               <td>{b.balls}</td>
               <td>{b.fours}</td>
@@ -665,7 +588,7 @@ function RunsChart({ d, innings, colors }) {
                   return (
                     <g key={`${k}-${o.n}`}>
                       <rect x={x0} y={y(o.runs)} width={bw} height={H - y(o.runs)} fill={colorOf(inn)} />
-                      {o.wickets > 0 && <circle cx={x0 + bw / 2} cy={y(o.runs) - 4} r="2.5" fill={colorOf(inn)} stroke="var(--sp-page)" strokeWidth="1" />}
+                      {o.wickets > 0 && <circle cx={x0 + bw / 2} cy={y(o.runs) - 4} r="2.5" fill="var(--sp-loss)" stroke="var(--sp-page)" strokeWidth="1" />}
                     </g>
                   );
                 }),
@@ -676,7 +599,7 @@ function RunsChart({ d, innings, colors }) {
                   {inn.byOver
                     .filter((o) => o.wickets > 0)
                     .map((o) => (
-                      <circle key={o.n} cx={o.n * slot} cy={y(o.total)} r="2.5" fill={colorOf(inn)} stroke="var(--sp-page)" strokeWidth="1" />
+                      <circle key={o.n} cx={o.n * slot} cy={y(o.total)} r="2.5" fill="var(--sp-loss)" stroke="var(--sp-page)" strokeWidth="1" />
                     ))}
                 </g>
               ))}
@@ -709,7 +632,7 @@ function RunsChart({ d, innings, colors }) {
             <b style={{ color: colorOf(inn) }}>■</b> {teamOf(d, inn.team)?.name} {inn.wickets >= 10 ? `${inn.runs} all out` : `${inn.runs}/${inn.wickets}`}
           </span>
         ))}
-        . Dots mark wickets{!each && target ? `; dashed is the target, ${target}` : ''}. The highest {each ? 'over' : 'total'} reaches the top: {top} runs.
+        . Red dots mark wickets{!each && target ? `; dashed is the target, ${target}` : ''}. The highest {each ? 'over' : 'total'} reaches the top: {top} runs.
       </p>
     </section>
   );

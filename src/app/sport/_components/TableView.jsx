@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { fetchStandings } from '@/lib/sport/espn.mjs';
 import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
@@ -19,18 +19,12 @@ export default function TableView({ slug }) {
 
   return (
     <div className="sp-read">
-      <div className="sp-pad" style={{ paddingTop: 16 }}>
-        <h1 className="sp-h1">Tables</h1>
-        <nav className="sp-days" aria-label="Competition" style={{ margin: '12px 0 10px' }}>
-          {choices.map((l) => (
-            <Link key={l.slug} href={`/sport/table/${l.slug}`} className="sp-pill" aria-current={l.slug === slug ? 'page' : undefined}
-              style={l.slug === slug ? { height: 36, padding: '0 14px', fontSize: 13.5, background: 'var(--sp-brand)', color: '#fff' } : { height: 36, padding: '0 14px', fontSize: 13.5, background: 'var(--sp-surface)', color: 'var(--sp-ink-2)', border: '1px solid var(--sp-rule)' }}>
-              {l.short}
-            </Link>
-          ))}
-        </nav>
-        <p className="sp-tiny sp-muted" style={{ margin: '0 0 6px' }}>
-          <b style={{ color: 'var(--sp-ink-2)' }}>{lg?.name}</b> · {data?.season ?? ''}{data?.season ? '. ' : ''}<Freshness at={at} error={error} />
+      <div className="sp-pad" style={{ paddingTop: 10 }}>
+        <h1 className="sp-sr">{lg?.name} table</h1>
+        <LeaguePicker choices={choices} slug={slug} />
+        <p className="sp-tiny sp-muted" style={{ margin: '10px 0 6px' }}>
+          {data?.season ? `${data.season} · ` : ''}
+          <Freshness at={at} error={error} />
         </p>
       </div>
       {hidden ? (
@@ -46,10 +40,25 @@ export default function TableView({ slug }) {
       {!hidden && data && slug === 'eng.1' && data.groups[0]?.rows.length > 0 && <SeasonForecast rows={data.groups[0].rows} />}
       {!hidden && data && (
         <p className="sp-note sp-pad" style={{ marginTop: 10 }}>
-          Colours mark where places change, from ESPN’s notes; they can shift with cup winners. The table updates when a result is final, not during matches.
+          The bars mark what each place leads to, from ESPN’s notes; they can shift with cup winners. The table updates when a result is final, not during matches.
         </p>
       )}
     </div>
+  );
+}
+
+/** The competitions as words, the one shown underlined and scrolled into view. */
+function LeaguePicker({ choices, slug }) {
+  const here = useRef(null);
+  useEffect(() => here.current?.scrollIntoView({ block: 'nearest', inline: 'center' }), [slug]);
+  return (
+    <nav className="sp-days sp-leagues" aria-label="Competition">
+      {choices.map((l) => (
+        <Link key={l.slug} href={`/sport/table/${l.slug}`} className="sp-day" ref={l.slug === slug ? here : undefined} aria-current={l.slug === slug ? 'page' : undefined}>
+          {l.short}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -72,10 +81,13 @@ function Group({ g, slug, isFollowed }) {
           </tr>
         </thead>
         <tbody>
-          {g.rows.map((r) => (
-            <tr key={r.id} className={isFollowed(r.id) ? 'sp-mine' : ''} title={r.zone ?? undefined}>
+          {g.rows.map((r, i) => (
+            <tr key={r.id} className={[isFollowed(r.id) ? 'sp-mine' : '', i > 0 && r.zone !== g.rows[i - 1].zone ? 'sp-zone-break' : ''].filter(Boolean).join(' ') || undefined} title={r.zone ?? undefined}>
               <td className="l sp-pos" style={{ paddingLeft: 12 }}>
-                <span className="sp-zone" style={zoneStyle(r.zone)}>{r.rank}</span>
+                <span className="sp-zone">
+                  <i style={zoneMark(r.zone)} aria-hidden="true" />
+                  {r.rank}
+                </span>
               </td>
               <td className="l" style={{ maxWidth: 0, width: '100%' }}>
                 <Link href={`/sport/team?id=${r.id}&l=${slug}`} className="sp-tteam">
@@ -98,33 +110,29 @@ function Group({ g, slug, isFollowed }) {
   );
 }
 
-/** One colour per kind of place, so the table reads at a glance: Europe, promotion, the drop. */
-const zoneColor = (zone) => {
+// Where each place leads, as a bar beside it. Rewards in ink, more for a bigger one (the Champions
+// League or promotion, then the Europa League, then the Conference League); a play-off is outlined;
+// the drop is red, as points lost are everywhere else.
+const ink = (t) => `color-mix(in srgb, var(--sp-ink) ${t}%, transparent)`;
+const zoneMark = (zone) => {
   const z = (zone ?? '').toLowerCase(); // ESPN sends null for mid-table rows
-  if (!z) return null;
-  if (/relegat/.test(z) && /play/.test(z)) return '#f97316';
-  if (/relegat/.test(z)) return '#ef4444';
-  if (/champions/.test(z)) return '#3b82f6';
-  if (/europa/.test(z)) return '#f59e0b';
-  if (/conference/.test(z)) return '#10b981';
-  if (/promot/.test(z)) return '#22c55e';
-  if (/play/.test(z)) return '#14b8a6';
-  return '#8b5cf6';
-};
-
-const zoneStyle = (zone) => {
-  const c = zoneColor(zone);
-  return c ? { background: c, color: '#fff' } : { background: 'var(--sp-sunk)', color: 'var(--sp-ink-2)' };
+  if (!z) return { background: 'transparent' };
+  if (/relegat/.test(z)) return /play/.test(z) ? { boxShadow: 'inset 0 0 0 1.5px var(--sp-loss)' } : { background: 'var(--sp-loss)' };
+  if (/play/.test(z)) return { boxShadow: 'inset 0 0 0 1.5px var(--sp-ink)' };
+  if (/champions|promot/.test(z)) return { background: 'var(--sp-ink)' };
+  if (/europa/.test(z)) return { background: ink(55) };
+  return { background: ink(25) };
 };
 
 function ZoneKey({ rows }) {
+  // ESPN spells some the same way twice ("Promotion playoffs", "Promotion Playoffs").
   const seen = [];
-  for (const r of rows) if (r.zone && !seen.includes(r.zone)) seen.push(r.zone);
+  for (const r of rows) if (r.zone && !seen.some((z) => z.toLowerCase() === r.zone.toLowerCase())) seen.push(r.zone);
   if (!seen.length) return null;
   return (
     <div className="sp-key-chips">
       {seen.map((z) => (
-        <span key={z}><i style={{ background: zoneColor(z) }} />{z}</span>
+        <span key={z}><i style={zoneMark(z)} />{z}</span>
       ))}
     </div>
   );

@@ -29,6 +29,7 @@
   --sp-flash: #ffe58a;
   --sp-mine: #f3f7f4;
   --sp-shirt-edge: rgba(0, 0, 0, 0.25);
+  --sp-kit-white: #ececec; /* a white kit as a block: pale enough to read as white, dark enough to show on the page */
   --sp-sans: var(--font-sport, 'Archivo'), system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: var(--sp-page);
   color: var(--sp-ink);
@@ -68,6 +69,7 @@ html[data-sport-theme='dark'] .sp-root {
   --sp-flash: #4d3f0a;
   --sp-mine: #172019;
   --sp-shirt-edge: rgba(255, 255, 255, 0.35);
+  --sp-kit-white: #ececec;
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-sport-theme='light']) .sp-root {
@@ -93,6 +95,7 @@ html[data-sport-theme='dark'] .sp-root {
     --sp-flash: #4d3f0a;
     --sp-mine: #172019;
     --sp-shirt-edge: rgba(255, 255, 255, 0.35);
+    --sp-kit-white: #ececec;
   }
 }
 body:has(.sp-root) { background: #ffffff; }
@@ -113,6 +116,8 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-h1 { font-size: 28px; line-height: 1.05; font-weight: 900; letter-spacing: -0.01em; font-variation-settings: 'wdth' 75; margin: 0; }
 .sp-h2 { font-size: 18px; font-weight: 800; margin: 0; font-variation-settings: 'wdth' 85; }
 .sp-h3 { font-size: 15px; font-weight: 800; margin: 0; font-variation-settings: 'wdth' 88; }
+/* A small label over a heading: "This weekend", "Next race". */
+.sp-kicker { margin: 0 0 2px; font-size: 13px; font-weight: 750; color: var(--sp-muted); }
 .sp-small { font-size: 13.5px; }
 .sp-tiny { font-size: 12px; }
 .sp-link { text-decoration: underline; text-decoration-color: var(--sp-rule-2); text-underline-offset: 3px; }
@@ -137,6 +142,7 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-word-dot { color: var(--sp-muted); font-weight: 700; }
 .sp-word-sport { font-weight: 900; }
 .sp-mark { flex: none; display: block; }
+.sp-word .sp-mark { align-self: center; margin-right: 2px; }
 
 /* Phones: the bar along the top. */
 .sp-top { position: sticky; top: 0; z-index: 20; background: var(--sp-page); border-bottom: 1px solid var(--sp-rule); padding-top: env(safe-area-inset-top, 0px); }
@@ -222,7 +228,9 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-days::-webkit-scrollbar { display: none; }
 .sp-day { flex: none; padding: 6px 0 8px; font-size: 15px; font-weight: 650; color: var(--sp-muted); border-bottom: 2px solid transparent; }
 .sp-day:hover { color: var(--sp-ink); }
-.sp-day[aria-pressed='true'] { color: var(--sp-ink); font-weight: 800; border-bottom-color: var(--sp-ink); }
+.sp-day[aria-pressed='true'], .sp-day[aria-current='page'] { color: var(--sp-ink); font-weight: 800; border-bottom-color: var(--sp-ink); }
+.sp-leagues { border-bottom: 1px solid var(--sp-rule); }
+.sp-leagues .sp-day { margin-bottom: -1px; padding: 10px 0 9px; }
 
 /* Small text labels (replaces pills) */
 .sp-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--sp-muted); }
@@ -236,8 +244,9 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 
 /* ---------- lists ---------- */
 .sp-card, .sp-panel { background: var(--sp-surface); }
-.sp-panel { padding: 16px; border-top: 1px solid var(--sp-rule); border-bottom: 1px solid var(--sp-rule); }
-@media (min-width: 1024px) { .sp-panel { padding: 16px 0; border-bottom: 0; } }
+/* One rule above each section, so two sections never stack two rules with a gap between. */
+.sp-panel { padding: 16px; border-top: 1px solid var(--sp-rule); }
+@media (min-width: 1024px) { .sp-panel { padding: 16px 0; } }
 .sp-group { margin-top: 18px; }
 .sp-ghead { display: flex; align-items: center; gap: 10px; padding: 0 16px 6px; }
 @media (min-width: 1024px) { .sp-ghead { padding: 0 0 6px; } }
@@ -286,6 +295,10 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 @media (min-width: 1024px) { .sp-hero { margin: 0; } }
 .sp-hero-half { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; padding: 44px 10px 18px; text-align: center; min-width: 0; }
 .sp-hero-half a { font-weight: 800; font-size: 16px; line-height: 1.15; font-variation-settings: 'wdth' 85; }
+.sp-hero-name { display: inline-flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
+/* A red card on a white chip, so it reads on any kit, a red one included. */
+.sp-hero-name .sp-pips { margin: 0; padding: 2px 3px; border-radius: 3px; background: #fff; line-height: 0; }
+.sp-kit-edge { box-shadow: inset 0 -1px 0 var(--sp-rule-2); }
 .sp-hero-crest { width: 64px; height: 64px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
 .sp-hero-meta { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 12px; font-weight: 700; z-index: 1; }
 .sp-hero-plate { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; color: #111; border-radius: 10px; padding: 8px 16px 7px; text-align: center; z-index: 1; min-width: 104px; }
@@ -299,6 +312,25 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-scorers ul:first-child { text-align: right; }
 .sp-scorers li { display: flex; align-items: center; gap: 6px; }
 .sp-scorers ul:first-child li { justify-content: flex-end; }
+/* Under the match header, in ink: what the score means for the table. */
+.sp-band { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; padding: 10px 16px 11px; background: var(--sp-ink); color: var(--sp-page); }
+@media (min-width: 640px) { .sp-band { margin: 0 16px; border-radius: 0 0 10px 10px; } .sp-hero:has(+ .sp-band) { border-radius: 10px 10px 0 0; } }
+@media (min-width: 1024px) { .sp-band { margin: 0; } }
+.sp-band-label { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.75; }
+.sp-band-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 16px; font-size: 15.5px; font-weight: 600; line-height: 1.25; }
+.sp-band-move strong { font-weight: 850; }
+.sp-band-move b { font-size: 22px; font-weight: 900; font-variation-settings: 'wdth' 64; font-variant-numeric: tabular-nums; }
+/* A penalty shoot-out, kick by kick. */
+.sp-pens { padding: 12px 16px; border-bottom: 1px solid var(--sp-rule); display: grid; gap: 8px; }
+@media (min-width: 1024px) { .sp-pens { padding: 12px 0; } }
+.sp-pens .sp-h2 { margin: 0; }
+.sp-pens-row { display: grid; grid-template-columns: minmax(0, 7.5em) 1fr auto; align-items: center; gap: 10px; }
+.sp-pens-name { font-weight: 750; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-pens-kicks { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-pens-kick { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-style: normal; font-size: 15px; font-weight: 900; line-height: 1; box-sizing: border-box; }
+.sp-pens-miss { background: var(--sp-loss); color: #fff; }
+.sp-pens-yet { border: 1.5px dashed var(--sp-muted); }
+.sp-pens-total { font-size: 24px; font-weight: 900; font-variation-settings: 'wdth' 64; font-variant-numeric: tabular-nums; min-width: 1ch; text-align: right; }
 .sp-hero-under { padding: 8px 16px 0; }
 @media (min-width: 1024px) { .sp-hero-under { padding: 8px 0 0; } }
 
@@ -320,6 +352,12 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-tl-who { line-height: 1.25; min-width: 0; }
 .sp-tl-who b { font-weight: 750; }
 .sp-tl-who small { display: block; color: var(--sp-muted); font-size: 12.5px; }
+/* Goals lead: the scorer heavier and the score it made in the scoreboard's type; substitutions recede. */
+.sp-tl-line { display: inline-flex; align-items: baseline; gap: 8px; }
+.sp-tl li.sp-tl-goal { min-height: 52px; }
+.sp-tl li.sp-tl-goal .sp-tl-who b { font-size: 16px; font-weight: 850; }
+.sp-tl-score { font-size: 19px; line-height: 1; font-weight: 900; font-variation-settings: 'wdth' 64; font-variant-numeric: tabular-nums; }
+.sp-tl li.sp-tl-sub .sp-tl-who b { font-weight: 600; color: var(--sp-ink-2); }
 
 /* Stat comparison */
 .sp-stat { padding: 9px 0; }
@@ -372,12 +410,14 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-table tr.sp-mine td { background: var(--sp-mine); }
 .sp-table .sp-tteam { display: flex; align-items: center; gap: 10px; min-width: 0; font-variation-settings: 'wdth' 90; font-weight: 650; }
 .sp-table .sp-tteam span { overflow: hidden; text-overflow: ellipsis; }
-.sp-zone { display: inline-grid; place-items: center; min-width: 24px; height: 22px; border-radius: 3px; font-weight: 800; font-size: 12.5px; }
+.sp-zone { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.sp-zone i { display: block; width: 4px; height: 22px; border-radius: 1px; }
+.sp-table tr.sp-zone-break td { border-top-color: var(--sp-ink-2); }
 @media (max-width: 480px) { .sp-table .sp-hide-sm { display: none; } }
 .sp-key-chips { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px 16px; }
 @media (min-width: 1024px) { .sp-key-chips { padding: 12px 0; } }
 .sp-key-chips span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--sp-ink-2); }
-.sp-key-chips i { width: 10px; height: 10px; border-radius: 2px; }
+.sp-key-chips i { width: 4px; height: 14px; border-radius: 1px; }
 
 /* ---------- fantasy ---------- */
 .sp-fhead { padding: 14px 16px 16px; border-bottom: 1px solid var(--sp-rule); text-align: center; }
@@ -608,6 +648,8 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-scores i { display: block; width: 100%; max-width: 40px; background: var(--sp-ink); }
 .sp-scores b { font-size: 14px; font-weight: 900; }
 .sp-wp { display: block; width: 100%; height: 120px; }
+.sp-wp-goals { position: relative; height: 14px; margin-bottom: 2px; }
+.sp-wp-goals span { position: absolute; top: 0; transform: translateX(-50%); display: grid; place-items: center; line-height: 0; }
 .sp-wp-axis { display: flex; justify-content: space-between; margin-top: 2px; }
 .sp-mw { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--sp-rule); }
 .sp-mw-r { display: flex; flex-direction: column; align-items: flex-end; }
@@ -616,12 +658,8 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-posdist { display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px; width: 200px; height: 14px; }
 .sp-posdist i { display: block; }
 .sp-role { display: grid; grid-template-columns: 112px minmax(0, 1fr) 82px; gap: 10px; align-items: center; min-height: 26px; }
-.sp-share { display: flex; gap: 2px; margin-top: 4px; }
-.sp-share > span { display: flex; flex-direction: column; min-width: 0; font-size: 11px; color: var(--sp-ink-2); }
-.sp-share i { display: block; height: 10px; background: var(--sp-ink); }
-.sp-share > span:nth-child(even) i { background: var(--sp-ink-2); }
-.sp-share b { font-size: 12.5px; font-weight: 850; color: var(--sp-ink); margin-top: 3px; }
-.sp-share span span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-bar-track { display: block; height: 8px; background: var(--sp-sunk); }
+.sp-bar-track i { display: block; height: 100%; }
 .sp-nx { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 2px 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--sp-rule); }
 .sp-nx .sp-split { grid-column: 2; }
 .sp-nx > span:nth-child(3), .sp-nx > span:nth-child(4) { grid-column: 2; }
@@ -1055,3 +1093,128 @@ details[open] > summary .sp-chev { transform: rotate(90deg); }
 .sp-f1-live-link b { flex: 1; font-weight: 800; }
 .sp-f1-live-link:hover { background: var(--sp-hover); }
 .sp-root [id] { scroll-margin-top: 70px; }
+.sp-side-soon { margin-left: auto; padding: 2px 5px 1px; border-radius: 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-muted); box-shadow: inset 0 0 0 1px var(--sp-rule-2); font-variation-settings: 'wdth' 85; }
+.sp-about summary { display: flex; align-items: center; min-height: 44px; font-size: 14.5px; font-weight: 750; cursor: pointer; list-style: none; }
+.sp-about summary::-webkit-details-marker { display: none; }
+.sp-about > .sp-section { padding-left: 0; padding-right: 0; margin-top: 6px; }
+
+/* ---------- cricket, live: the scoreboard, this over, the cards ---------- */
+/* The scoreboard: each side's half in its colours, the sides in batting order, and an ink band with
+   the one sentence that matters. The band inverts in dark mode, so it always stands apart. */
+.sp-csb { margin-top: 10px; }
+.sp-csb-halves { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 172px; outline: 1px solid var(--sp-rule); outline-offset: -1px; }
+.sp-csb-half { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; padding: 44px 14px 14px; min-width: 0; }
+.sp-csb-half + .sp-csb-half { align-items: flex-end; text-align: right; }
+.sp-csb-crest { width: 46px; height: 46px; border-radius: 50%; background: #fff; display: grid; place-items: center; margin-bottom: 8px; }
+.sp-csb-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; line-height: 1.2; font-variation-settings: 'wdth' 85; }
+.sp-csb-runs { margin-top: 4px; font-size: 40px; line-height: 0.95; font-weight: 900; letter-spacing: -0.01em; font-variation-settings: 'wdth' 62; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sp-csb-overs { margin-top: 4px; font-size: 12.5px; font-weight: 700; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.sp-csb-yet { margin-top: 6px; font-size: 14px; font-weight: 750; opacity: 0.8; }
+.sp-csb-tag { position: absolute; top: 12px; left: 14px; font-size: 12px; font-weight: 850; }
+.sp-csb-half + .sp-csb-half .sp-csb-tag { left: auto; right: 14px; }
+.sp-csb-chip { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); padding: 2px 8px; border-radius: 4px; background: #fff; color: #111; font-size: 12px; font-weight: 750; white-space: nowrap; }
+.sp-csb-eq { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding: 11px 16px 12px; background: var(--sp-ink); color: var(--sp-page); }
+.sp-csb-eq-main { margin: 0; font-size: 17px; font-weight: 650; line-height: 1.2; }
+.sp-csb-eq-main b { font-size: 27px; font-weight: 900; font-variation-settings: 'wdth' 64; font-variant-numeric: tabular-nums; }
+.sp-csb-eq-side { margin: 0; font-size: 13px; font-weight: 650; opacity: 0.78; font-variant-numeric: tabular-nums; }
+.sp-csb-eq-main strong { font-weight: 850; }
+@media (min-width: 640px) {
+  .sp-csb { margin: 10px 16px 0; }
+  .sp-csb-halves { border-radius: 10px 10px 0 0; overflow: hidden; }
+  .sp-csb-eq { border-radius: 0 0 10px 10px; }
+}
+@media (min-width: 1024px) { .sp-csb { margin: 10px 0 0; } .sp-csb-runs { font-size: 48px; } }
+
+/* A ball as the scorer marks it: wickets red, fours and sixes in the batting side's colours (set
+   inline), dots grey, singles outlined, extras outlined in grey and smaller. */
+.sp-cball { display: inline-grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 6px; border: 1.5px solid transparent; font-style: normal; font-size: 15px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.sp-cball-run { border-color: var(--sp-ink); color: var(--sp-ink); }
+.sp-cball-dot { background: var(--sp-sunk); }
+.sp-cball-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--sp-muted); }
+.sp-cball-b { border-color: rgba(0, 0, 0, 0.12); font-size: 16px; }
+/* A six is told from a four by more than colour (one in twelve men is colour-blind): a ring round it. */
+.sp-cball-six { font-size: 18px; font-weight: 900; outline: 2px solid var(--sp-ink); outline-offset: 2px; }
+.sp-cball-w { background: var(--sp-loss); color: #fff; }
+.sp-cball-x { border-color: var(--sp-rule-2); color: var(--sp-ink-2); font-size: 11.5px; font-weight: 800; }
+.sp-cball-todo { border: 1.5px dashed var(--sp-rule-2); }
+.sp-cover-who { margin-left: 6px; font-size: 15px; font-weight: 650; color: var(--sp-ink-2); }
+.sp-cover-balls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.sp-cover-prev { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 12px 0 0; }
+.sp-cover-prev b { color: var(--sp-ink); font-weight: 800; }
+.sp-cover-mini { display: inline-flex; gap: 4px; }
+.sp-cover-mini .sp-cball { width: 22px; height: 22px; border-radius: 4px; border-width: 1px; font-size: 11.5px; }
+.sp-cover-mini .sp-cball-dot::after { width: 4px; height: 4px; }
+.sp-cover-mini .sp-cball-x { font-size: 8.5px; }
+
+/* The batters and bowlers on: a card each, topped with their side's colour. */
+.sp-ccards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.sp-ccard { min-width: 0; padding: 11px 12px 10px; border: 1px solid var(--sp-rule-2); border-top: 4px solid var(--kit); border-radius: 6px; }
+.sp-ccard-name { margin: 0; font-size: 14.5px; font-weight: 800; line-height: 1.2; font-variation-settings: 'wdth' 88; }
+.sp-ccard-on { font-size: 12px; font-weight: 650; color: var(--sp-muted); font-variation-settings: 'wdth' 100; }
+.sp-ccard-strike { border-top-width: 7px; }
+.sp-ccard-striker { font-size: 12px; font-weight: 850; color: var(--sp-ink); font-variation-settings: 'wdth' 100; }
+.sp-ccard-big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; margin: 6px 0 0; }
+.sp-ccard-big b { font-size: 38px; line-height: 0.95; font-weight: 900; font-variation-settings: 'wdth' 62; font-variant-numeric: tabular-nums; }
+.sp-ccard-big span { font-size: 13px; font-weight: 650; color: var(--sp-ink-2); }
+.sp-ccard-line { margin: 5px 0 0; font-size: 12.5px; line-height: 1.35; color: var(--sp-ink-2); }
+.sp-ccard-mark { margin: 6px 0 0; font-size: 12.5px; font-weight: 800; color: var(--kit); }
+.sp-ccard-more { margin-top: 6px; font-size: 12.5px; }
+.sp-ccard-more summary { display: flex; align-items: center; min-height: 32px; cursor: pointer; list-style: none; font-weight: 750; color: var(--sp-ink); }
+.sp-ccard-more summary::-webkit-details-marker { display: none; }
+.sp-ccard-more .sp-cm-form { font-size: 12.5px; }
+.sp-cpair { margin-top: 12px; }
+.sp-cpair-bar { display: flex; gap: 2px; height: 10px; margin-top: 6px; }
+.sp-cpair-bar i { display: block; min-width: 2px; }
+.sp-cpair-l { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0 0; }
+.sp-cpair-l b { color: var(--sp-ink); font-weight: 850; }
+.sp-cstage { margin: 10px 0 0; font-size: 14px; line-height: 1.4; color: var(--sp-ink-2); }
+.sp-cstage b { color: var(--sp-ink); font-weight: 800; }
+
+/* Wickets, latest first: the red W, who and how, and the score it fell at. */
+.sp-cwk { list-style: none; margin: 8px 0 0; padding: 0; }
+.sp-cwk li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--sp-rule); }
+.sp-cwk li:first-child { border-top: 0; }
+.sp-cwk-who { min-width: 0; font-size: 14px; line-height: 1.3; }
+.sp-cwk-who small { display: block; font-size: 12.5px; color: var(--sp-muted); }
+.sp-cwk-at { text-align: right; }
+.sp-cwk-at b { display: block; font-size: 17px; font-weight: 900; font-variation-settings: 'wdth' 72; }
+.sp-cwk-at small { font-size: 12px; color: var(--sp-muted); }
+/* The same scoreboard as a card in lists: smaller, and the whole card opens the match. */
+.sp-csb.sp-csb-card { display: block; margin: 6px 0 0; color: inherit; border-radius: 10px; overflow: hidden; }
+.sp-csb-card .sp-csb-halves { min-height: 0; border-radius: 10px 10px 0 0; overflow: hidden; }
+.sp-csb-card .sp-csb-half { padding: 28px 12px 10px; }
+.sp-csb-card .sp-csb-name { font-size: 14px; }
+.sp-csb-card .sp-csb-runs { font-size: 30px; }
+.sp-csb-card .sp-csb-overs { font-size: 12px; }
+.sp-csb-card .sp-csb-tag { top: 9px; left: 12px; font-size: 11.5px; }
+.sp-csb-card .sp-csb-half + .sp-csb-half .sp-csb-tag { left: auto; right: 12px; }
+.sp-csb-card .sp-csb-eq { padding: 8px 12px 9px; border-radius: 0 0 10px 10px; }
+.sp-csb-card .sp-csb-eq-main { font-size: 14.5px; }
+.sp-csb-card .sp-csb-eq-main b { font-size: 21px; }
+.sp-csb-card .sp-csb-eq-side { font-size: 12px; }
+.sp-csb-card:hover .sp-csb-eq-main { text-decoration: underline; text-underline-offset: 3px; }
+/* The scorecard: each innings headed by a band in its side's colour; fifties and hundreds in it too. */
+.sp-sc > summary { border-left: 5px solid var(--kit, var(--sp-ink)); padding-left: 10px; }
+.sp-sct-fifty { color: var(--kit, var(--sp-ink)); }
+/* The compact score that sticks under the header once the scoreboard has scrolled away. It has no height of
+   its own, so showing it moves nothing. */
+.sp-stick { position: sticky; top: calc(54px + env(safe-area-inset-top, 0px)); z-index: 15; height: 0; }
+@media (min-width: 1024px) { .sp-stick { top: 0; } }
+.sp-stick-bar { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 6px; padding: 7px 16px; background: var(--sp-page); border-bottom: 1px solid var(--sp-rule); visibility: hidden; }
+@media (min-width: 1024px) { .sp-stick-bar { padding: 8px 0; } }
+.sp-stick-on .sp-stick-bar { visibility: visible; }
+.sp-stick-team { display: inline-flex; align-items: baseline; gap: 5px; padding: 3px 8px; border-radius: 4px; font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.sp-stick-team b { font-size: 15px; font-weight: 900; font-variation-settings: 'wdth' 70; font-variant-numeric: tabular-nums; }
+.sp-stick-words { margin-left: auto; font-size: 13px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-stick-words.sp-on { color: var(--sp-live); }
+.sp-stick-ink { background: var(--sp-ink); color: var(--sp-page); }
+/* A chart line's name at its end, in its colour, on the page. */
+.sp-f1-ends { position: relative; padding-right: 38px; }
+.sp-f1-end { position: absolute; right: 0; transform: translateY(-50%); font-size: 11.5px; font-weight: 850; line-height: 1; }
+.sp-stick-team.sp-f1-band-yellow, .sp-stick-team.sp-f1-band-sc, .sp-stick-team.sp-f1-band-sc-ending, .sp-stick-team.sp-f1-band-vsc, .sp-stick-team.sp-f1-band-vsc-ending { text-transform: none; letter-spacing: 0; }
+/* The F1 sentence sits in the status card, under the lap or the clock. */
+.sp-band.sp-band-f1 { margin: 12px -14px 0; border-radius: 0; padding: 10px 14px 11px; }
+.sp-band.sp-band-f1:last-child { margin-bottom: -12px; }
+.sp-band-f1 .sp-band-main { display: block; }
+.sp-band-main strong { font-weight: 850; }
+.sp-band-f1 .sp-band-main b { font-size: 21px; font-weight: 900; font-variation-settings: 'wdth' 64; font-variant-numeric: tabular-nums; }

@@ -10,7 +10,7 @@ import { bestXI, nextFree, estimateFree, planTransfers, buildSquad, rotationPair
 import { chipsLeft, validate, whenFor, honestFacts, transferLedger } from './advice.mjs';
 import { londonToUtc, ukLabel, priceWindows, priceMove, breakBefore } from './timing.mjs';
 import { cleanReport, newsPatches, newsTtl, matchPlayer } from './news.mjs';
-import { espnDaysFor, formationLines, normaliseMatch, statusOf } from './espn.mjs';
+import { espnDaysFor, formationLines, normaliseMatch, statusOf, withPendingGoals, shootoutFrom, shotsFrom } from './espn.mjs';
 
 test('bonus: plain 3-2-1', () => {
   assert.deepEqual(bonusFromBps({ 1: 30, 2: 25, 3: 20, 4: 10 }), { 1: 3, 2: 2, 3: 1 });
@@ -775,4 +775,45 @@ test('ESPN relay key: the ESPN URL survives the round trip through a path segmen
   const k = espnKey(u);
   assert.match(k, /^[A-Za-z0-9_-]+$/);
   assert.equal(fromEspnKey(k), u);
+});
+
+test('withPendingGoals: the score is right when the events lag behind it', () => {
+  const goal = (id, side, minute, period = 1) => ({ id, kind: 'goal', side, minute, order: Number.parseInt(minute, 10), period, players: ['A Player'], score: null });
+  const events = [goal('1', 'home', "12'"), { id: '2', kind: 'yellow', side: 'away', minute: "30'", order: 30, period: 1, players: [] }];
+  const live = { status: { state: 'in', label: "78'" }, home: { score: 1 }, away: { score: 1 } };
+  const out = withPendingGoals(events, live);
+  const pending = out.filter((e) => e.pending);
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].side, 'away');
+  assert.equal(pending[0].minute, "78'");
+  assert.deepEqual(pending[0].score, [1, 1]);
+  // In step: nothing added, the same list back.
+  assert.equal(withPendingGoals(events, { ...live, away: { score: 0 } }), events);
+  // At half-time a missing goal goes at 45′, at full time at 90′.
+  assert.equal(withPendingGoals([], { status: { state: 'in', label: 'HT' }, home: { score: 1 }, away: { score: 0 } })[0].minute, "45'");
+  assert.equal(withPendingGoals([], { status: { state: 'post', label: 'FT' }, home: { score: 0 }, away: { score: 2 } }).filter((e) => e.pending).length, 2);
+  // Before kick-off there's no score to trust.
+  assert.equal(withPendingGoals([], { status: { state: 'pre', label: '' }, home: { score: null }, away: { score: null } }).length, 0);
+});
+
+test('shootoutFrom: a shoot-out kick by kick, and its kicks are not shots', () => {
+  const c = (sequence, text, period = 5) => ({ sequence, text, play: { id: String(sequence), period: { number: period }, type: { type: /^goal/i.test(text) ? 'goal' : 'penalty---missed' }, text } });
+  // ESPN's own words, from Bradford v Burnley in the Carabao Cup.
+  const commentary = [
+    c(1, 'Penalty Shootout begins Bradford City 0, Burnley 0.'),
+    c(2, 'Goal! Bradford City 0, Burnley 0(1). Zian Flemming (Burnley) converts the penalty with a right footed shot to the bottom left corner.'),
+    c(3, 'Goal! Bradford City 0(1), Burnley 0(1). Antoni Sarcevic (Bradford City) converts the penalty with a right footed shot to the top left corner.'),
+    c(4, 'Penalty missed! Still Bradford City 0(1), Burnley 0(1). Zeki Amdouni (Burnley) hits the left post with a right footed shot.'),
+    c(5, 'Penalty saved. Jacob Bruun Larsen (Burnley) right footed shot saved in the bottom left corner by Jon McCracken (Bradford City).'),
+    c(6, 'Penalty Shootout ends, Bradford City 0(1), Burnley 0(1).'),
+  ];
+  const kicks = shootoutFrom(commentary, { home: ['Bradford City', 'Bradford', 'BRA'], away: ['Burnley', 'BUR'] });
+  assert.deepEqual(kicks.map((k) => [k.side, k.outcome, k.player]), [
+    ['away', 'scored', 'Zian Flemming'],
+    ['home', 'scored', 'Antoni Sarcevic'],
+    ['away', 'missed', 'Zeki Amdouni'],
+    ['away', 'saved', 'Jacob Bruun Larsen'],
+  ]);
+  assert.deepEqual(shootoutFrom([c(1, 'Kick-off', 1)], { home: [], away: [] }), []);
+  assert.equal(shotsFrom(commentary, [], () => 'home').length, 0);
 });

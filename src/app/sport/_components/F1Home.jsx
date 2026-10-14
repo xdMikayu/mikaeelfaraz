@@ -42,15 +42,9 @@ export default function F1Home() {
   const last = useJson(season && lastRound ? `/api/sport/f1/round/${season}/${lastRound}` : null);
   const now = useNow(30000);
   const zone = useZone();
-  const total = cal.data?.races.length ?? 0;
   return (
     <div className="sp-read">
-      <div className="sp-pad" style={{ paddingTop: 14 }}>
-        <div className="sp-section-head" style={{ marginBottom: 0 }}>
-          <h1 className="sp-h1">Formula 1</h1>
-          {season && total > 0 && st.data && <span className="sp-small sp-muted">{season}, {lastRound} of {total} rounds run</span>}
-        </div>
-      </div>
+      {/* The header already says F1: the page opens on the next race, its name the heading. */}
       <NextWeekend cal={cal} now={now} />
       {last.data?.race && <LastRace season={season} round={lastRound} data={last.data} date={cal.data?.races.find((r) => r.round === lastRound)} color={color} named={named} />}
       <Championship st={st} cal={cal.data} color={color} named={named} />
@@ -71,15 +65,20 @@ function NextWeekend({ cal, now }) {
   // "Marina Bay Street Circuit, Singapore", not "…, Marina Bay, Singapore".
   const where = race ? [race.circuit, race.place, race.country].filter((x, i, a) => x && !a.slice(0, i).some((y) => y?.includes(x))).join(', ') : '';
   return (
-    <section className="sp-pad sp-section">
-      {/* The heading waits for the calendar: it's "This weekend" or "Next race" depending on the date. */}
-      {!data && !error ? <div className="sp-skel" style={{ height: 330, borderRadius: 6 }} /> : <h2 className="sp-h2">{soon ? 'This weekend' : 'Next race'}</h2>}
+    <section className="sp-pad sp-section" style={{ paddingTop: 14 }}>
+      {/* The label waits for the calendar: it's "This weekend" or "Next race" depending on the date. */}
+      {!data && !error ? <div className="sp-skel" style={{ height: 330, borderRadius: 6 }} /> : race && <p className="sp-kicker">{soon ? 'This weekend' : 'Next race'}</p>}
       {!data && error && <p className="sp-note">Couldn’t load the F1 calendar just now. Try again in a minute.</p>}
-      {data && !race && <p className="sp-note">The {data.season} season is over. Next year’s calendar shows here once it’s published.</p>}
+      {data && !race && (
+        <>
+          <h1 className="sp-h1">The {data.season} season</h1>
+          <p className="sp-note">It’s over. Next year’s calendar shows here once it’s published.</p>
+        </>
+      )}
       {race && (
         <>
-          <div className="sp-event-top" style={{ marginTop: 8 }}>
-            <b className="sp-f1-name">{race.name}</b>
+          <div className="sp-event-top" style={{ marginTop: 2 }}>
+            <h1 className="sp-f1-name sp-h1">{race.name}</h1>
             <span className="sp-tiny sp-muted">
               Round {race.round} of {data.races.length}
             </span>

@@ -191,21 +191,39 @@ export function LapTrace({ trace, colorOf, drivers }) {
   const dmax = Math.max(0.05, ...trace.delta.map(Math.abs));
   const dy = (v) => DH / 2 - (v / dmax) * (DH / 2 - 4);
   const end = trace.delta[trace.delta.length - 1];
+  // Each line named at its end, so it reads without telling the colours apart; kept 16% apart.
+  const ends = trace.laps.map((l, i) => ({ code: trace.codes[i], at: (y(l.speed[l.speed.length - 1]) / H) * 100 }));
+  if (ends.length === 2 && Math.abs(ends[0].at - ends[1].at) < 16) {
+    const mid = (ends[0].at + ends[1].at) / 2;
+    const [hi, lo] = ends[0].at <= ends[1].at ? [ends[0], ends[1]] : [ends[1], ends[0]];
+    hi.at = Math.max(8, mid - 8);
+    lo.at = Math.min(92, hi.at + 16);
+  }
   return (
     <figure className="sp-f1-fig">
-      <svg viewBox={`0 0 ${W} ${H}`} className="sp-f1-svg" preserveAspectRatio="none" role="img" aria-label={`Speed along the lap, ${a} and ${b}`}>
-        {trace.laps.map((l, i) => (
-          <path key={trace.codes[i]} d={line(l.speed, y)} fill="none" stroke={st[trace.codes[i]].color} strokeWidth="2" strokeDasharray={st[trace.codes[i]].dashed ? '5 3' : undefined} vectorEffect="non-scaling-stroke" />
+      <div className="sp-f1-ends">
+        <svg viewBox={`0 0 ${W} ${H}`} className="sp-f1-svg" preserveAspectRatio="none" role="img" aria-label={`Speed along the lap, ${a} and ${b}`}>
+          {trace.laps.map((l, i) => (
+            <path key={trace.codes[i]} d={line(l.speed, y)} fill="none" stroke={st[trace.codes[i]].color} strokeWidth="2" strokeDasharray={st[trace.codes[i]].dashed ? '5 3' : undefined} vectorEffect="non-scaling-stroke" />
+          ))}
+        </svg>
+        {ends.map((e) => (
+          <span key={e.code} className="sp-f1-end" style={{ top: `${e.at}%`, color: st[e.code].color }} aria-hidden="true">
+            {e.code}
+          </span>
         ))}
-      </svg>
-      <div className="sp-f1-axis sp-tiny sp-muted">
+      </div>
+      {/* The same width as the speed lines above, so the two line up along the lap. */}
+      <div className="sp-f1-axis sp-f1-ends sp-tiny sp-muted">
         <span>Speed, {vmin}–{vmax} km/h</span>
         <span>{(len / 1000).toFixed(2)} km</span>
       </div>
-      <svg viewBox={`0 0 ${W} ${DH}`} className="sp-f1-svg" preserveAspectRatio="none" role="img" aria-label={`Gap between ${a} and ${b} along the lap`} style={{ marginTop: 8 }}>
-        <path d={`M0 ${DH / 2}H${W}`} stroke="var(--sp-rule-2)" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
-        <path d={line(trace.delta, dy)} fill="none" stroke="var(--sp-ink)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      </svg>
+      <div className="sp-f1-ends" style={{ marginTop: 8 }}>
+        <svg viewBox={`0 0 ${W} ${DH}`} className="sp-f1-svg" preserveAspectRatio="none" role="img" aria-label={`Gap between ${a} and ${b} along the lap`}>
+          <path d={`M0 ${DH / 2}H${W}`} stroke="var(--sp-rule-2)" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+          <path d={line(trace.delta, dy)} fill="none" stroke="var(--sp-ink)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        </svg>
+      </div>
       <figcaption className="sp-tiny sp-muted">
         Above: speed along the lap, <Mark color={st[a].color} /> {a} and <Mark color={st[b].color} /> {b}
         {st[b].dashed ? ' (dashed)' : ''}. Below: how far {b} was behind {a} at each point of the lap, rising where {a} gained; {gapText(end)} s at the line. From F1’s car data, about four readings a second, so small wiggles are noise.

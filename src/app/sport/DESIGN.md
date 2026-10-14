@@ -1,7 +1,7 @@
 # Matchday design rules: kit colours
 
-The football app at `/sport`, a product with its own look. The direction ("B: kit colours") was picked from three
-mockups. Check every screen against this file before it ships.
+The sports app at `/sport` (football, cricket, F1, and tennis and wrestling to come), a product with its own look. The
+direction ("B: kit colours") was picked from three mockups. Check every screen against this file before it ships.
 
 ## The idea
 
@@ -31,9 +31,24 @@ two earlier versions of this app shipped them.
 | Black and white | Everything else |
 | Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions, F1 sectors): more ink means more. F1 tyres too: more ink is a softer compound, wet tyres outlined |
 
-- Near-white kits fall back to the club's alternate colour when it has a darker one.
+- Every team colour goes through `src/lib/sport/kit-colors.mjs`, wherever it comes from:
+  - ESPN's raw screen primaries become the colour of the real shirt: `#0000fa` a royal blue, `#ffff00` a kit yellow,
+    neon greens a true green. Designed colours (Chelsea's blue, Villa's claret) pass unchanged.
+  - One colour per team on a page: its block, its chart lines, its bars and its share of a forecast all match.
+    `matchKits` decides it once per match.
+  - In a block, a white kit takes the club's darker alternate when it has one; when it doesn't, or when the away
+    side has to change into white, the block is a pale grey (`--sp-kit-white`) so it doesn't merge with the page.
+  - When two kits clash the away side changes to its other kit, as on the pitch.
+  - On the page, a colour that's too pale to read as a line (Man City's sky blue on white) gets a deeper shade of
+    itself, never a different colour; a white kit is drawn in the page's ink.
+  - Two lines that someone red-green colour blind (about one man in twelve) would read as the same, such as
+    Liverpool's red against Sporting's green, are checked by simulating how they see them; one line then moves a
+    shade lighter or darker, the smallest step that tells them apart and no more than 0.2 in lightness, so each
+    stays its own colour. Lightness is the one difference everyone sees.
+- Nothing is told by colour alone: a six has a ring, a missed penalty a cross, a chart line its name at the end.
 - Coloured blocks get a hairline edge so white halves don't merge with the page.
-- Dark mode is neutral near-black (`#121212`), never navy. The kit colours are unchanged.
+- Dark mode is neutral near-black (`#121212`), never navy. The kit colours are unchanged; only their lines lighten
+  where they need to.
 
 ## Type
 
@@ -50,33 +65,110 @@ two earlier versions of this app shipped them.
 - Statuses are text: "FT" in grey, "38'" in red, "20:30" in ink.
 - Fantasy plates follow the same rule: black when the player's match is over, red while it's on, an outline with
   the kick-off time while it's still to come.
-- Tabs and the day picker are words, underlined when active. The sports row at the top of Scores is the one
-  exception: each sport's mark over its name, underlined when active.
-- The tab bar is a plain bar with a hairline top edge.
+- Tabs, the day picker and the league picker are words, underlined when active. Never boxed pills.
+- One rule above each section. Two sections never stack two rules with a gap between them.
+- Lists of shares are ranked bars, biggest first, every row named. Never a stacked bar with labels that don't fit.
 
-## Sport marks
+## Navigation
 
-Every sport has a mark in `public/sport/marks/`, in the same family as the app icon:
+- The header names the sport you're in: "Matchday · F1", the sport in heavy type. Pages don't repeat it in their
+  own heading: a page's heading is its subject ("Wednesday 14 October", "United States Grand Prix").
+- Phones: the sport's sections are tabs under the header (Scores · Fantasy · Tables · Following). The sports wait in
+  a drawer behind the menu button, since switching sport is occasional. No bottom tab bar.
+- Desktop: the same list is a 236 px sidebar, the current sport's sections nested under it.
+- Settings is its own page: spoilers, appearance, the order of the sports and the one Matchday opens on.
+- Every row in the drawer and sidebar is at least 44 px tall.
 
-- A rounded square of the sport's own surface: grass, the cricket pitch, a court, asphalt, the ring.
-- One object on it, split down the middle: red on the left, white on the right. A shirt, a ball split along its
-  seam, a car, a mask. Where a split object would read as something else (a red and white tennis ball looks like a
-  baseball), the surface takes the split instead: hard court and clay either side of the net.
-- Flat colours, no outlines, gradients or shadows; ink (`#111`) only for details like a collar or wheels.
-- Checked at 180, 60, 32 and 16 px on light and dark before it ships.
+## The mark
 
-The app icon stays the football mark. A sport page uses its own mark as the browser-tab icon; saved to the home
-screen, it's still Matchday.
+"The fixture": two halves facing each other across a gap, home and away, or a ball about to be kicked off. A red
+half and an ink half on a white tile (`public/sport/icon.svg`), so it reads on any background, light or dark.
+
+- It sits before the name everywhere the name appears: "◐ Matchday · Cricket" in the header, the menu and the
+  sidebar.
+- It's the app icon, the favicon and the home-screen icon (`favicon-32`, `icon-192`, `icon-512`, the maskable icon
+  and the Apple touch icon, which are full squares since the phone rounds them itself).
+- No letter, no gradient, no outline beyond the tile's hairline. Checked at 180, 64, 32 and 16 px on light and dark.
+
+## Sport pictograms
+
+Each sport is a pictogram drawn for the app (`SportGlyph` in `_components/glyphs.jsx`), not a logo:
+
+- The navigation glyphs' grid and stroke: 22 units, 1.6 stroke, round caps and joins, outline first.
+- Balanced to carry about the same ink: a ball, a bat and ball, a tennis ball's seams (diagonal, so it doesn't read
+  as a baseball), a chequered flag, a championship belt.
+- Words lead and the pictogram follows: the active sport gets weight and a 2 px ink rule, never a filled pill.
+- A sport page's browser-tab icon is its pictogram (`public/sport/marks/`); saved to the home screen, it's still
+  Matchday's mark.
 
 ## Team markers
 
 In lists, a small shirt in the kit colour (with the alternate colour at the collar) stands in for a crest. Crests
-appear only on white discs inside kit-colour blocks.
+appear only on white discs inside kit-colour blocks, and in league tables.
+
+## Tables
+
+A bar beside each place says what it leads to, from ESPN's notes: ink for a reward (darker for a bigger one), an
+outline for a play-off, red for the drop, and a line where one zone ends. No other colours.
+
+## Match events
+
+- Goals lead: the scorer heavier, and the score it made in the scoreboard's type on the outer side of the name.
+  Substitutions recede.
+- A red card in a kit-colour block sits on a small white chip, so it reads on a red kit too.
+- The win-probability chart marks each goal with a ball above it and a faint rule in the scorers' colour.
+
+## Cricket, live
+
+Built to be followed at a glance (`_components/CricketLive.jsx`):
+
+- **The scoreboard:** each side's half in its colours, in the order they batted, the score in the scoreboard's type
+  and "20 of 20 overs" in words. Under it an ink band (it inverts in dark mode) with the one sentence that matters,
+  its numbers big: "India need **162** off **62** balls", "Heading for **243**", "India need **248** to win",
+  or the result.
+- **This over, ball by ball:** a wicket is red with a white W; a four or a six takes the batting side's colour (a six
+  heavier); a dot ball is grey; runs are outlined in ink; wides and no-balls are outlined in grey with their mark.
+  Slots for the balls still to come show only while that over is being bowled, and no total is given while ESPN's
+  ball-by-ball lags the score.
+- **The batters and the bowler** are cards topped with their side's colour: runs off balls big, then fours, sixes
+  and strike rate in words. Form, records and match-ups wait behind a tap on each card. A fifty or a hundred is
+  named in the side's colour.
+- **The partnership** is one bar split between the two batters, in the same order as their cards.
+- **Wickets** are a timeline, latest first: the red W, who and how, and the score it fell at.
+- **At the innings break** the band gives the target, the cards become "Not out" and "Best bowling", and nothing
+  says anyone is batting.
+- Lists use the same scoreboard as a card that opens the match, with each side's chance under it.
+
+## Live, every sport
+
+What following cricket live taught, applied to football and F1 too:
+
+- **The score stays in sight.** Once the scoreboard scrolls away, a compact bar sticks under the header: each
+  side's score in its colours and the minute (football), the score and what's needed (cricket), the lap or the
+  clock, the flag and the one sentence (F1). It takes no room until it's needed (`_components/Sticky.jsx`).
+- **One sentence says what it means**, in an ink band under the scoreboard, its numbers big:
+  - Football, in a league: "As it stands: **Liverpool** go up to **6th** · **LASK** stay **27th**", with every match
+    in the league being played counted as if it ended now (`src/lib/sport/as-it-stands.mjs`); before kick-off,
+    where a win would take each side.
+  - F1: "**Verstappen** leads by **4.2 s**, 12 laps to go"; in qualifying, who's out as it stands; "provisional
+    pole"; in practice, the fastest.
+- **Trust the score over the details.** ESPN's score moves before its events and its ball-by-ball. A goal the score
+  has and the events don't yet shows as a goal with the scorer to follow; an over's total comes from the score.
+- **Hold early numbers.** Nothing is shown that one moment can swing: possession waits until 5 minutes, a run rate
+  until an over is done, F1 gaps until lap 2, and a trend until it has three clean laps (the same car ahead, no
+  stop by either, no safety car). A drop zone is named once enough drivers have set a time to fill the places
+  through.
+- **Say what's moving.** Football: the last ten minutes in words ("City 4 shots (0.9 xG), Liverpool none"). F1:
+  gaps that moved a second and a half or more over five clean laps ("Norris is catching Verstappen for the lead:
+  3.4 s behind, 2.1 s closer than five laps ago").
+- **A penalty shoot-out** is shown kick by kick: scored in the side's colour, missed or saved in red with a cross,
+  and while it's on, the kicks still to come as empty rings. Its kicks aren't shots: they stay out of the xG.
 
 ## Motion
 
 - A new goal flashes the score once.
-- Nothing else moves except the page.
+- Live timing is calm: no flashing rows, no pulsing dots.
+- Nothing else moves except the page and the drawer.
 
 ## Words
 

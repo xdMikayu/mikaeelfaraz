@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "TZ=Asia/Dubai node --test src/lib/finance/finance.test.mjs src/lib/sport/sport.test.mjs src/lib/sport/othersports.test.mjs src/lib/sport/cricket.test.mjs src/lib/sport/cricket-model.test.mjs src/lib/sport/cricket-match.test.mjs src/lib/sport/odds.test.mjs src/lib/sport/f1.test.mjs src/lib/sport/f1-live.test.mjs"
+    "test": "TZ=Asia/Dubai node --test src/lib/finance/finance.test.mjs src/lib/sport/sport.test.mjs src/lib/sport/othersports.test.mjs src/lib/sport/cricket.test.mjs src/lib/sport/cricket-model.test.mjs src/lib/sport/cricket-match.test.mjs src/lib/sport/odds.test.mjs src/lib/sport/f1.test.mjs src/lib/sport/f1-live.test.mjs src/lib/sport/kit-colors.test.mjs src/lib/sport/as-it-stands.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
