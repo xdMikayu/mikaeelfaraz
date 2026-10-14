@@ -204,7 +204,7 @@ export function situation(m) {
     if (need <= 0) return { ...base, kind: 'won', margin: plural(left, 'wicket') };
     // All out or out of balls short of the target: the side that batted first has won, or it's a tie.
     if (out || balls === 0) return need === 1 ? { ...base, kind: 'tied' } : { ...base, kind: 'won', team: other.name, margin: plural(need - 1, 'run') };
-    return { ...base, kind: 'chase', runs: need, balls, target, rate, needRate: balls ? need / (balls / 6) : null };
+    return { ...base, kind: 'chase', runs: need, balls, bowled: o.balls, target, rate, needRate: balls ? need / (balls / 6) : null };
   }
   // Batting first: all out or the overs used up means the chase's target is set.
   if (out || (o.max != null && o.balls >= o.max)) return { ...base, kind: 'set', team: other.name, runs: now.runs + 1, by: bat.name, maxOvers: o.max ? o.max / 6 : null };

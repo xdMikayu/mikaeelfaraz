@@ -87,6 +87,9 @@ export function Scoreboard({ d, sit, kits }) {
     const kit = kits[t.id];
     const bat = sit?.bat === t.id && !['set', 'won', 'tied'].includes(sit?.kind);
     const won = done && t.winner;
+    // Once the other side bats, ESPN's line for the first innings can drop its overs; the innings has them.
+    const inn = d.innings.filter((x) => x.team === t.id).at(-1);
+    const overs = oversWords(t.overs) ?? (inn?.overs && inn.ballLimit ? `${inn.overs} of ${inn.ballLimit / 6} overs` : null);
     return (
       <div className={`sp-csb-half${bat ? ' sp-csb-bat' : ''}`} style={{ background: fillOf(kit), color: kit?.ink ?? '#fff' }}>
         <span className="sp-csb-crest">
@@ -96,7 +99,7 @@ export function Scoreboard({ d, sit, kits }) {
         {t.runs ? (
           <>
             <b className="sp-csb-runs">{t.runs}</b>
-            <span className="sp-csb-overs">{oversWords(t.overs)}</span>
+            <span className="sp-csb-overs">{overs}</span>
           </>
         ) : (
           <span className="sp-csb-yet">{d.state === 'pre' ? '' : 'Yet to bat'}</span>
@@ -223,7 +226,8 @@ function Equation({ d, sit }) {
         )}
       </>
     );
-    side = [sit.needRate != null && `${oneDp(sit.needRate)} an over needed`, sit.rate != null && `scoring ${oneDp(sit.rate)}`].filter(Boolean).join(' · ');
+    // The rate they're scoring at means little before an over is done (one four off one ball is 24 an over).
+    side = [sit.needRate != null && `${oneDp(sit.needRate)} an over needed`, sit.rate != null && sit.bowled >= 6 && `scoring ${oneDp(sit.rate)}`].filter(Boolean).join(' · ');
   } else if (sit?.kind === 'rate') {
     main = read?.projected ? (
       <>
@@ -285,8 +289,13 @@ export function ThisOver({ d, inn, kits }) {
   if (!overs.length) return null;
   const kit = kits[inn.team];
   const [now, before] = [overs.at(-1), overs.at(-2)];
-  const total = (o) => o.balls.reduce((s, m) => s + runsOf(m), 0);
-  const wkts = (o) => o.balls.filter((m) => m === 'W').length;
+  // The over being bowled is counted from the score, which is always current: the innings total now
+  // less the total at the end of the over before. The ball-by-ball can be a ball or two behind.
+  const current = inn.balls % 6 ? Math.floor(inn.balls / 6) + 1 : Math.floor(inn.balls / 6);
+  const before0 = now.n === 1 ? { total: 0, down: 0 } : inn.byOver?.find((o) => o.n === now.n - 1);
+  const fromScore = now.n === current && before0 ? { runs: inn.runs - before0.total, wickets: inn.wickets - before0.down } : null;
+  const total = (o) => (o === now && fromScore ? fromScore.runs : o.balls.reduce((t, m) => t + runsOf(m), 0));
+  const wkts = (o) => (o === now && fromScore ? fromScore.wickets : o.balls.filter((m) => m === 'W').length);
   const line = (o) => `${plural(total(o), 'run')}${wkts(o) ? `, ${plural(wkts(o), 'wicket')}` : ''}`;
   const lag = inn.byOver?.length > 0 && inn.balls - inn.byOver.at(-1).balls > 3;
   // Slots for the balls still to come, only while this over is the one being bowled.
@@ -298,8 +307,8 @@ export function ThisOver({ d, inn, kits }) {
         <h2 className="sp-h2">
           {inningsDone(inn) ? 'Last over' : `${nth(now.n)} over`} <span className="sp-cover-who">{nameOf(d, now.bowler)}</span>
         </h2>
-        {/* While the ball-by-ball lags the score, its over is short of balls and its total would mislead. */}
-        {!lag && <span className="sp-small sp-ink2 sp-num">{line(now)}</span>}
+        {/* While the ball-by-ball lags well behind, an over's total from its balls would mislead. */}
+        {(fromScore || !lag) && <span className="sp-small sp-ink2 sp-num">{line(now)}</span>}
       </div>
       <div className="sp-cover-balls">
         {now.balls.map((m, i) => (
@@ -369,7 +378,8 @@ export function Crease({ d, inn, kits, details }) {
               <span> off {plural(b.balls, 'ball')}</span>
             </p>
             <p className="sp-ccard-line">
-              {b.fours} fours · {b.sixes} sixes{sr(b.runs, b.balls) != null ? ` · strike rate ${sr(b.runs, b.balls)}` : ''}
+              {plural(b.fours, 'four')} · {plural(b.sixes, 'six', 'sixes')}
+              {sr(b.runs, b.balls) != null ? ` · strike rate ${sr(b.runs, b.balls)}` : ''}
             </p>
             {b.runs >= 50 && <p className="sp-ccard-mark">{b.runs >= 100 ? 'Hundred' : 'Fifty'}</p>}
             {details?.(b.id, 'bat')}

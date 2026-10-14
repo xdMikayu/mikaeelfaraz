@@ -146,4 +146,5 @@ test('situation: at a T20 innings break ESPN drops the overs limit; the format s
   assert.equal(chase.kind, 'chase');
   assert.equal(chase.runs, 162);
   assert.equal(chase.balls, 62);
+  assert.equal(chase.bowled, 58);
 });
