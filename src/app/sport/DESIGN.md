@@ -24,12 +24,12 @@ two earlier versions of this app shipped them.
 
 | Colour | Means |
 |---|---|
-| Kit colours (from ESPN; FPL's own kit images on the fantasy pitch) | That team: split match cards, the match header, the team header, shirt markers, chart lines, possession |
+| Kit colours (from ESPN; FPL's own kit images on the fantasy pitch; F1's team colours from its timing data) | That team: split match cards, the match header, the team header, shirt markers, chart lines, possession; in F1 the thin bar beside each driver and his chart line (a team's second driver dashed) |
 | Red | Live now (the minute), red cards, points lost |
 | Green | Points gained; players who help you in your league |
 | Grass green | Pitches |
 | Black and white | Everything else |
-| Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions): more ink means more |
+| Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions, F1 sectors): more ink means more. F1 tyres too: more ink is a softer compound, wet tyres outlined |
 
 - Near-white kits fall back to the club's alternate colour when it has a darker one.
 - Coloured blocks get a hairline edge so white halves don't merge with the page.

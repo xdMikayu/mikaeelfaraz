@@ -13,3 +13,7 @@ yarn-error.log
 # Cricsheet downloads and the cricket model's working files (see scripts/sport/cricket-extract.mjs)
 /data/sport/cricsheet/
 /data/sport/cricket/
+
+# Python (the F1 data scripts) and FastF1's download cache
+__pycache__/
+.fastf1-cache/

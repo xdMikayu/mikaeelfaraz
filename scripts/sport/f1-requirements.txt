@@ -1,0 +1,2 @@
+# For scripts/sport/f1_sessions.py, f1_model.py and f1_fit.py (FastF1 brings pandas, numpy and scipy).
+fastf1==3.8.3
