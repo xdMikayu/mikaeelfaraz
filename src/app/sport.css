@@ -329,7 +329,7 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-pens-kicks { display: flex; flex-wrap: wrap; gap: 6px; }
 .sp-pens-kick { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-style: normal; font-size: 15px; font-weight: 900; line-height: 1; box-sizing: border-box; }
 .sp-pens-miss { background: var(--sp-loss); color: #fff; }
-.sp-pens-yet { border: 1.5px dashed var(--sp-rule-2); }
+.sp-pens-yet { border: 1.5px dashed var(--sp-muted); }
 .sp-pens-total { font-size: 24px; font-weight: 900; font-variation-settings: 'wdth' 64; font-variant-numeric: tabular-nums; min-width: 1ch; text-align: right; }
 .sp-hero-under { padding: 8px 16px 0; }
 @media (min-width: 1024px) { .sp-hero-under { padding: 8px 0 0; } }

@@ -41,6 +41,11 @@ two earlier versions of this app shipped them.
   - When two kits clash the away side changes to its other kit, as on the pitch.
   - On the page, a colour that's too pale to read as a line (Man City's sky blue on white) gets a deeper shade of
     itself, never a different colour; a white kit is drawn in the page's ink.
+  - Two lines that someone red-green colour blind (about one man in twelve) would read as the same, such as
+    Liverpool's red against Sporting's green, are checked by simulating how they see them; one line then moves a
+    shade lighter or darker, the smallest step that tells them apart and no more than 0.2 in lightness, so each
+    stays its own colour. Lightness is the one difference everyone sees.
+- Nothing is told by colour alone: a six has a ring, a missed penalty a cross, a chart line its name at the end.
 - Coloured blocks get a hairline edge so white halves don't merge with the page.
 - Dark mode is neutral near-black (`#121212`), never navy. The kit colours are unchanged; only their lines lighten
   where they need to.
@@ -133,6 +138,31 @@ Built to be followed at a glance (`_components/CricketLive.jsx`):
 - **At the innings break** the band gives the target, the cards become "Not out" and "Best bowling", and nothing
   says anyone is batting.
 - Lists use the same scoreboard as a card that opens the match, with each side's chance under it.
+
+## Live, every sport
+
+What following cricket live taught, applied to football and F1 too:
+
+- **The score stays in sight.** Once the scoreboard scrolls away, a compact bar sticks under the header: each
+  side's score in its colours and the minute (football), the score and what's needed (cricket), the lap or the
+  clock, the flag and the one sentence (F1). It takes no room until it's needed (`_components/Sticky.jsx`).
+- **One sentence says what it means**, in an ink band under the scoreboard, its numbers big:
+  - Football, in a league: "As it stands: **Liverpool** go up to **6th** · **LASK** stay **27th**", with every match
+    in the league being played counted as if it ended now (`src/lib/sport/as-it-stands.mjs`); before kick-off,
+    where a win would take each side.
+  - F1: "**Verstappen** leads by **4.2 s**, 12 laps to go"; in qualifying, who's out as it stands; "provisional
+    pole"; in practice, the fastest.
+- **Trust the score over the details.** ESPN's score moves before its events and its ball-by-ball. A goal the score
+  has and the events don't yet shows as a goal with the scorer to follow; an over's total comes from the score.
+- **Hold early numbers.** Nothing is shown that one moment can swing: possession waits until 5 minutes, a run rate
+  until an over is done, F1 gaps until lap 2, and a trend until it has three clean laps (the same car ahead, no
+  stop by either, no safety car). A drop zone is named once enough drivers have set a time to fill the places
+  through.
+- **Say what's moving.** Football: the last ten minutes in words ("City 4 shots (0.9 xG), Liverpool none"). F1:
+  gaps that moved a second and a half or more over five clean laps ("Norris is catching Verstappen for the lead:
+  3.4 s behind, 2.1 s closer than five laps ago").
+- **A penalty shoot-out** is shown kick by kick: scored in the side's colour, missed or saved in red with a cross,
+  and while it's on, the kicks still to come as empty rings. Its kicks aren't shots: they stay out of the xG.
 
 ## Motion
 

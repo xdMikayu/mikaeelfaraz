@@ -106,6 +106,8 @@ function side(c) {
     alt: kitHex(t.alternateColor),
     score: c.score == null ? null : Number(typeof c.score === 'object' ? c.score.value ?? c.score.displayValue : c.score),
     shootout: c.shootoutScore != null ? Number(c.shootoutScore) : null,
+    // Over two legs: the score across both, this match included.
+    agg: c.aggregateScore != null ? Number(c.aggregateScore) : null,
     winner: Boolean(c.winner),
     form: c.form ?? null,
   };
@@ -135,6 +137,7 @@ export function normaliseMatch(e, league) {
     competition: e.league?.abbreviation ?? e.league?.name ?? null,
     date: comp.date ?? e.date,
     status,
+    leg: comp.leg?.value ?? null,
     home: { ...home, red: details.filter((d) => d.red && d.side === 'home').length },
     away: { ...away, red: details.filter((d) => d.red && d.side === 'away').length },
     goals: details.filter((d) => d.goal && !d.shootout),

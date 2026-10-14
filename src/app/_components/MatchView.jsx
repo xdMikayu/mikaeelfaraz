@@ -201,7 +201,8 @@ function useFirstTrue(v) {
 function useTableNow(m) {
   const slug = m && LEAGUE_BY_SLUG[m.league]?.table && m.status.state !== 'post' && !m.status.off ? m.league : null;
   const { data } = useLive(
-    (signal) => (slug ? Promise.all([fetchStandings(slug, { signal }), fetchScoreboard(slug, null, { signal })]).then(([standings, board]) => ({ standings, board })) : Promise.resolve(null)),
+    // Without the league's other matches it still counts this one.
+    (signal) => (slug ? Promise.all([fetchStandings(slug, { signal }), fetchScoreboard(slug, null, { signal }).catch(() => null)]).then(([standings, board]) => ({ standings, board })) : Promise.resolve(null)),
     [slug],
     { every: 60000, live: () => m?.status.state === 'in' },
   );
@@ -226,8 +227,32 @@ function Move({ name, move }) {
  * would take each side.
  */
 function TableBand({ m, table, names }) {
-  if (!table?.standings) return null;
   const live = m.status.state === 'in';
+  // The second leg of a tie: the score across both legs, which is what decides it.
+  if (m.leg === 2 && m.home.agg != null && m.away.agg != null && (live || m.status.state === 'pre')) {
+    const [h, a] = [m.home.agg, m.away.agg];
+    const lead = h === a ? null : h > a ? 'home' : 'away';
+    return (
+      <div className="sp-band" aria-live="polite">
+        <span className="sp-band-label">{live ? 'On aggregate' : 'After the first leg'}</span>
+        <span className="sp-band-main">
+          <span className="sp-band-move">
+            {lead ? (
+              <>
+                <strong>{names[lead]}</strong> lead <b>{Math.max(h, a)}–{Math.min(h, a)}</b>
+              </>
+            ) : (
+              <>
+                Level at <b>{h}–{a}</b>
+                {live ? `, ${Number.parseInt(m.status.label, 10) > 90 ? 'penalties' : 'extra time'} if it stays that way` : ''}
+              </>
+            )}
+          </span>
+        </span>
+      </div>
+    );
+  }
+  if (!table?.standings) return null;
   let r = null;
   if (live) {
     // This match from its own feed, which is fresher than the league's scoreboard.
