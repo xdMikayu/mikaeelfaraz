@@ -1,5 +1,5 @@
 import SportsBar, { sportIcons } from '../_components/SportsBar';
-import ComingSoon from '../_components/ComingSoon';
+import F1Home from '../_components/F1Home';
 
 export const metadata = { title: 'F1', icons: sportIcons('f1') };
 
@@ -7,7 +7,7 @@ export default function F1Page() {
   return (
     <>
       <SportsBar active="f1" />
-      <ComingSoon sport="f1" />
+      <F1Home />
     </>
   );
 }
