@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lapSeconds, lapText, gapText, standingsOf, winnersOf, classificationOf, qualifyingOf, roundOf, titleRace } from './f1.mjs';
+import { lapSeconds, lapText, gapText, standingsOf, winnersOf, classificationOf, qualifyingOf, roundOf, titleRace, countdown } from './f1.mjs';
 
 const D = (id, code, first, last) => ({ driverId: id, code, permanentNumber: '1', givenName: first, familyName: last });
 const C = (id, name) => ({ constructorId: id, name });
@@ -85,4 +85,17 @@ test('the title maths', () => {
   // All run: the leader has won it.
   const done = titleRace({ drivers, constructors }, races, { 1: {}, 2: {}, 3: {}, 4: {} }, { 4: {} });
   assert.equal(done.racesLeft + done.sprintsLeft, 0);
+});
+
+test('countdown: the two biggest units, none of them zero', () => {
+  const min = 60e3;
+  assert.deepEqual(countdown(11 * 1440 * min + 5 * 60 * min), [[11, 'days']]);
+  assert.deepEqual(countdown(2 * 1440 * min), [[2, 'days']]);
+  assert.deepEqual(countdown(1440 * min + 14 * 60 * min), [[1, 'day'], [14, 'h']]);
+  assert.deepEqual(countdown(1440 * min), [[1, 'day']]);
+  assert.deepEqual(countdown(3 * 60 * min + 12 * min), [[3, 'h'], [12, 'min']]);
+  assert.deepEqual(countdown(60 * min), [[1, 'h']]);
+  // A part-minute counts as a minute: nothing reads "0 min" before it starts.
+  assert.deepEqual(countdown(20e3), [[1, 'min']]);
+  assert.deepEqual(countdown(-5e3), [[0, 'min']]);
 });

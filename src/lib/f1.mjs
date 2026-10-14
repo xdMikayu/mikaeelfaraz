@@ -142,3 +142,15 @@ export function titleRace(standings, races, raceDone, sprintDone) {
   };
   return { racesLeft, sprintsLeft, most, drivers: title(standings.drivers, most.driver), constructors: title(standings.constructors, most.team) };
 }
+
+/** What's left until a time, as its two biggest units: [[11, 'days']], [[1, 'day'], [14, 'h']], [[3, 'h'], [12, 'min']]. */
+export function countdown(ms) {
+  const min = Math.max(0, Math.ceil(ms / 60000));
+  const d = Math.floor(min / 1440);
+  const h = Math.floor((min % 1440) / 60);
+  const m = min % 60;
+  if (d >= 2) return [[d, 'days']];
+  if (d === 1) return h ? [[1, 'day'], [h, 'h']] : [[1, 'day']];
+  if (h) return m ? [[h, 'h'], [m, 'min']] : [[h, 'h']];
+  return [[m, 'min']];
+}

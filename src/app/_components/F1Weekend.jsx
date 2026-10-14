@@ -1,12 +1,12 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { sessionEnd } from '@/lib/sport/othersports.mjs';
 import { SESSION_KEY, lapText, gapText } from '@/lib/sport/f1.mjs';
 import { kickoff, shortDate, zoneLabel } from './time';
 import { useJson, useF1Index, teamColor, teamName, Driver, Mark, useF1Reveal, Reveal } from './f1bits';
 import { LapChart, TyreStrip, PaceList, LapTrace } from './F1Charts';
+import { RaceHero } from './F1Hero';
 import F1Live from './F1Live';
 import { heat } from './fplbits';
 
@@ -22,6 +22,13 @@ function useNow(every) {
   }, [every]);
   return now;
 }
+
+/** "9–11 Oct", or "30 Oct – 1 Nov" across a month's end. */
+const dayRange = (a, b) => {
+  const [x, y] = [new Date(a), new Date(b)];
+  const dm = (d) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return x.getMonth() === y.getMonth() ? `${x.getDate()}–${dm(y)}` : `${dm(x)} – ${dm(y)}`;
+};
 
 /** "30" or "30–33": a temperature range, as one number when it held steady. */
 const range = ([a, b]) => (Math.round(a) === Math.round(b) ? `${Math.round(a)}` : `${Math.round(a)}–${Math.round(b)}`);
@@ -63,26 +70,22 @@ export default function F1Weekend() {
   const s = sessions.find((x) => SESSION_KEY[x.label] === key) ?? fallback;
   const sKey = SESSION_KEY[s.label];
   const onFile = ix.data?.rounds?.[round]?.sessions ?? {};
-  const where = [race.circuit, race.place, race.country].filter((x, i, a) => x && !a.slice(0, i).some((y) => y?.includes(x))).join(', ');
   const first = sessions[0]?.at;
   const last = sessions[sessions.length - 1]?.at;
+  const won = rd.data?.race?.[0];
 
   return (
     <div className="sp-read">
-      <div className="sp-pad" style={{ paddingTop: 14 }}>
-        <Link className="sp-tiny sp-muted sp-link" href="/sport/f1">
-          Formula 1
-        </Link>
-        <div className="sp-event-top" style={{ marginTop: 6 }}>
-          <h1 className="sp-f1-name sp-h1">{race.name}</h1>
-          <span className="sp-tiny sp-muted">
-            Round {race.round} of {cal.data.races.length}
-          </span>
-        </div>
-        <p className="sp-small sp-muted" style={{ margin: '4px 0 0' }}>
-          {where}
-          {first && last ? `, ${shortDate(first)} to ${shortDate(last)}` : ''}
-        </p>
+      <RaceHero
+        race={race}
+        total={cal.data.races.length}
+        season={season}
+        now={now}
+        compact
+        kicker={`Round ${race.round} of ${cal.data.races.length}${first && last ? ` · ${dayRange(first, last)}` : ''}`}
+        winner={!hidden && won?.pos === 1 ? won.driver.last : null}
+      />
+      <div className="sp-pad">
         <div className="sp-tabs" role="tablist" aria-label="Sessions" style={{ marginTop: 12, gap: 16 }}>
           {sessions.map((x) => {
             const k = SESSION_KEY[x.label];
@@ -113,7 +116,7 @@ export default function F1Weekend() {
       />
       <p className="sp-note sp-pad" style={{ margin: '18px 0 0' }}>
         Classifications for the race, the sprint and qualifying from Jolpica; everything else from F1’s timing data through FastF1, an hour or two after each session.
-        Unofficial: Matchday has no link with Formula 1. Times in {zoneLabel()}.
+        Circuit maps from Tomislav Bacinger’s f1-circuits (MIT licence). Unofficial: Matchday has no link with Formula 1. Times in {zoneLabel()}.
       </p>
     </div>
   );
