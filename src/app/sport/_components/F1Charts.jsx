@@ -97,9 +97,9 @@ export function LapChart({ s, colorOf }) {
   );
 }
 
-const COMPOUND = { SOFT: 'S', MEDIUM: 'M', HARD: 'H', INTERMEDIATE: 'I', WET: 'W' };
+export const COMPOUND = { SOFT: 'S', MEDIUM: 'M', HARD: 'H', INTERMEDIATE: 'I', WET: 'W' };
 // More ink for the softer tyre, as on a heat map; wet-weather tyres are outlined.
-const SHADE = { SOFT: 0.95, MEDIUM: 0.55, HARD: 0.12 };
+export const SHADE = { SOFT: 0.95, MEDIUM: 0.55, HARD: 0.12 };
 
 /** Each driver's stints along the race, in finishing order, with the compound in each. */
 export function TyreStrip({ s, colorOf }) {

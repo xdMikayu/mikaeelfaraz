@@ -7,6 +7,7 @@ import { SESSION_KEY, lapText, gapText } from '@/lib/sport/f1.mjs';
 import { kickoff, shortDate, zoneLabel } from './time';
 import { useJson, useF1Index, teamColor, teamName, Driver, Mark, useF1Reveal, Reveal } from './f1bits';
 import { LapChart, TyreStrip, PaceList, LapTrace } from './F1Charts';
+import F1Live from './F1Live';
 import { heat } from './fplbits';
 
 const TAB = { 'Practice 1': 'FP1', 'Practice 2': 'FP2', 'Practice 3': 'FP3', 'Sprint qualifying': 'Sprint quali', Sprint: 'Sprint', Qualifying: 'Qualifying', Race: 'Race' };
@@ -55,7 +56,9 @@ export default function F1Weekend() {
 
   const sessions = race.sessions;
   const done = sessions.filter((s) => sessionEnd(s) <= now);
-  const fallback = done.length ? done[done.length - 1] : sessions[0];
+  // Open on the session that's on (or about to be), else the last one done.
+  const onNow = sessions.find((x) => Date.parse(x.at) - 3600e3 <= now && now < sessionEnd(x) + 30 * 60e3);
+  const fallback = onNow ?? (done.length ? done[done.length - 1] : sessions[0]);
   const key = pick ?? q.get('s') ?? SESSION_KEY[fallback.label];
   const s = sessions.find((x) => SESSION_KEY[x.label] === key) ?? fallback;
   const sKey = SESSION_KEY[s.label];
@@ -85,13 +88,29 @@ export default function F1Weekend() {
             const k = SESSION_KEY[x.label];
             return (
               <button key={k} role="tab" aria-selected={k === sKey} onClick={() => setPick(k)} style={{ height: 38, fontSize: 14.5 }}>
+                {Date.parse(x.at) <= now && now < sessionEnd(x) && <i className="sp-dot sp-live-text" style={{ marginRight: 6, verticalAlign: 2 }} aria-label="On now" />}
                 {TAB[x.label] ?? x.label}
               </button>
             );
           })}
         </div>
       </div>
-      <Session key={sKey} s={s} sKey={sKey} season={season} round={round} rd={rd} onFile={onFile[sKey]} predicted={Boolean(ix.data?.rounds?.[round]?.predict)} colorOf={colorOf} nameOf={nameOf} now={now} hidden={hidden} reveal={reveal} />
+      <Session
+        key={sKey}
+        s={s}
+        sKey={sKey}
+        season={season}
+        round={round}
+        rd={rd}
+        onFile={onFile[sKey]}
+        settled={Boolean((ix.data || ix.error) && (rd.data || rd.error))}
+        predicted={Boolean(ix.data?.rounds?.[round]?.predict)}
+        colorOf={colorOf}
+        nameOf={nameOf}
+        now={now}
+        hidden={hidden}
+        reveal={reveal}
+      />
       <p className="sp-note sp-pad" style={{ margin: '18px 0 0' }}>
         Classifications for the race, the sprint and qualifying from Jolpica; everything else from F1’s timing data through FastF1, an hour or two after each session.
         Unofficial: Matchday has no link with Formula 1. Times in {zoneLabel()}.
@@ -100,36 +119,30 @@ export default function F1Weekend() {
   );
 }
 
-function Session({ s, sKey, season, round, rd, onFile, predicted, colorOf, nameOf, now, hidden, reveal }) {
+function Session({ s, sKey, season, round, rd, onFile, settled, predicted, colorOf, nameOf, now, hidden, reveal }) {
   const file = useJson(onFile ? `/api/sport/f1/data/${season}/${round}-${sKey}` : null);
   const pred = useJson(sKey === 'race' && predicted ? `/api/sport/f1/data/${season}/${round}-predict` : null);
   const start = Date.parse(s.at);
   const end = sessionEnd(s);
   const f = file.data;
-  if (now < start) {
-    return (
-      <>
-        <section className="sp-pad sp-section">
-          <p className="sp-small sp-ink2" style={{ margin: 0 }}>
-            {s.label} starts <b className="sp-f1-strong">{shortDate(s.at)} at {kickoff(s.at)}</b>.
-          </p>
-        </section>
-        {pred.data && <Prediction p={pred.data} colorOf={colorOf} />}
-      </>
-    );
-  }
-  if (now < end) {
-    return (
+  const official = sKey === 'race' ? rd.data?.race : sKey === 'sprint' ? rd.data?.sprint : sKey === 'q' ? rd.data?.qualifying : null;
+  const before = (
+    <>
       <section className="sp-pad sp-section">
         <p className="sp-small sp-ink2" style={{ margin: 0 }}>
-          <span className="sp-live-text">On now.</span> Live timing isn’t on Matchday yet: the classification and the analysis appear an hour or two after the session.
+          {s.label} starts <b className="sp-f1-strong">{shortDate(s.at)} at {kickoff(s.at)}</b>. Live timing starts here when F1’s does, shortly before.
         </p>
       </section>
-    );
-  }
+      {pred.data && <Prediction p={pred.data} colorOf={colorOf} />}
+    </>
+  );
+  // Live timing from three hours before the start (sessions get moved earlier) until the
+  // classification or the analysis is in, at most six hours after the end.
+  if (now >= start - 3 * 3600e3 && now < end + 6 * 3600e3 && (now < end || (settled && !onFile && !official))) return <F1Live s={s} hidden={hidden} reveal={reveal} before={before} />;
+  if (now < start) return before;
+  if (!settled) return <div className="sp-skel" style={{ height: 360, margin: 16, borderRadius: 6 }} />;
   if (hidden) return <Reveal onReveal={reveal} what={`${s.label.toLowerCase()} results`} />;
 
-  const official = sKey === 'race' ? rd.data?.race : sKey === 'sprint' ? rd.data?.sprint : sKey === 'q' ? rd.data?.qualifying : null;
   const waiting = !onFile && now - end < 6 * 3600e3;
   return (
     <>

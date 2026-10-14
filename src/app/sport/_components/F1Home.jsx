@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { nextRace, sessionEnd } from '@/lib/sport/othersports.mjs';
-import { titleRace } from '@/lib/sport/f1.mjs';
+import { SESSION_KEY, titleRace } from '@/lib/sport/f1.mjs';
 import { kickoff, shortDate, until, zoneLabel } from './time';
 import { useJson, useF1Index, teamColor, teamName, Driver, Mark, shortRace } from './f1bits';
 
@@ -85,11 +85,21 @@ function NextWeekend({ cal, now }) {
             </span>
           </div>
           <p className="sp-small sp-muted" style={{ margin: '2px 0 0' }}>{where}</p>
-          <p className="sp-small" style={{ margin: '6px 0 0' }}>
-            {race.live && <span className="sp-live-text">On now: {race.live.label}</span>}
-            {race.live && Date.parse(raceAt) > now && ' · '}
-            {Date.parse(raceAt) > now && <span className="sp-ink2">Race {until(raceAt, now)}</span>}
-          </p>
+          {race.live ? (
+            <Link className="sp-f1-live-link" href={`${weekendHref(data.season, race.round)}&s=${SESSION_KEY[race.live.label]}`}>
+              <span className="sp-f1-live">
+                <i className="sp-dot" aria-hidden="true" /> Live
+              </span>
+              <b>{race.live.label}: follow the timing</b>
+              <span aria-hidden="true">→</span>
+            </Link>
+          ) : (
+            Date.parse(raceAt) > now && (
+              <p className="sp-small sp-ink2" style={{ margin: '6px 0 0' }}>
+                Race {until(raceAt, now)}
+              </p>
+            )
+          )}
           <ol className="sp-sessions" aria-label="Sessions">
             {race.sessions.map((s) => {
               const state = race.live?.at === s.at ? 'live' : sessionEnd(s) <= now ? 'done' : 'todo';
