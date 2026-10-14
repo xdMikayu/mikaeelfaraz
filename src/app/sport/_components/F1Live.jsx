@@ -271,8 +271,9 @@ function Status({ t, left, minutes, age, delay, tv, names }) {
     else if (left != null) small = `${clockText(left)} left`;
     if (kind === 'practice' && minutes && left != null && !over) done = Math.min(1, Math.max(0, 1 - left / (minutes * 60)));
   }
-  // Race control's latest word, if it's from this lap or the last.
-  const word = t.messages.find((m) => ['sc', 'red', 'chequered', 'info', 'stewards'].includes(m.kind));
+  // Race control's latest word, if it's from this lap or the last: the flags and the stewards, and
+  // notices such as the chance of rain before the start.
+  const word = t.messages.find((m) => ['sc', 'red', 'chequered', 'stewards', ...(status === 'waiting' ? ['info'] : [])].includes(m.kind));
   const fresh = word && (kind !== 'race' || !t.lap?.now || (word.lap ?? 0) >= t.lap.now - 1);
   const flag = status === 'suspended' && t.track !== 'red' ? 'red' : t.track;
   return (
@@ -286,7 +287,7 @@ function Status({ t, left, minutes, age, delay, tv, names }) {
         <span className="sp-tiny sp-muted sp-num" aria-live="polite">
           {delay ? (
             `${delay} s behind live`
-          ) : age != null && !over ? (
+          ) : age != null && ['running', 'suspended', 'break'].includes(status) ? (
             age > 20 ? (
               <span className="sp-live-text">No update for {age} s</span>
             ) : (
@@ -297,10 +298,14 @@ function Status({ t, left, minutes, age, delay, tv, names }) {
           ) : null}
         </span>
       </div>
-      {done != null && (
-        <div className="sp-f1-progress" aria-hidden="true">
-          <i style={{ width: `${done * 100}%` }} />
-        </div>
+      {kind === 'race' && t.lap?.of ? (
+        <Laps now={over ? t.lap.of + 1 : status === 'waiting' ? 0 : t.lap.now} of={t.lap.of} />
+      ) : (
+        done != null && (
+          <div className="sp-f1-progress" aria-hidden="true">
+            <i style={{ width: `${done * 100}%` }} />
+          </div>
+        )
       )}
       {kind === 'quali' && t.part?.cut && status === 'running' && (
         <p className="sp-tiny sp-muted" style={{ margin: '6px 0 0' }}>
@@ -315,6 +320,17 @@ function Status({ t, left, minutes, age, delay, tv, names }) {
         </p>
       )}
       {tv}
+    </div>
+  );
+}
+
+/** The race as a row of laps, one tick each: run, under way, to go. */
+function Laps({ now, of }) {
+  return (
+    <div className="sp-f1-laps" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${of}, minmax(0, 1fr))` }}>
+      {Array.from({ length: of }, (_, i) => (
+        <i key={i} className={i + 1 < now ? 'sp-f1-lap-done' : i + 1 === now ? 'sp-f1-lap-now' : undefined} />
+      ))}
     </div>
   );
 }
@@ -442,7 +458,12 @@ function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, changed, lo
 
   return (
     <section className="sp-section">
-      {kind === 'race' && (
+      {kind === 'race' && t.session.status === 'waiting' && (
+        <div className="sp-pad sp-section-head">
+          <h2 className="sp-h2">The grid</h2>
+        </div>
+      )}
+      {kind === 'race' && t.session.status !== 'waiting' && (
         <div className="sp-pad sp-f1-tower-head">
           <div className="sp-f1-seg" role="radiogroup" aria-label="Gaps">
             <button role="radio" aria-checked={mode === 'int'} onClick={() => setMode('int')}>
@@ -513,7 +534,7 @@ function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, changed, lo
                   </td>
                   {kind === 'race' ? (
                     <>
-                      <td className="sp-num">{raceGap(d, i, mode)}</td>
+                      <td className="sp-num">{t.session.status === 'waiting' ? null : raceGap(d, i, mode)}</td>
                       <td className="sp-num">
                         <Time t={d.lastLap} />
                       </td>

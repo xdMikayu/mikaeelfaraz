@@ -194,7 +194,7 @@ export default function Home() {
               </p>
               <p className="links">
                 <a href="/sport">Open Matchday</a>
-                <a href="/sport/following#xg">How the xG model works</a>
+                <a href="/sport/settings#xg">How the xG model works</a>
               </p>
             </div>
             <dl>

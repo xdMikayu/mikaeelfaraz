@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Matchday cricket: a ball half red and half white, red-ball and white-ball cricket, split along its seam on the pitch. -->
-  <defs><clipPath id="cricket-sq"><rect width="512" height="512" rx="112"/></clipPath><clipPath id="cricket-obj"><path d="M256 106a150 150 0 1 0 0.01 0Z"/></clipPath></defs>
-  <g clip-path="url(#cricket-sq)"><rect width="512" height="512" fill="#2f8d4e"/><path fill="#2a8346" d="M64 0h64v512H64zM192 0h64v512h-64zM320 0h64v512h-64zM448 0h64v512h-64z"/>
-    <rect x="178" width="156" height="512" fill="#d8c48e"/>
-    <g fill="none" stroke="#fff" stroke-width="9"><path d="M146 84H366M146 428H366"/></g>
-    <g clip-path="url(#cricket-obj)"><path fill="#d6001c" d="M0 0h256v512H0z"/><path fill="#fff" d="M256 0h256v512H256z"/></g>
-    <g clip-path="url(#cricket-obj)" fill="none" stroke-width="7" stroke-linecap="round">
-      <g stroke="#fff"><path d="M231 142L245 130"/><path d="M231 166L245 154"/><path d="M231 190L245 178"/><path d="M231 214L245 202"/><path d="M231 238L245 226"/><path d="M231 262L245 250"/><path d="M231 286L245 274"/><path d="M231 310L245 298"/><path d="M231 334L245 322"/><path d="M231 358L245 346"/><path d="M231 382L245 370"/></g>
-      <g stroke="#111"><path d="M281 142L267 130"/><path d="M281 166L267 154"/><path d="M281 190L267 178"/><path d="M281 214L267 202"/><path d="M281 238L267 226"/><path d="M281 262L267 250"/><path d="M281 286L267 274"/><path d="M281 310L267 298"/><path d="M281 334L267 322"/><path d="M281 358L267 346"/><path d="M281 382L267 370"/></g>
-    </g>
-    <path d="M256 106V406" stroke="#111" stroke-opacity=".35" stroke-width="5"/></g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#fff"/><g transform="translate(5 5)" fill="none" stroke="#111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m12.6 4.6 3.8 3.8-8.9 8.9a1.6 1.6 0 0 1-2.3 0l-1.5-1.5a1.6 1.6 0 0 1 0-2.3Z" /> <path d="m14.5 6.5 4-4" /> <circle cx="16.5" cy="16.5" r="2.3" fill="#111" /></g></svg>
