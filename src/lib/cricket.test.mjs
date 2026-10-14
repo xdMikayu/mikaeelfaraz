@@ -132,3 +132,18 @@ test('cricket: once the scores settle it, say who won, before ESPN calls the res
   assert.equal(said(game('T20I', ['Pakistan', '180/5'], ['Sri Lanka', '180/6', '20/20 ov, target 181', true])), 'The match is tied. The official result follows shortly.');
   assert.equal(said(game('Test', ['Queensland', '307 & 68'], ['Western Australia', '175 & 201/8', '72.5 ov, target 201', true], 4)), 'Western Australia have won by 2 wickets. The official result follows shortly.');
 });
+
+test('situation: at a T20 innings break ESPN drops the overs limit; the format still sets the target', () => {
+  const team = (id, name, runs, overs, batting) => ({ id, name, runs, overs, batting });
+  // West Indies 247/3 after their 20 overs, the score line reading "20 ov": India need 248.
+  const brk = situation({ state: 'in', format: 'T20I', teams: [team('6', 'India', '', null, false), team('4', 'West Indies', '247/3', '20 ov', true)] });
+  assert.equal(brk.kind, 'set');
+  assert.equal(brk.team, 'India');
+  assert.equal(brk.runs, 248);
+  assert.equal(brk.maxOvers, 20);
+  // Then the chase, its score line without the limit too: the balls left still come out.
+  const chase = situation({ state: 'in', format: 'T20I', teams: [team('6', 'India', '86/2', '9.4 ov', true), team('4', 'West Indies', '247/3', '20 ov', false)] });
+  assert.equal(chase.kind, 'chase');
+  assert.equal(chase.runs, 162);
+  assert.equal(chase.balls, 62);
+});

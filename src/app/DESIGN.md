@@ -74,6 +74,17 @@ two earlier versions of this app shipped them.
 - Settings is its own page: spoilers, appearance, the order of the sports and the one Matchday opens on.
 - Every row in the drawer and sidebar is at least 44 px tall.
 
+## The mark
+
+"The fixture": two halves facing each other across a gap, home and away, or a ball about to be kicked off. A red
+half and an ink half on a white tile (`public/sport/icon.svg`), so it reads on any background, light or dark.
+
+- It sits before the name everywhere the name appears: "◐ Matchday · Cricket" in the header, the menu and the
+  sidebar.
+- It's the app icon, the favicon and the home-screen icon (`favicon-32`, `icon-192`, `icon-512`, the maskable icon
+  and the Apple touch icon, which are full squares since the phone rounds them itself).
+- No letter, no gradient, no outline beyond the tile's hairline. Checked at 180, 64, 32 and 16 px on light and dark.
+
 ## Sport pictograms
 
 Each sport is a pictogram drawn for the app (`SportGlyph` in `_components/glyphs.jsx`), not a logo:
@@ -83,7 +94,7 @@ Each sport is a pictogram drawn for the app (`SportGlyph` in `_components/glyphs
   as a baseball), a chequered flag, a championship belt.
 - Words lead and the pictogram follows: the active sport gets weight and a 2 px ink rule, never a filled pill.
 - A sport page's browser-tab icon is its pictogram (`public/sport/marks/`); saved to the home screen, it's still
-  Matchday.
+  Matchday's mark.
 
 ## Team markers
 
@@ -101,6 +112,27 @@ outline for a play-off, red for the drop, and a line where one zone ends. No oth
   Substitutions recede.
 - A red card in a kit-colour block sits on a small white chip, so it reads on a red kit too.
 - The win-probability chart marks each goal with a ball above it and a faint rule in the scorers' colour.
+
+## Cricket, live
+
+Built to be followed at a glance (`_components/CricketLive.jsx`):
+
+- **The scoreboard:** each side's half in its colours, in the order they batted, the score in the scoreboard's type
+  and "20 of 20 overs" in words. Under it an ink band (it inverts in dark mode) with the one sentence that matters,
+  its numbers big: "India need **162** off **62** balls", "Heading for **243**", "India need **248** to win",
+  or the result.
+- **This over, ball by ball:** a wicket is red with a white W; a four or a six takes the batting side's colour (a six
+  heavier); a dot ball is grey; runs are outlined in ink; wides and no-balls are outlined in grey with their mark.
+  Slots for the balls still to come show only while that over is being bowled, and no total is given while ESPN's
+  ball-by-ball lags the score.
+- **The batters and the bowler** are cards topped with their side's colour: runs off balls big, then fours, sixes
+  and strike rate in words. Form, records and match-ups wait behind a tap on each card. A fifty or a hundred is
+  named in the side's colour.
+- **The partnership** is one bar split between the two batters, in the same order as their cards.
+- **Wickets** are a timeline, latest first: the red W, who and how, and the score it fell at.
+- **At the innings break** the band gives the target, the cards become "Not out" and "Best bowling", and nothing
+  says anyone is batting.
+- Lists use the same scoreboard as a card that opens the match, with each side's chance under it.
 
 ## Motion
 
