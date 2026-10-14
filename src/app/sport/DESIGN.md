@@ -148,8 +148,9 @@ What following cricket live taught, applied to football and F1 too:
   clock, the flag and the one sentence (F1). It takes no room until it's needed (`_components/Sticky.jsx`).
 - **One sentence says what it means**, in an ink band under the scoreboard, its numbers big:
   - Football, in a league: "As it stands: **Liverpool** go up to **6th** · **LASK** stay **27th**", with every match
-    in the league being played counted as if it ended now (`src/lib/sport/as-it-stands.mjs`); before kick-off,
-    where a win would take each side.
+    in the league being played counted as if it ended now, and finished ones until ESPN's table has them
+    (`src/lib/sport/as-it-stands.mjs`); before kick-off, where a win would take each side; after the whistle,
+    "In the table", for the rest of the day. In the second leg of a tie, the aggregate.
   - F1: "**Verstappen** leads by **4.2 s**, 12 laps to go"; in qualifying, who's out as it stands; "provisional
     pole"; in practice, the fastest.
 - **Trust the score over the details.** ESPN's score moves before its events and its ball-by-ball. A goal the score
@@ -163,6 +164,21 @@ What following cricket live taught, applied to football and F1 too:
   3.4 s behind, 2.1 s closer than five laps ago").
 - **A penalty shoot-out** is shown kick by kick: scored in the side's colour, missed or saved in red with a cross,
   and while it's on, the kicks still to come as empty rings. Its kicks aren't shots: they stay out of the xG.
+
+## F1, the race weekend
+
+The F1 pages open on the race weekend as a title card (`_components/F1Hero.jsx`), in ink:
+
+- **The circuit, drawn large**, in white. Outlines from Tomislav Bacinger's f1-circuits (MIT licence; notice in
+  `src/lib/sport/f1-circuits.LICENSE.md`), built into `src/lib/sport/f1-circuits.json` by
+  `scripts/sport/f1-circuits.mjs`.
+- **The race in the scoreboard's type**, and under it the one thing that matters now, in big numerals: "Lights out
+  in **11** days" before the weekend, "Qualifying in **3** h **12** min" during it, "On now: **Qualifying**" with a
+  link to the timing, or the winner once it's over (not while spoilers are hidden).
+- **The track's facts** in a line: its length and its first Grand Prix.
+- **The title fight**: the leaders as bars in their team colours, as long as their points, and in ink what's at
+  stake: "**Antonelli** leads Russell by **102** points, with up to **150** still to win. 6 drivers can still take
+  it."
 
 ## Motion
 
