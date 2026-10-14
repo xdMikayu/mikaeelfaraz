@@ -1,0 +1,103 @@
+{
+ "Abu Dhabi Grand Prix": {
+  "loss": 22.8,
+  "stops": 52
+ },
+ "Australian Grand Prix": {
+  "loss": 21.4,
+  "stops": 46
+ },
+ "Austrian Grand Prix": {
+  "loss": 21.1,
+  "stops": 107
+ },
+ "Azerbaijan Grand Prix": {
+  "loss": 21.6,
+  "stops": 37
+ },
+ "Bahrain Grand Prix": {
+  "loss": 24.1,
+  "stops": 95
+ },
+ "Barcelona Grand Prix": {
+  "loss": 24.0,
+  "stops": 42
+ },
+ "Belgian Grand Prix": {
+  "loss": 20.1,
+  "stops": 69
+ },
+ "British Grand Prix": {
+  "loss": 24.7,
+  "stops": 101
+ },
+ "Canadian Grand Prix": {
+  "loss": 23.3,
+  "stops": 68
+ },
+ "Chinese Grand Prix": {
+  "loss": 23.3,
+  "stops": 52
+ },
+ "Dutch Grand Prix": {
+  "loss": 21.1,
+  "stops": 74
+ },
+ "Emilia Romagna Grand Prix": {
+  "loss": 28.1,
+  "stops": 35
+ },
+ "Hungarian Grand Prix": {
+  "loss": 21.2,
+  "stops": 109
+ },
+ "Italian Grand Prix": {
+  "loss": 25.5,
+  "stops": 51
+ },
+ "Japanese Grand Prix": {
+  "loss": 22.7,
+  "stops": 65
+ },
+ "Las Vegas Grand Prix": {
+  "loss": 22.0,
+  "stops": 55
+ },
+ "Mexico City Grand Prix": {
+  "loss": 22.7,
+  "stops": 47
+ },
+ "Miami Grand Prix": {
+  "loss": 19.8,
+  "stops": 58
+ },
+ "Monaco Grand Prix": {
+  "loss": 21.2,
+  "stops": 62
+ },
+ "Qatar Grand Prix": {
+  "loss": 27.3,
+  "stops": 30
+ },
+ "Saudi Arabian Grand Prix": {
+  "loss": 20.9,
+  "stops": 20
+ },
+ "Singapore Grand Prix": {
+  "loss": 25.0,
+  "stops": 64
+ },
+ "Spanish Grand Prix": {
+  "loss": 22.9,
+  "stops": 95
+ },
+ "São Paulo Grand Prix": {
+  "loss": 22.4,
+  "stops": 36
+ },
+ "United States Grand Prix": {
+  "loss": 21.6,
+  "stops": 42
+ },
+ "_note": "From 77 races and sprints, 2024–2026, by scripts/sport/f1_pitloss.py."
+}
