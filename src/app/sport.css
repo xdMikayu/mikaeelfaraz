@@ -372,12 +372,14 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-table tr.sp-mine td { background: var(--sp-mine); }
 .sp-table .sp-tteam { display: flex; align-items: center; gap: 10px; min-width: 0; font-variation-settings: 'wdth' 90; font-weight: 650; }
 .sp-table .sp-tteam span { overflow: hidden; text-overflow: ellipsis; }
-.sp-zone { display: inline-grid; place-items: center; min-width: 24px; height: 22px; border-radius: 3px; font-weight: 800; font-size: 12.5px; }
+.sp-zone { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.sp-zone i { display: block; width: 4px; height: 22px; border-radius: 1px; }
+.sp-table tr.sp-zone-break td { border-top-color: var(--sp-ink-2); }
 @media (max-width: 480px) { .sp-table .sp-hide-sm { display: none; } }
 .sp-key-chips { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px 16px; }
 @media (min-width: 1024px) { .sp-key-chips { padding: 12px 0; } }
 .sp-key-chips span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--sp-ink-2); }
-.sp-key-chips i { width: 10px; height: 10px; border-radius: 2px; }
+.sp-key-chips i { width: 4px; height: 14px; border-radius: 1px; }
 
 /* ---------- fantasy ---------- */
 .sp-fhead { padding: 14px 16px 16px; border-bottom: 1px solid var(--sp-rule); text-align: center; }
@@ -1055,3 +1057,9 @@ details[open] > summary .sp-chev { transform: rotate(90deg); }
 .sp-f1-live-link b { flex: 1; font-weight: 800; }
 .sp-f1-live-link:hover { background: var(--sp-hover); }
 .sp-root [id] { scroll-margin-top: 70px; }
+.sp-side-soon { margin-left: auto; padding: 2px 5px 1px; border-radius: 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-muted); box-shadow: inset 0 0 0 1px var(--sp-rule-2); font-variation-settings: 'wdth' 85; }
+.sp-about summary { display: flex; align-items: center; min-height: 44px; font-size: 14.5px; font-weight: 750; cursor: pointer; list-style: none; }
+.sp-about summary::-webkit-details-marker { display: none; }
+.sp-about summary::after { content: '▾'; margin-left: 8px; color: var(--sp-muted); }
+.sp-about[open] summary::after { content: '▴'; }
+.sp-about > .sp-section { padding-left: 0; padding-right: 0; margin-top: 6px; }
