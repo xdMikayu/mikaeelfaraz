@@ -357,7 +357,8 @@ function Header({ m, data, hidden, reveal, at, error, band }) {
           ) : (
             <>
               <b>{m.home.score ?? '–'}–{m.away.score ?? '–'}</b>
-              <span className={live ? 'sp-on' : ''}>{live ? m.status.label : ended(m.status.long)}</span>
+              {/* After a shoot-out "Pens 4–2" says it all: a third line would run into the names. */}
+              {(live || m.home.shootout == null) && <span className={live ? 'sp-on' : ''}>{live ? m.status.label : ended(m.status.long)}</span>}
               {m.home.shootout != null && <span>Pens {m.home.shootout}–{m.away.shootout}</span>}
             </>
           )}
