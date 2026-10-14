@@ -1249,7 +1249,9 @@ details[open] > summary .sp-chev { transform: rotate(90deg); }
 @media (min-width: 640px) { .sp-f1h-compact .sp-f1h-name { font-size: 46px; } .sp-f1h-compact .sp-f1h-big { font-size: 60px; } }
 .sp-f1t-bars { list-style: none; margin: 4px 0 12px; display: grid; gap: 6px; }
 .sp-f1t-bars li { display: grid; grid-template-columns: minmax(0, 1fr) 46px 40px; align-items: center; gap: 8px; }
-.sp-f1t-bar { display: flex; align-items: baseline; gap: 7px; padding: 9px 10px; border-radius: 4px; min-width: 0; white-space: nowrap; overflow: hidden; }
+/* Name over team, so both fit in a short bar: the bar's length is the points, not the label. */
+.sp-f1t-bar { display: flex; flex-direction: column; align-items: flex-start; padding: 7px 10px 6px; border-radius: 4px; min-width: 0; white-space: nowrap; overflow: hidden; line-height: 1.15; }
+.sp-f1t-bar > * { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .sp-f1t-bar b { font-size: 16px; font-weight: 850; }
 .sp-f1t-bar small { font-size: 12px; font-weight: 650; opacity: 0.82; overflow: hidden; text-overflow: ellipsis; }
 .sp-f1t-pts { font-size: 26px; font-weight: 900; font-variation-settings: 'wdth' 64; font-variant-numeric: tabular-nums; text-align: right; }
