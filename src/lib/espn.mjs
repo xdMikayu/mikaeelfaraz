@@ -254,6 +254,8 @@ export function shotsFrom(commentary = [], keyEvents = [], sideOfName) {
   const plays = [...commentary.map((c) => c.play).filter(Boolean), ...keyEvents];
   for (const p of plays) {
     if (seen.has(p.id)) continue;
+    // A penalty shoot-out (period 5) isn't play: its kicks go to shootoutFrom, not the shots or the xG.
+    if ((p.period?.number ?? 0) >= 5) continue;
     const outcome = shotOutcome(p);
     const at = outcome && shotPoint(p);
     if (!at) continue;
@@ -278,6 +280,30 @@ export function shotsFrom(commentary = [], keyEvents = [], sideOfName) {
     });
   }
   return shots.sort((a, b) => a.order - b.order);
+}
+
+/**
+ * A penalty shoot-out kick by kick, from ESPN's commentary, which has each one ("Goal! … Zian Flemming
+ * (Burnley) converts the penalty", "Penalty missed! …", "Penalty saved. …") while its key events only
+ * mark the start and the end. [{ side, outcome: 'scored' | 'missed' | 'saved', player }] in order.
+ */
+export function shootoutFrom(commentary = [], names) {
+  const items = [...commentary].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+  const start = items.findIndex((c) => /penalty shootout begins/i.test(c.text ?? ''));
+  if (start < 0) return [];
+  const kicks = [];
+  for (const c of items.slice(start + 1)) {
+    const text = c.text ?? '';
+    if (/penalty shootout ends/i.test(text)) break;
+    const outcome = /^goal!/i.test(text) ? 'scored' : /^penalty missed/i.test(text) ? 'missed' : /^penalty saved/i.test(text) ? 'saved' : null;
+    if (!outcome) continue;
+    // The taker and his side: "Zian Flemming (Burnley) converts".
+    const who = text.replace(/^[^.]*\.\s*/, '').match(/^(.+?) \(([^)]+)\)/);
+    const team = who?.[2] ?? c.play?.team?.displayName ?? '';
+    const side = names.home.includes(team) ? 'home' : names.away.includes(team) ? 'away' : null;
+    if (side) kicks.push({ side, outcome, player: who?.[1] ?? null });
+  }
+  return kicks;
 }
 
 // The stats people look for first (goals and xG sit above this list), then the rest.
@@ -415,6 +441,29 @@ function withScores(events) {
   });
 }
 
+const isGoal = (e) => ['goal', 'pen', 'og'].includes(e.kind) && e.side && e.period < 5;
+
+/**
+ * ESPN's score moves before its list of events does, sometimes by a minute or more. The score is
+ * right: a goal it has that the events don't yet is added as a goal with the scorer to follow, so the
+ * scorers, the timeline and the win chart never disagree with it. The real event replaces it.
+ */
+export function withPendingGoals(events, match) {
+  const label = String(match.status?.label ?? '');
+  // Where the goal goes: the minute now, or the end of the half the match is resting at.
+  const minute = /^\d/.test(label) ? label : match.status?.state === 'post' ? "90'" : "45'";
+  const pending = [];
+  for (const side of ['home', 'away']) {
+    const score = Number(match[side]?.score ?? 0);
+    const have = events.filter((e) => isGoal(e) && e.side === side).length;
+    for (let i = have; i < score; i++) {
+      pending.push({ id: `pending-${side}-${i}`, kind: 'goal', side, minute, order: Number.MAX_SAFE_INTEGER, period: 0, players: [], playerIds: [], text: '', pending: true });
+    }
+  }
+  if (!pending.length) return events;
+  return withScores([...events.map(({ score, ...e }) => e), ...pending]);
+}
+
 function formFrom(lastFive = [], teamId) {
   const t = lastFive.find((x) => String(x.team?.id) === teamId);
   return (t?.events ?? []).slice(0, 5).map((g) => ({
@@ -439,7 +488,7 @@ export async function fetchMatch(slug, id, opts) {
   const homeName = match.home.name;
   const sideOfId = (tid) => (String(tid) === match.home.id ? 'home' : 'away');
   const sideOfName = (team) => (team?.id ? sideOfId(team.id) : team?.displayName === homeName ? 'home' : 'away');
-  const events = withScores(eventsFrom(d.keyEvents, sideOfId));
+  const events = withPendingGoals(withScores(eventsFrom(d.keyEvents, sideOfId)), match);
   const rosters = d.rosters ?? [];
   const rHome = rosters.find((r) => r.homeAway === 'home');
   const rAway = rosters.find((r) => r.homeAway === 'away');
@@ -448,11 +497,14 @@ export async function fetchMatch(slug, id, opts) {
     .map((c) => ({ seq: c.sequence ?? 0, minute: c.time?.displayValue ?? '', text: c.text, kind: c.play ? kindOf(c.play.type) : null }))
     .sort((a, b) => b.seq - a.seq);
   const shots = shotsFrom(d.commentary, d.keyEvents, sideOfName);
+  const teamNames = (t) => [t.name, t.short, t.abbr].filter(Boolean);
+  const shootout = shootoutFrom(d.commentary, { home: teamNames(match.home), away: teamNames(match.away) });
   const gi = d.gameInfo ?? {};
   return {
     match,
     events,
     shots,
+    shootout,
     hasShotData: (d.commentary ?? []).length > 0,
     stats: statsFrom(d.boxscore, match.home.id),
     lineups: { home: lineupFrom(rHome, events), away: lineupFrom(rAway, events) },

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { kitHex, fillOf, lineOf, matchKits, contrast, hexToRgb, distance, isWhite } from './kit-colors.mjs';
+import { kitHex, fillOf, lineOf, matchKits, contrast, hexToRgb, distance, isWhite, cvdDistance } from './kit-colors.mjs';
 
 const C = (a, b) => contrast(hexToRgb(a), hexToRgb(b));
 
@@ -59,4 +59,28 @@ test('matchKits: two sides that would look alike are told apart', () => {
   // Dortmund v Bodo/Glimt: both yellow, Bodo's alternate is white.
   const y = matchKits({ color: '#ffee00', alt: '#272726' }, { color: '#fcee33', alt: '#ffffff' });
   assert.ok(distance(hexToRgb(y.home.line), hexToRgb(y.away.line)) >= 18);
+});
+
+test('matchKits: red against green is told apart for someone colour blind, by a shade', () => {
+  const cvd = (a, b) => cvdDistance(hexToRgb(a), hexToRgb(b));
+  // Liverpool's red and Sporting's green: two browns to someone red-green colour blind.
+  const liv = { color: 'c8102e' };
+  const spo = { color: '008057' };
+  assert.ok(cvd('#c8102e', '#008057') < 15);
+  for (const dark of [false, true]) {
+    const k = matchKits(liv, spo, dark);
+    assert.ok(cvd(k.home.line, k.away.line) >= 17, `${dark ? 'dark' : 'light'}: ${k.home.line} ${k.away.line}`);
+    // Each stays its own colour (a shade, not another hue) and readable on the page.
+    const surface = dark ? '#121212' : '#ffffff';
+    for (const line of [k.home.line, k.away.line]) assert.ok(C(line, surface) >= 2.6, line);
+    assert.ok(hexToRgb(k.home.line)[0] > hexToRgb(k.home.line)[1] * 2, `still red: ${k.home.line}`);
+    assert.ok(hexToRgb(k.away.line)[1] > hexToRgb(k.away.line)[0] * 2, `still green: ${k.away.line}`);
+    // The blocks are the real kits.
+    assert.equal(k.home.fill, '#c8102e');
+    assert.equal(k.away.fill, '#008057');
+  }
+  // Red against blue reads to everyone: left alone.
+  const k = matchKits({ color: 'e8352a' }, { color: '0a3f92' });
+  assert.equal(k.home.line, lineOf('#e8352a'));
+  assert.equal(k.away.line, lineOf('#0a3f92'));
 });
