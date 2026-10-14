@@ -4,6 +4,7 @@
 import { xgFor } from './xg.mjs';
 import { pricesOf } from './odds.mjs';
 import { kitHex } from './kit-colors.mjs';
+import { gamesIn } from './as-it-stands.mjs';
 
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 const WEB = 'https://site.web.api.espn.com/apis/v2/sports/soccer';
@@ -108,6 +109,9 @@ function side(c) {
     shootout: c.shootoutScore != null ? Number(c.shootoutScore) : null,
     // Over two legs: the score across both, this match included.
     agg: c.aggregateScore != null ? Number(c.aggregateScore) : null,
+    // Games in the competition, from its record ("1-0-1"): before the match while it's on, with it
+    // once it's over. Tells whether the league table has taken a result (as-it-stands.mjs).
+    games: gamesIn((c.records ?? c.record ?? []).find((r) => r.type === 'total')?.summary),
     winner: Boolean(c.winner),
     form: c.form ?? null,
   };
