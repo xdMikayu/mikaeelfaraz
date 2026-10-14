@@ -796,7 +796,7 @@ function PhaseTable({ d, innings }) {
           ))}
         </tbody>
       </table>
-      {usual && <p className="sp-tiny sp-muted" style={{ margin: '6px 0 0' }}>Runs/wickets in each phase. "Usual here" is the average first innings at this ground, wickets to one decimal place.</p>}
+      {usual && <p className="sp-tiny sp-muted" style={{ margin: '6px 0 0' }}>Runs/wickets in each phase. “Usual here” is the average first innings at this ground, wickets to one decimal place.</p>}
     </section>
   );
 }

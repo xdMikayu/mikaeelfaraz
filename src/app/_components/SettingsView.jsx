@@ -1,5 +1,7 @@
 'use client';
 import { usePrefs } from './prefs';
+import { SPORTS } from './nav';
+import { SportGlyph } from './glyphs';
 
 // What applies to every sport: spoilers, the look, and where the data comes from.
 
@@ -9,6 +11,8 @@ export default function SettingsView() {
     <div className="sp-pad" style={{ paddingTop: 16 }}>
       <h1 className="sp-h1">Settings</h1>
       <p className="sp-small sp-ink2" style={{ margin: '4px 0 0' }}>For every sport. Saved in this browser only; there are no accounts.</p>
+
+      <Sports />
 
       <section className="sp-section">
         <h2 className="sp-h2">Spoilers</h2>
@@ -40,6 +44,48 @@ export default function SettingsView() {
 
       <About />
     </div>
+  );
+}
+
+/** The order of the sports in the menu, and the one Matchday opens on. */
+function Sports() {
+  const { prefs, update } = usePrefs();
+  const list = prefs.sports.map((k) => SPORTS.find((s) => s.key === k)).filter(Boolean);
+  const move = (i, d) =>
+    update((p) => {
+      const o = [...p.sports];
+      const j = i + d;
+      if (j < 0 || j >= o.length) return {};
+      [o[i], o[j]] = [o[j], o[i]];
+      return { sports: o };
+    });
+  return (
+    <section className="sp-section">
+      <h2 className="sp-h2">Sports</h2>
+      <p className="sp-small sp-ink2" style={{ margin: '4px 0 10px' }}>
+        The order they come in the menu, and the one Matchday opens on.
+      </p>
+      <div className="sp-panel" style={{ padding: '0 16px' }} role="radiogroup" aria-label="Open Matchday on">
+        {list.map((x, i) => (
+          <div key={x.key} className="sp-toggle">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', minWidth: 0, flex: 1 }}>
+              <input type="radio" name="start" checked={prefs.start === x.key} onChange={() => update({ start: x.key })} style={{ width: 18, height: 18, accentColor: 'var(--sp-ink)' }} />
+              <SportGlyph sport={x.key} size={20} />
+              <span style={{ fontWeight: 650 }}>{x.label}</span>
+              {prefs.start === x.key && <span className="sp-tiny sp-muted">Opens first</span>}
+            </label>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button className="sp-btn sp-btn-quiet sp-icon-btn sp-btn-sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${x.label} up`}>
+                ↑
+              </button>
+              <button className="sp-btn sp-btn-quiet sp-icon-btn sp-btn-sm" onClick={() => move(i, 1)} disabled={i === list.length - 1} aria-label={`Move ${x.label} down`}>
+                ↓
+              </button>
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

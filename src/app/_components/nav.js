@@ -24,7 +24,7 @@ export const SPORTS = [
     href: '/sport/f1',
     match: under('/sport/f1'),
     sections: [
-      { href: '/sport/f1', label: 'This weekend', match: (p) => p === '/sport/f1' || under('/sport/f1/race')(p) },
+      { href: '/sport/f1', label: 'Weekend', match: (p) => p === '/sport/f1' || under('/sport/f1/race')(p) },
       { href: '/sport/f1#championship', label: 'Championship', match: () => false },
       { href: '/sport/f1#calendar', label: 'Calendar', match: () => false },
     ],
