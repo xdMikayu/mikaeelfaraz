@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PrefsProvider, usePrefs } from './prefs';
@@ -12,38 +12,24 @@ import { LEAGUES } from '@/lib/sport/leagues.mjs';
 // sport's sections sit under it as tabs, since they're used all the time, while the other sports
 // wait in a drawer, since switching sport is occasional. On desktop all of it is the sidebar.
 
-// The mark: a half-and-half shirt on the centre spot, split along the halfway line. It's the
-// home-screen icon (public/sport/icon.svg); the pages themselves carry only the name.
-const SHIRT = 'M212 114C221 134 236 143 256 143C276 143 291 134 300 114L368 134L426 198L392 238L352 212L352 400Q352 412 340 412L172 412Q160 412 160 400L160 212L120 238L86 198L144 134Z';
-export function Mark({ size = 26 }) {
-  const id = useId().replace(/:/g, '');
+// The mark, "the fixture": two halves facing each other across a gap, home and away, or a ball
+// about to be kicked off. Red and ink, Matchday's own colours, on a white tile that reads on any
+// background. It's the app icon too (public/sport/icon.svg) and sits before the name everywhere.
+export function Mark({ size = 22 }) {
   return (
     <svg className="sp-mark" width={size} height={size} viewBox="0 0 512 512" aria-hidden="true">
-      <defs>
-        <clipPath id={`${id}s`}><rect width="512" height="512" rx="118" /></clipPath>
-        <clipPath id={`${id}t`}><path d={SHIRT} /></clipPath>
-      </defs>
-      <g clipPath={`url(#${id}s)`}>
-        <rect width="512" height="512" fill="#2f8d4e" />
-        <path fill="#2a8346" d="M64 0h64v512H64zM192 0h64v512h-64zM320 0h64v512h-64zM448 0h64v512h-64z" />
-        <g fill="none" stroke="#fff" strokeOpacity=".62" strokeWidth="9">
-          <path d="M256 0v512" />
-          <circle cx="256" cy="262" r="190" />
-        </g>
-        <g clipPath={`url(#${id}t)`}>
-          <path fill="#d6001c" d="M0 0h256v512H0z" />
-          <path fill="#fff" d="M256 0h256v512H256z" />
-        </g>
-        <path d="M212 114C221 134 236 143 256 143C276 143 291 134 300 114" fill="none" stroke="#111" strokeWidth="14" strokeLinecap="round" />
-      </g>
+      <rect x="8" y="8" width="496" height="496" rx="110" fill="#fff" stroke="#000" strokeOpacity=".14" strokeWidth="16" />
+      <path fill="#d6001c" d="M236 96a160 160 0 0 0 0 320z" />
+      <path fill="#111" d="M276 96a160 160 0 0 1 0 320z" />
     </svg>
   );
 }
 
-/** "Matchday · F1": the name, then where you are, which is the word that stands out. */
+/** "Matchday · F1": the mark, the name, then where you are, which is the word that stands out. */
 export function Wordmark({ sport }) {
   return (
     <span className={`sp-word${sport ? ' sp-word-in' : ''}`}>
+      <Mark />
       <span className="sp-word-name">Matchday</span>
       {sport && (
         <>

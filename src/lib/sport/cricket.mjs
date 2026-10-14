@@ -193,6 +193,9 @@ export function situation(m) {
     return { ...base, kind: diff > 0 ? 'lead' : diff < 0 ? 'trail' : 'level', runs: Math.abs(diff) };
   }
 
+  // At the break ESPN's score line can drop the overs limit ("20 ov", not "20/20 ov"); the format
+  // still says it: 20 overs a side in a T20, 50 in a one-day match.
+  if (o.max == null) o.max = /T20/i.test(m.format ?? '') ? 120 : /ODI|One-Day|List A/i.test(m.format ?? '') ? 300 : null;
   const rate = o.balls ? now.runs / (o.balls / 6) : null;
   const target = o.target ?? (theirs.length === 1 ? theirs[0].runs + 1 : null);
   if (target != null) {
