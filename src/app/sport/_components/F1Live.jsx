@@ -7,6 +7,7 @@ import { kickoff } from './time';
 import { heat } from './fplbits';
 import { Mark, Reveal } from './f1bits';
 import { COMPOUND, SHADE } from './F1Charts';
+import { useScrolledPast, StickyBar } from './Sticky';
 
 // Live timing for one session, from /api/sport/f1/live every 3 seconds. Every answer is kept for
 // three minutes, so the view can run behind live to match the viewer's TV picture, which is often
@@ -157,13 +158,20 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
   const [follow, setFollow] = useStored('md-f1-follow', null);
   const [open, setOpen] = useState(null);
   const [mode, setMode] = useState('int');
+  const [statusRef, statusPast] = useScrolledPast();
   const history = useRef({});
   const latest = buf.at(-1);
 
-  // Each driver's gap to the car ahead at the end of each lap, for whether it's closing.
+  // Each driver's gap to the car ahead at the end of each lap, for whether it's closing: with who that
+  // car was and the stops so far, and the laps run under a caution, so a pit stop, a pass or a safety
+  // car isn't read as one driver catching another.
   useEffect(() => {
     if (!latest || latest.session.kind !== 'race') return;
-    for (const d of latest.drivers) if (d.int?.s != null && d.laps) (history.current[d.n] ??= {})[d.laps] = d.int.s;
+    const ahead = {};
+    const order = latest.drivers.filter((d) => !d.out).sort((a, b) => a.pos - b.pos);
+    order.forEach((d, i) => (ahead[d.n] = order[i - 1]?.n ?? null));
+    for (const d of latest.drivers) if (d.int?.s != null && d.laps) (history.current[d.n] ??= {})[d.laps] = { s: d.int.s, ahead: ahead[d.n], stops: d.stops, pit: Boolean(d.pit) };
+    if (latest.lap?.now && latest.track !== 'green') (history.current.caution ??= {})[latest.lap.now] = true;
   }, [latest]);
 
   if (!latest) {
@@ -223,8 +231,9 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
   return (
     <>
       <section className="sp-pad sp-section">
-        <Status t={t} left={left} minutes={s.minutes} age={delay ? null : age} delay={delay} tv={tv} names={names} />
+        <Status t={t} left={left} minutes={s.minutes} age={delay ? null : age} delay={delay} tv={tv} names={names} follow={follow} cardRef={statusRef} />
       </section>
+      <StickyStatus t={t} left={left} names={names} follow={follow} shown={statusPast} />
       {followed && <Following d={followed} t={t} loss={loss} names={names} onStop={() => setFollow(null)} />}
       <Tower t={t} mode={mode} setMode={setMode} open={open} setOpen={setOpen} follow={follow} setFollow={setFollow} loss={loss} names={names} />
       {t.session.kind === 'race' && live && <Strategy t={t} names={names} history={history.current} />}
@@ -238,8 +247,60 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
   );
 }
 
+const FLAG_SHORT = { yellow: 'Yellow', sc: 'Safety car', 'sc-ending': 'Safety car in', vsc: 'VSC', 'vsc-ending': 'VSC ending', red: 'Red flag' };
+const gapWords = (x) => `${x < 10 ? x.toFixed(1) : Math.round(x)} s`;
+const stillGoing = (t) => t.drivers.filter((d) => !d.out).sort((a, b) => a.pos - b.pos);
+
+/**
+ * Where the session stands, in one sentence: who leads and by how much with the laps left, who's in
+ * the drop zone, who's on provisional pole. Nothing it says needs working out.
+ * Returns { label, text } or null.
+ */
+export function sayF1(t, left, names, follow) {
+  const { kind, status } = t.session;
+  const order = stillGoing(t);
+  const [first, second] = order;
+  if (!first || status === 'waiting') return null;
+  const over = status === 'finished' || status === 'final';
+  if (kind === 'race') {
+    const toGo = t.lap?.of && t.lap?.now ? t.lap.of - t.lap.now : null;
+    const togo = toGo == null ? '' : toGo === 0 ? ', last lap' : `, ${toGo} ${toGo === 1 ? 'lap' : 'laps'} to go`;
+    const gap = second?.int?.laps ? `a lap` : second?.int?.s != null ? gapWords(second.int.s) : null;
+    if (over) return { label: 'Result', text: <><strong>{first.last}</strong> wins{gap ? <> by <b>{gap}</b></> : ''}</> };
+    if (status === 'suspended' || t.track === 'red') return { label: 'The lead', text: <>The race is stopped. <strong>{first.last}</strong> leads{togo}</> };
+    // Under a safety car the gaps close up and mean little; on the first lap they're guesses until the
+    // cars have passed the timing points.
+    if (['sc', 'sc-ending', 'vsc', 'vsc-ending'].includes(t.track) || !gap || (t.lap?.now ?? 0) <= 1) return { label: 'The lead', text: <><strong>{first.last}</strong> leads{togo}</> };
+    return { label: 'The lead', text: <><strong>{first.last}</strong> leads by <b>{gap}</b>{togo}</> };
+  }
+  if (kind === 'quali' && t.part) {
+    if (status === 'break') return null;
+    const going = t.drivers.filter((d) => !d.knockedOut).sort((a, b) => a.pos - b.pos);
+    const timed = going.filter((d) => d.q?.[t.part.now - 1]);
+    if (over) return timed[0] ? { label: 'Pole', text: <><strong>{timed[0].last}</strong> takes pole{timed[1]?.gap?.s ? <> by <b>{timed[1].gap.s.toFixed(3)} s</b></> : ''}</> } : null;
+    if (!timed.length) return null;
+    const cut = t.part.cut && going.length > t.part.cut ? t.part.cut : null;
+    // The drop zone means something once enough have set a time to fill the places through.
+    if (cut && timed.length >= cut) {
+      const out = going.slice(cut);
+      const mine = out.find((d) => d.n === follow);
+      return {
+        label: 'The drop zone',
+        text: mine ? <><strong>{mine.last}</strong> is out as it stands, {ordinal(mine.pos)}: the top {cut} go through</> : <>Out as it stands: <strong>{andList(out.map((d) => d.last))}</strong></>,
+      };
+    }
+    if (cut) return { label: 'So far', text: <><strong>{timed[0].last}</strong> fastest; <b>{timed.length}</b> of {going.length} have set a time</> };
+    return { label: 'Provisional pole', text: <><strong>{timed[0].last}</strong>{timed[1]?.gap?.s ? <>, <b>{timed[1].gap.s.toFixed(3)} s</b> clear of {timed[1].last}</> : ''}</> };
+  }
+  // Practice: the fastest, once two have set a time.
+  const timed = t.drivers.filter((d) => d.bestLap?.s).sort((a, b) => a.bestLap.s - b.bestLap.s);
+  if (timed.length < 2) return null;
+  return { label: 'Fastest', text: <><strong>{timed[0].last}</strong>, <b>{(timed[1].bestLap.s - timed[0].bestLap.s).toFixed(3)} s</b> clear of {timed[1].last}</> };
+}
+
 /** The session at a glance: the flag, the lap or the clock, how far through, the last word from race control. */
-function Status({ t, left, minutes, age, delay, tv, names }) {
+function Status({ t, left, minutes, age, delay, tv, names, follow, cardRef }) {
+  const said = sayF1(t, left, names, follow);
   const { kind, status, name } = t.session;
   const q = /sprint/i.test(name ?? '') ? 'SQ' : 'Q';
   const over = status === 'finished' || status === 'final';
@@ -266,7 +327,7 @@ function Status({ t, left, minutes, age, delay, tv, names }) {
   const fresh = word && (kind !== 'race' || !t.lap?.now || (word.lap ?? 0) >= t.lap.now - 1);
   const flag = status === 'suspended' && t.track !== 'red' ? 'red' : t.track;
   return (
-    <div className="sp-f1-card">
+    <div className="sp-f1-card" ref={cardRef}>
       {flag !== 'green' && <div className={`sp-f1-band sp-f1-band-${flag}`}>{status === 'suspended' && t.track !== 'red' ? 'Session stopped' : FLAG[flag]}</div>}
       <div className="sp-f1-status">
         <div>
@@ -302,6 +363,12 @@ function Status({ t, left, minutes, age, delay, tv, names }) {
           {t.part.now + 1}.
         </p>
       )}
+      {said && (
+        <div className="sp-band sp-band-f1" aria-live="polite">
+          <span className="sp-band-label">{said.label}</span>
+          <span className="sp-band-main">{said.text}</span>
+        </div>
+      )}
       {fresh && (
         <p className="sp-f1-word">
           <span className="sp-num sp-muted">{word.lap ? `Lap ${word.lap}` : kickoff(word.at)}</span>
@@ -310,6 +377,40 @@ function Status({ t, left, minutes, age, delay, tv, names }) {
       )}
       {tv}
     </div>
+  );
+}
+
+/**
+ * The session kept in sight while the page scrolls: the lap or the clock, the flag when it isn't
+ * green, and the one sentence. Only while the session is on.
+ */
+function StickyStatus({ t, left, names, follow, shown }) {
+  const { kind, status } = t.session;
+  if (!['running', 'suspended'].includes(status)) return null;
+  const q = /sprint/i.test(t.session.name ?? '') ? 'SQ' : 'Q';
+  const said = sayF1(t, left, names, follow);
+  const flag = status === 'suspended' && t.track !== 'red' ? 'red' : t.track;
+  return (
+    <StickyBar shown={shown}>
+      <span className="sp-stick-team sp-stick-ink">
+        {kind === 'race' ? (
+          <>
+            Lap{' '}
+            <b>
+              {t.lap?.now ?? 1}
+              {t.lap?.of ? `/${t.lap.of}` : ''}
+            </b>
+          </>
+        ) : (
+          <>
+            {kind === 'quali' && t.part ? `${q}${t.part.now}` : 'Left'}
+            {left != null && <b>{clockText(left)}</b>}
+          </>
+        )}
+      </span>
+      {FLAG_SHORT[flag] && <span className={`sp-stick-team sp-f1-band-${flag}`}>{FLAG_SHORT[flag]}</span>}
+      {said && <span className="sp-stick-words">{said.text}</span>}
+    </StickyBar>
   );
 }
 
@@ -642,6 +743,43 @@ function Details({ d, t, q, follow, loss, names }) {
   );
 }
 
+/**
+ * How a driver's gap to the car ahead changed over the last `k` laps: { now, by, perLap }, by > 0 for
+ * closing. Only over clean laps (the same car ahead at both ends, no stop by either, no caution, not
+ * in the pit lane), so a pit stop, a pass or a safety car is never read as one driver catching another.
+ */
+function change(history, t, n, k) {
+  const h = history[n];
+  const d = t.drivers.find((x) => x.n === n);
+  const end = d?.laps;
+  const a = h?.[end - k];
+  const b = h?.[end];
+  if (!a || !b || a.ahead == null || a.ahead !== b.ahead || a.stops !== b.stops || a.pit || b.pit) return null;
+  const front = history[b.ahead];
+  const fa = front?.[end - k];
+  const fb = front?.[end];
+  if (fa && fb && fa.stops !== fb.stops) return null;
+  for (let lap = end - k + 1; lap <= end; lap++) if (history.caution?.[lap]) return null;
+  return { now: b.s, by: a.s - b.s, perLap: (a.s - b.s) / k };
+}
+
+/**
+ * Gaps that have moved by a second and a half or more over five clean laps, beyond the fights within a
+ * second: who is catching whom, and who is pulling away. The biggest four.
+ */
+function movers(history, t) {
+  if ((t.lap?.now ?? 0) < 7) return [];
+  const order = stillGoing(t);
+  const out = [];
+  order.forEach((d, i) => {
+    if (!i || d.pit) return;
+    const c = change(history, t, d.n, 5);
+    if (!c || Math.abs(c.by) < 1.5 || c.now < 1) return;
+    out.push({ n: d.n, ahead: order[i - 1].n, pos: d.pos, now: c.now, by: Math.abs(c.by), closing: c.by > 0 });
+  });
+  return out.sort((x, y) => y.by - x.by).slice(0, 4);
+}
+
 /** In a race: cars within a second of the one ahead (joined into trains), and who has yet to stop. */
 function Strategy({ t, names, history }) {
   const trains = [];
@@ -651,21 +789,15 @@ function Strategy({ t, names, history }) {
     else trains.push([b]);
   }
   const color = Object.fromEntries(t.drivers.map((d) => [d.n, d.color]));
-  const trend = (n) => {
-    const h = history[n];
-    const d = t.drivers.find((x) => x.n === n);
-    if (!h || !d?.laps) return null;
-    for (const k of [3, 2, 1]) {
-      if (h[d.laps - k] != null && h[d.laps] != null) return (h[d.laps - k] - h[d.laps]) / k;
-    }
-    return null;
-  };
+  // A trend is read only from clean laps: the same car ahead, no pit stop by either, no caution.
+  const trend = (n, k = 3) => change(history, t, n, k)?.perLap ?? null;
+  const moving = movers(history, t);
   // Whoever is fewer: those yet to stop, or those who have.
   const running = t.drivers.filter((d) => !d.out);
   const yet = running.filter((d) => d.stops === 0);
   const been = running.filter((d) => d.stops > 0);
   const showYet = t.lap?.now > 1 && yet.length > 0 && been.length > 0;
-  if (!trains.length && !showYet) return null;
+  if (!trains.length && !showYet && !moving.length) return null;
   const who = (n) => (
     <span className="sp-f1-name-mark">
       <Mark color={color[n]} />
@@ -712,8 +844,37 @@ function Strategy({ t, names, history }) {
           </p>
         </>
       )}
+      {moving.length > 0 && (
+        <>
+          <div className="sp-pad sp-section-head" style={trains.length ? { marginTop: 14 } : undefined}>
+            <h2 className="sp-h2">Gaps on the move</h2>
+            <span className="sp-tiny sp-muted">Over the last five laps</span>
+          </div>
+          <ul className="sp-f1-list">
+            {moving.map((m) => (
+              <li key={m.n}>
+                <span className="sp-num sp-muted">
+                  P{m.pos - 1}–{m.pos}
+                </span>
+                <span>
+                  {m.closing ? (
+                    <>
+                      {who(m.n)} is catching {who(m.ahead)}
+                      {m.pos === 2 ? ' for the lead' : ''}: <span className="sp-num">{gapWords(m.now)}</span> behind, <span className="sp-num">{m.by.toFixed(1)} s</span> closer than five laps ago
+                    </>
+                  ) : (
+                    <>
+                      {who(m.ahead)} is pulling away from {who(m.n)}: <span className="sp-num">{gapWords(m.now)}</span> ahead, <span className="sp-num">{m.by.toFixed(1)} s</span> more than five laps ago
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {showYet && (
-        <p className="sp-small sp-ink2 sp-pad" style={{ margin: trains.length ? '12px 0 0' : 0 }}>
+        <p className="sp-small sp-ink2 sp-pad" style={{ margin: trains.length || moving.length ? '12px 0 0' : 0 }}>
           {yet.length <= been.length ? (
             <>
               <b className="sp-f1-strong">Yet to stop:</b> {andList(yet.map((d) => `${d.last}${d.tyre ? ` (${TYRE[d.tyre.c] ?? d.tyre.c}s, ${laps(d.tyre.age)})` : ''}`))}.

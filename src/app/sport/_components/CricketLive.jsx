@@ -4,10 +4,10 @@
 // bowler as cards, and what's happened (wickets) as a timeline. Everything a newcomer might not read
 // is said in words; the long form and records wait behind a tap.
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Crest from './Crest';
 import { useDark } from './colors';
+import { useScrolledPast, StickyBar, StickyTeam } from './Sticky';
 import { situation } from '@/lib/sport/cricket.mjs';
 import { matchKits } from '@/lib/sport/kit-colors.mjs';
 import { oversOf } from '@/lib/sport/cricket-form.mjs';
@@ -73,16 +73,7 @@ const oversWords = (s) => {
 export function Scoreboard({ d, sit, kits }) {
   const [a, b] = ordered(d);
   const done = d.state === 'post';
-  const ref = useRef(null);
-  const [away, setAway] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-    // Out of view once its bottom passes under the sticky header (54 px on phones).
-    const io = new IntersectionObserver(([e]) => setAway(!e.isIntersecting && e.boundingClientRect.top < 0), { rootMargin: '-60px 0px 0px 0px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  const [ref, away] = useScrolledPast();
   const half = (t) => {
     const kit = kits[t.id];
     const bat = sit?.bat === t.id && !['set', 'won', 'tied'].includes(sit?.kind);
@@ -123,25 +114,18 @@ export function Scoreboard({ d, sit, kits }) {
   );
 }
 
-/**
- * While a live match scrolls by, its score stays in sight: a compact bar under the header with each
- * side's score in its colour and the numbers that matter. It takes no room until it's needed.
- */
+/** The score kept in sight while a live match scrolls by: each side's score in its colour, and what's needed. */
 function StickyScore({ d, sit, kits, shown }) {
   const teams = ordered(d).filter((t) => t?.runs);
   const words =
     sit?.kind === 'chase' ? `need ${sit.runs}${sit.balls != null ? ` off ${sit.balls}` : ''}` : sit?.kind === 'set' ? `${sit.team} need ${sit.runs}` : sit?.kind === 'rate' && d.read?.now?.projected ? `heading for ${d.read.now.projected.mean}` : null;
   return (
-    <div className={`sp-csb-stick${shown ? ' sp-csb-stick-on' : ''}`} aria-hidden={!shown}>
-      <div className="sp-csb-stick-bar">
-        {teams.map((t) => (
-          <span key={t.id} className="sp-csb-stick-team" style={{ background: fillOf(kits[t.id]), color: kits[t.id]?.ink ?? '#fff' }}>
-            {t.short || t.name} <b>{t.runs}</b>
-          </span>
-        ))}
-        {words && <span className="sp-csb-stick-words">{words}</span>}
-      </div>
-    </div>
+    <StickyBar shown={shown}>
+      {teams.map((t) => (
+        <StickyTeam key={t.id} fill={fillOf(kits[t.id])} ink={kits[t.id]?.ink ?? '#fff'} name={t.short || t.name} score={t.runs} />
+      ))}
+      {words && <span className="sp-stick-words">{words}</span>}
+    </StickyBar>
   );
 }
 

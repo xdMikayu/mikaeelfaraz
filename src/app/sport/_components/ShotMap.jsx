@@ -48,7 +48,9 @@ export default function ShotMap({ shots, colors, names }) {
             const onT = s.outcome === 'saved' || s.outcome === 'post';
             return (
               <g key={s.id} onClick={() => setSel(sel === s.id ? null : s.id)} onPointerEnter={(e) => e.pointerType === 'mouse' && setSel(s.id)} style={{ cursor: 'pointer' }}>
-                <circle cx={p.x} cy={p.y} r={r(s)} fill={goal ? c : 'rgba(255,255,255,0.18)'} fillOpacity={1} stroke={goal ? '#fff' : c} strokeOpacity={goal || onT ? 1 : 0.45} strokeWidth={goal ? 1.5 : 2} vectorEffect="non-scaling-stroke" />
+                {/* A white edge under each ring, so a team's colour reads on the grass whatever it is (a green kit included). */}
+                {!goal && <circle cx={p.x} cy={p.y} r={r(s)} fill="none" stroke="#fff" strokeOpacity={onT ? 0.95 : 0.5} strokeWidth={4.5} vectorEffect="non-scaling-stroke" />}
+                <circle cx={p.x} cy={p.y} r={r(s)} fill={goal ? c : 'rgba(255,255,255,0.18)'} fillOpacity={1} stroke={goal ? '#fff' : c} strokeOpacity={goal || onT ? 1 : 0.6} strokeWidth={goal ? 1.5 : 2} vectorEffect="non-scaling-stroke" />
                 {sel === s.id && <circle cx={p.x} cy={p.y} r={r(s) + 1.2} fill="none" stroke="#fff" strokeWidth="2" vectorEffect="non-scaling-stroke" />}
                 <circle cx={p.x} cy={p.y} r={Math.max(2.6, r(s))} fill="transparent" />
               </g>

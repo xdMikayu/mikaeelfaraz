@@ -147,10 +147,54 @@ export function lineOf(fill, dark = false) {
   return INK[dark ? 'dark' : 'light'];
 }
 
+// Red-green colour blindness (about one man in twelve), simulated on linear RGB (Machado, Oliveira
+// and Fernandes 2009, full severity): deuteranopia and protanopia.
+const CVD = [
+  [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.01182, 0.04294, 0.968881]],
+  [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+];
+const seenAs = (rgb, M) => {
+  const L = rgb.map(lin);
+  return M.map((r) => gam(Math.min(1, Math.max(0, r[0] * L[0] + r[1] * L[1] + r[2] * L[2]))));
+};
+
+/** How far apart two colours look to someone with red-green colour blindness (the worse of the two kinds). */
+export const cvdDistance = (a, b) => Math.min(...CVD.map((M) => distance(seenAs(a, M), seenAs(b, M))));
+
+/**
+ * Two lines someone who is red-green colour blind can tell apart (Liverpool's red against a green
+ * looks like two browns to them, and to some a red looks dark): one of them lighter or darker, the
+ * smallest change that does it, so each stays its team's colour and readable on the page. The away
+ * line changes before the home one. Failing that, the pair they can best tell apart.
+ */
+function apart(lh, la, dark) {
+  const surface = SURFACE[dark ? 'dark' : 'light'];
+  let best = { lh, la, d: cvdDistance(hexToRgb(lh), hexToRgb(la)) + 4 };
+  // At most 0.2 lighter or darker: further and a green is black.
+  for (let step = 1; step <= 10; step += 1) {
+    for (const moving of ['away', 'home']) {
+      const from = lch(hexToRgb(moving === 'away' ? la : lh));
+      const other = hexToRgb(moving === 'away' ? lh : la);
+      for (const dir of [1, -1]) {
+        const L2 = from.L + dir * step * 0.02;
+        if (L2 <= 0.05 || L2 >= 0.98) continue;
+        const hex = fromOklch(L2, from.C, from.h);
+        const rgb = hexToRgb(hex);
+        if (contrast(rgb, surface) < 2.6) continue;
+        const d = cvdDistance(other, rgb);
+        const pair = moving === 'away' ? { lh, la: hex, d } : { lh: hex, la, d };
+        if (d >= 18) return pair;
+        if (d > best.d) best = pair;
+      }
+    }
+  }
+  return best;
+}
+
 /** { home, away }, each { fill, ink, white, line }: one colour per team for a whole match page. */
 export function matchKits(home, away, dark = false) {
   const [h, a] = fills(home, away);
-  const lh = lineOf(h, dark);
+  let lh = lineOf(h, dark);
   let la = lineOf(a, dark);
   // Two lines that look alike can't tell the teams apart: the away side goes to a mid grey, or to
   // ink when the home side is itself greyish.
@@ -158,6 +202,9 @@ export function matchKits(home, away, dark = false) {
     const grey = dark ? '#8c8c8c' : '#a3a3a3';
     la = distance(hexToRgb(lh), hexToRgb(grey)) >= 18 ? grey : INK[dark ? 'dark' : 'light'];
   }
+  // Two that only look alike to someone colour blind: a shade lighter or darker. Pairs that are
+  // merely close (15 to 18) are left as they are.
+  if (cvdDistance(hexToRgb(lh), hexToRgb(la)) < 15) ({ lh, la } = apart(lh, la, dark));
   const side = (fill, line) => ({ fill, ink: inkOn(fill), white: isWhite(fill), line });
   return { home: side(h, lh), away: side(a, la) };
 }
