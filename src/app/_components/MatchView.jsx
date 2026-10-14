@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { fetchMatch, fetchStandings, fetchScoreboard } from '@/lib/sport/espn.mjs';
-import { asItStands, ifTheyWin, moveWords } from '@/lib/sport/as-it-stands.mjs';
+import { standingsNow, inTable, groupOf, ifTheyWin, moveWords } from '@/lib/sport/as-it-stands.mjs';
 import { optaXg } from '@/lib/sport/fplmap.mjs';
 import { LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
 import { useLive, Freshness } from './useLive';
@@ -195,18 +195,34 @@ function useFirstTrue(v) {
 }
 
 /**
- * The league's table and its matches today, for "as it stands": only in leagues with a table, and
- * only before and during the match (after it, ESPN's table takes the result itself).
+ * The league's table and its matches today, for "as it stands": only in leagues with a table, from
+ * before kick-off to the day's end. It refreshes every minute while the match is on, and after the
+ * whistle until the table has taken the result. `seen` holds each side's games played while a match
+ * was on, so a finished result is counted until the table has it (as-it-stands.mjs).
  */
 function useTableNow(m) {
-  const slug = m && LEAGUE_BY_SLUG[m.league]?.table && m.status.state !== 'post' && !m.status.off ? m.league : null;
+  const today = m && Date.now() - Date.parse(m.date) < 8 * 3600e3;
+  const slug = m && LEAGUE_BY_SLUG[m.league]?.table && !m.status.off && (m.status.state !== 'post' || today) ? m.league : null;
+  const seen = useRef({});
   const { data } = useLive(
     // Without the league's other matches it still counts this one.
     (signal) => (slug ? Promise.all([fetchStandings(slug, { signal }), fetchScoreboard(slug, null, { signal }).catch(() => null)]).then(([standings, board]) => ({ standings, board })) : Promise.resolve(null)),
     [slug],
-    { every: 60000, live: () => m?.status.state === 'in' },
+    {
+      every: 60000,
+      live: (d) => m?.status.state === 'in' || (m?.status.state === 'post' && Boolean(d?.standings) && inTable(groupOf(d.standings, m.home.id)?.rows ?? [], m, seen.current) === false),
+    },
   );
-  return data;
+  // Games played while a match is on, before the table takes its result.
+  useEffect(() => {
+    if (!data?.standings) return;
+    const played = new Map(data.standings.groups.flatMap((g) => g.rows).map((r) => [r.id, r.p]));
+    for (const x of [m, ...(data.board?.matches ?? [])]) {
+      if (x?.status.state !== 'in') continue;
+      for (const t of [x.home, x.away]) if (seen.current[t.id] == null && played.has(t.id)) seen.current[t.id] = played.get(t.id);
+    }
+  }, [data, m]);
+  return data ? { ...data, seen: seen.current } : null;
 }
 
 /** "go up to 6th" with the place in the scoreboard's type. */
@@ -254,17 +270,16 @@ function TableBand({ m, table, names }) {
   }
   if (!table?.standings) return null;
   let r = null;
-  if (live) {
+  if (live || m.status.state === 'post') {
     // This match from its own feed, which is fresher than the league's scoreboard.
-    const others = (table.board?.matches ?? []).filter((x) => x.id !== m.id && x.status.state === 'in');
-    r = asItStands(table.standings, m.home.id, m.away.id, [m, ...others]);
+    r = standingsNow(table.standings, m, table.board?.matches ?? [], table.seen);
   } else if (m.status.state === 'pre') {
     r = ifTheyWin(table.standings, m.home.id, m.away.id);
   }
   if (!r) return null;
   return (
     <div className="sp-band" aria-live="polite">
-      <span className="sp-band-label">{live ? 'As it stands' : 'With a win'}</span>
+      <span className="sp-band-label">{live ? 'As it stands' : m.status.state === 'post' ? 'In the table' : 'With a win'}</span>
       <span className="sp-band-main">
         <Move name={names.home} move={r.home} />
         <Move name={names.away} move={r.away} />
@@ -357,7 +372,8 @@ function Header({ m, data, hidden, reveal, at, error, band }) {
           ) : (
             <>
               <b>{m.home.score ?? '–'}–{m.away.score ?? '–'}</b>
-              <span className={live ? 'sp-on' : ''}>{live ? m.status.label : ended(m.status.long)}</span>
+              {/* After a shoot-out "Pens 4–2" says it all: a third line would run into the names. */}
+              {(live || m.home.shootout == null) && <span className={live ? 'sp-on' : ''}>{live ? m.status.label : ended(m.status.long)}</span>}
               {m.home.shootout != null && <span>Pens {m.home.shootout}–{m.away.shootout}</span>}
             </>
           )}

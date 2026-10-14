@@ -71,7 +71,8 @@ export function useAge(at) {
 
 export function Freshness({ at, error, live, every = 20, light = false }) {
   const age = useAge(at);
-  const stale = at && Date.now() - at > every * 3000;
+  // Only something live goes out of date: a finished match stops refreshing because nothing changes.
+  const stale = live && at && Date.now() - at > every * 3000;
   return (
     <span className={`sp-tiny sp-num${light ? '' : ' sp-muted'}`} aria-live="polite">
       {error && !at ? `Couldn’t load: ${error}` : error ? `${age}. Last refresh failed, trying again.` : age}

@@ -5,6 +5,7 @@ import { nextRace, sessionEnd } from '@/lib/sport/othersports.mjs';
 import { SESSION_KEY, titleRace } from '@/lib/sport/f1.mjs';
 import { kickoff, shortDate, until, zoneLabel } from './time';
 import { useJson, useF1Index, teamColor, teamName, Driver, Mark, shortRace } from './f1bits';
+import { RaceHero, TitleFight } from './F1Hero';
 
 const DAY = 864e5;
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -44,14 +45,15 @@ export default function F1Home() {
   const zone = useZone();
   return (
     <div className="sp-read">
-      {/* The header already says F1: the page opens on the next race, its name the heading. */}
+      {/* The header already says F1: the page opens on the next race, as a title card. */}
       <NextWeekend cal={cal} now={now} />
+      {st.data && cal.data && <TitleFight standings={st.data} races={cal.data.races} color={color} named={named} />}
       {last.data?.race && <LastRace season={season} round={lastRound} data={last.data} date={cal.data?.races.find((r) => r.round === lastRound)} color={color} named={named} />}
       <Championship st={st} cal={cal.data} color={color} named={named} />
       {cal.data && st.data && <Calendar cal={cal.data} st={st.data} color={color} now={now} />}
       <p className="sp-note sp-pad" style={{ margin: '18px 0 0' }}>
         Results and standings from Jolpica, which carries on the Ergast database. Laps, tyres and pace from F1’s timing data through FastF1, an hour or two after each
-        session. Unofficial: Matchday has no link with Formula 1.{zone ? ` Times in ${zone}.` : ''}
+        session. Circuit maps from Tomislav Bacinger’s f1-circuits (MIT licence). Unofficial: Matchday has no link with Formula 1.{zone ? ` Times in ${zone}.` : ''}
       </p>
     </div>
   );
@@ -60,73 +62,50 @@ export default function F1Home() {
 function NextWeekend({ cal, now }) {
   const { data, error } = cal;
   const race = data ? nextRace(data.races, now) : null;
-  const raceAt = race?.sessions[race.sessions.length - 1].at;
   const soon = race && (race.live || Date.parse(race.sessions[0].at) - now < 4 * DAY);
-  // "Marina Bay Street Circuit, Singapore", not "…, Marina Bay, Singapore".
-  const where = race ? [race.circuit, race.place, race.country].filter((x, i, a) => x && !a.slice(0, i).some((y) => y?.includes(x))).join(', ') : '';
+  if (!data && !error) return <div className="sp-skel sp-f1h-skel" style={{ height: 318, borderRadius: 10 }} />;
+  if (!data) return <p className="sp-note sp-pad">Couldn’t load the F1 calendar just now. Try again in a minute.</p>;
+  if (!race) {
+    return (
+      <section className="sp-pad sp-section" style={{ paddingTop: 14 }}>
+        <h1 className="sp-h1">The {data.season} season</h1>
+        <p className="sp-note">It’s over. Next year’s calendar shows here once it’s published.</p>
+      </section>
+    );
+  }
   return (
-    <section className="sp-pad sp-section" style={{ paddingTop: 14 }}>
-      {/* The label waits for the calendar: it's "This weekend" or "Next race" depending on the date. */}
-      {!data && !error ? <div className="sp-skel" style={{ height: 330, borderRadius: 6 }} /> : race && <p className="sp-kicker">{soon ? 'This weekend' : 'Next race'}</p>}
-      {!data && error && <p className="sp-note">Couldn’t load the F1 calendar just now. Try again in a minute.</p>}
-      {data && !race && (
-        <>
-          <h1 className="sp-h1">The {data.season} season</h1>
-          <p className="sp-note">It’s over. Next year’s calendar shows here once it’s published.</p>
-        </>
-      )}
-      {race && (
-        <>
-          <div className="sp-event-top" style={{ marginTop: 2 }}>
-            <h1 className="sp-f1-name sp-h1">{race.name}</h1>
-            <span className="sp-tiny sp-muted">
-              Round {race.round} of {data.races.length}
-            </span>
-          </div>
-          <p className="sp-small sp-muted" style={{ margin: '2px 0 0' }}>{where}</p>
-          {race.live ? (
-            <Link className="sp-f1-live-link" href={`${weekendHref(data.season, race.round)}&s=${SESSION_KEY[race.live.label]}`}>
-              <span className="sp-f1-live">
-                <i className="sp-dot" aria-hidden="true" /> Live
-              </span>
-              <b>{race.live.label}: follow the timing</b>
-              <span aria-hidden="true">→</span>
-            </Link>
-          ) : (
-            Date.parse(raceAt) > now && (
-              <p className="sp-small sp-ink2" style={{ margin: '6px 0 0' }}>
-                Race {until(raceAt, now)}
-              </p>
-            )
-          )}
-          <ol className="sp-sessions" aria-label="Sessions">
-            {race.sessions.map((s) => {
-              const state = race.live?.at === s.at ? 'live' : sessionEnd(s) <= now ? 'done' : 'todo';
-              return (
-                <li key={`${s.label}${s.at}`} className={`sp-session sp-session-${state}`}>
-                  <span>{shortDate(s.at)}</span>
-                  <span className="sp-num">{kickoff(s.at)}</span>
-                  <span>
-                    {s.label === 'Race' ? <b>{s.label}</b> : s.label}
-                    {state === 'live' && <span className="sp-live-text"> on now</span>}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-          <p className="sp-small" style={{ margin: '10px 0 0' }}>
-            <Link className="sp-link" href={weekendHref(data.season, race.round)}>
-              The weekend: sessions, results and analysis →
-            </Link>
+    <>
+      <RaceHero race={race} total={data.races.length} season={data.season} now={now} kicker={`${soon ? 'Race week' : 'Next race'} · Round ${race.round} of ${data.races.length}`} />
+      <section className="sp-pad sp-f1h-after">
+        <ol className="sp-sessions" aria-label="Sessions">
+          {race.sessions.map((s) => {
+            const state = race.live?.at === s.at ? 'live' : sessionEnd(s) <= now ? 'done' : 'todo';
+            const isNext = !race.live && race.upcoming?.at === s.at;
+            return (
+              <li key={`${s.label}${s.at}`} className={`sp-session sp-session-${state}${isNext ? ' sp-session-next' : ''}`}>
+                <span>{shortDate(s.at)}</span>
+                <span className="sp-num">{kickoff(s.at)}</span>
+                <span>
+                  {s.label === 'Race' ? <b>{s.label}</b> : s.label}
+                  {state === 'live' && <span className="sp-live-text"> on now</span>}
+                  {isNext && <span className="sp-muted"> · next, {until(s.at, now)}</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        <p className="sp-small" style={{ margin: '10px 0 0' }}>
+          <Link className="sp-link" href={weekendHref(data.season, race.round)}>
+            The weekend: sessions, results and analysis →
+          </Link>
+        </p>
+        {race.after && (
+          <p className="sp-small sp-ink2" style={{ margin: '8px 0 0' }}>
+            After this: {race.after.name}, race {shortDate(race.after.at)} at {kickoff(race.after.at)}.
           </p>
-          {race.after && (
-            <p className="sp-small sp-ink2" style={{ margin: '8px 0 0' }}>
-              After this: {race.after.name}, race {shortDate(race.after.at)} at {kickoff(race.after.at)}.
-            </p>
-          )}
-        </>
-      )}
-    </section>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -227,7 +206,8 @@ function Championship({ st, cal, color, named }) {
       {!data && error && <p className="sp-note sp-pad">Couldn’t load the standings from Jolpica just now.</p>}
       {data && (
         <>
-          <TitleWords all={t} kind={kind} named={named} />
+          {/* The drivers' title is said in the card at the top; the teams' is said here. */}
+          {kind === 'constructors' && <TitleWords all={t} kind={kind} named={named} />}
           <table className="sp-table sp-f1-table">
             <thead>
               <tr>

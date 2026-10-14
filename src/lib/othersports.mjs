@@ -83,7 +83,7 @@ const SESSIONS = [
 ];
 const at = (s) => (s?.date ? new Date(`${s.date}T${s.time ?? '12:00:00Z'}`).toISOString() : null);
 
-/** The season's races from Jolpica's /current.json: { season, races: [{ round, name, circuit, place, country, sessions }] }. */
+/** The season's races from Jolpica's /current.json: { season, races: [{ round, name, circuit, circuitId, place, country, sessions }] }. */
 export function f1Season(json) {
   const table = json?.MRData?.RaceTable;
   return {
@@ -92,6 +92,7 @@ export function f1Season(json) {
       round: Number(r.round),
       name: r.raceName,
       circuit: r.Circuit?.circuitName ?? null,
+      circuitId: r.Circuit?.circuitId ?? null,
       place: r.Circuit?.Location?.locality ?? null,
       country: r.Circuit?.Location?.country ?? null,
       sessions: [
