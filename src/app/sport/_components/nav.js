@@ -1,4 +1,4 @@
-// Where everything is: each sport and its own sections. The sidebar (desktop) and the drawer
+// Where everything is: each sport and its own sections ("soon": a page saying what's coming). The sidebar (desktop) and the drawer
 // (phones) list them; the header names the sport you're in: "Matchday · F1".
 
 const under = (...roots) => (p) => roots.some((r) => p === r || p.startsWith(`${r}/`) || p.startsWith(`${r}?`));
@@ -17,7 +17,7 @@ export const SPORTS = [
     ],
   },
   { key: 'cricket', label: 'Cricket', href: '/sport/cricket', match: under('/sport/cricket') },
-  { key: 'tennis', label: 'Tennis', href: '/sport/tennis', match: under('/sport/tennis') },
+  { key: 'tennis', label: 'Tennis', href: '/sport/tennis', match: under('/sport/tennis'), soon: true },
   {
     key: 'f1',
     label: 'F1',
@@ -29,7 +29,7 @@ export const SPORTS = [
       { href: '/sport/f1#calendar', label: 'Calendar', match: () => false },
     ],
   },
-  { key: 'wrestling', label: 'Wrestling', href: '/sport/wrestling', match: under('/sport/wrestling') },
+  { key: 'wrestling', label: 'Wrestling', href: '/sport/wrestling', match: under('/sport/wrestling'), soon: true },
 ];
 
 /** The sport a page belongs to; null for the pages that belong to none (settings). */

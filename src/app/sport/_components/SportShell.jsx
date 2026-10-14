@@ -112,6 +112,7 @@ function SideNav() {
               <Link href={s.href} className="sp-side-sport" aria-current={on && pathname === s.href ? 'page' : on ? 'true' : undefined}>
                 <SportGlyph sport={s.key} />
                 <span>{s.label}</span>
+                {s.soon && <small className="sp-side-soon">Soon</small>}
               </Link>
               {on && s.sections && (
                 <ul className="sp-side-sections">

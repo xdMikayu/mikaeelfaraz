@@ -83,7 +83,7 @@ const PAGES = {
   cricket: {
     title: 'Cricket',
     status: 'Being built',
-    intro: 'Live scores, with the sums done for you, and Matchday’s read on each match: par at the ground, where an innings is heading and each side’s chance of winning, learned from over 23,000 past matches. Scorecards and ball by ball are next.',
+    intro: 'Live scores with the sums done for you: par at the ground, where an innings is heading and each side’s chance, learned from over 23,000 past matches.',
     Now: CricketNow,
     plan: [
       'Live scores ball by ball: Tests, ODIs and T20 internationals, the IPL, the Big Bash, The Hundred and the rest.',
@@ -134,6 +134,22 @@ export default function ComingSoon({ sport }) {
         <p className="sp-prose sp-small" style={{ margin: 0 }}>{p.intro}</p>
       </div>
       {Now && <Now />}
+      {p.status ? (
+        // Where the section already shows plenty, its plans wait behind a tap.
+        <details className="sp-pad sp-section sp-about">
+          <summary>What’s still to come, and where the data comes from</summary>
+          <Plan p={p} />
+        </details>
+      ) : (
+        <Plan p={p} />
+      )}
+    </div>
+  );
+}
+
+function Plan({ p }) {
+  return (
+    <>
       <section className="sp-pad sp-section">
         <h2 className="sp-h2" style={{ marginBottom: 8 }}>What it will do</h2>
         <ul className="sp-plan">
@@ -146,6 +162,6 @@ export default function ComingSoon({ sport }) {
         <h2 className="sp-h2" style={{ marginBottom: 6 }}>The data</h2>
         <p className="sp-prose sp-small" style={{ margin: 0 }}>{p.data}</p>
       </section>
-    </div>
+    </>
   );
 }
