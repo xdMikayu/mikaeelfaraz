@@ -7,7 +7,6 @@ import { useMatchupIndex, useForecastKit, usePlayerLog } from './matchupData';
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const ORDER = ['ST', 'W-L', 'AM', 'W-R', 'CM', 'FB-L', 'CB', 'FB-R'];
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
-const SHORT = { ST: 'Strikers', 'W-L': 'Left wing', AM: 'No. 10', 'W-R': 'Right wing', CM: 'Midfield', 'FB-L': 'Left-back', CB: 'Centre-backs', 'FB-R': 'Right-back' };
 
 /** Premier League clubs: ratings, xG trend, where they leak and create chances, and the next five. */
 export default function TeamAnalysis({ team, fixtures, color }) {
@@ -114,16 +113,21 @@ export default function TeamAnalysis({ team, fixtures, color }) {
       {a.ownTotal > 0 && (
         <div className="sp-mu-block">
           <h3 className="sp-mu-h">Where their chances come from</h3>
-          <div className="sp-share" role="img" aria-label="Share of their xG plus xA by position">
-            {ORDER.filter((r) => a.own[r]).map((r) => (
-              <span key={r} style={{ flex: a.own[r] }} title={`${SHORT[r]}: ${Math.round((a.own[r] / a.ownTotal) * 100)}%`}>
-                <i />
-                <b className="sp-num">{a.own[r] / a.ownTotal >= 0.07 ? `${Math.round((a.own[r] / a.ownTotal) * 100)}%` : ''}</b>
-                <span>{a.own[r] / a.ownTotal >= 0.1 ? SHORT[r] : ''}</span>
-              </span>
-            ))}
-          </div>
-          <p className="sp-tiny sp-muted" style={{ margin: '4px 0 0' }}>Share of this season’s xG + xA by the position of the player involved.</p>
+          <p className="sp-tiny sp-ink2" style={{ margin: '0 0 6px' }}>Share of this season’s xG + xA by the position of the player involved, biggest first.</p>
+          {/* Ranked bars in the team's colour: every position named and comparable, which a stacked bar can't do. */}
+          {(() => {
+            const rows = ORDER.filter((r) => a.own[r]).sort((x, y) => a.own[y] - a.own[x]);
+            const top = a.own[rows[0]];
+            return rows.map((r) => (
+              <div key={r} className="sp-role">
+                <span className="sp-tiny" style={{ fontWeight: 700 }}>{cap(ROLE_NAME[r])}</span>
+                <span className="sp-bar-track">
+                  <i style={{ width: `${(a.own[r] / top) * 100}%`, background: color }} />
+                </span>
+                <span className="sp-tiny sp-num" style={{ textAlign: 'right', fontWeight: 750 }}>{Math.round((a.own[r] / a.ownTotal) * 100)}%</span>
+              </div>
+            ));
+          })()}
         </div>
       )}
 

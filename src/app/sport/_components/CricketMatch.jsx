@@ -113,7 +113,8 @@ function Header({ d }) {
         </p>
       )}
       <Status m={m} said={Boolean(words)} />
-      {d.toss && <p className="sp-tiny sp-muted" style={{ margin: '4px 0 0' }}>Toss: {d.toss}</p>}
+      {/* Early on ESPN's status line is the toss itself; then it isn't said twice. */}
+      {d.toss && !/toss/i.test(m.status ?? '') && <p className="sp-tiny sp-muted" style={{ margin: '4px 0 0' }}>Toss: {d.toss}</p>}
     </header>
   );
 }
@@ -158,7 +159,8 @@ function LiveTab({ d }) {
   const last = inn.bowling.find((b) => b.now === 'bowled last');
   const batters = inn.batting.filter((b) => !b.out).sort((a, b) => (a.now === 'striker' ? -1 : b.now === 'striker' ? 1 : 0));
   const pair = inn.partnerships.at(-1);
-  const unbroken = pair && pair.batters.every((x) => batters.some((b) => b.id === x.id));
+  // The commentary's partnerships name the batters; ESPN's own, used while the commentary lags, only say whether one has ended.
+  const unbroken = pair && (pair.batters ? pair.batters.every((x) => batters.some((b) => b.id === x.id)) : pair.ended === false);
   const quota = inn.ballLimit ? Math.ceil(inn.ballLimit / 30) * 6 : null;
   return (
     <div className="sp-pad">
@@ -209,9 +211,10 @@ function LiveTab({ d }) {
             );
           })}
         </ul>
-        {unbroken && pair.batters.length === 2 && (
+        {unbroken && (pair.batters?.length ?? 2) === 2 && (
           <p className="sp-small sp-ink2" style={{ margin: '8px 0 0' }}>
-            Partnership: <b style={{ color: 'var(--sp-ink)' }}>{pair.runs}</b> off {count(pair.balls, 'ball')} ({pair.batters.map((x) => `${shortOf(d, x.id)} ${x.runs} off ${x.balls}`).join(', ')}).
+            Partnership: <b style={{ color: 'var(--sp-ink)' }}>{pair.runs}</b> off {count(pair.balls, 'ball')}
+            {pair.batters ? ` (${pair.batters.map((x) => `${shortOf(d, x.id)} ${x.runs} off ${x.balls}`).join(', ')})` : ''}.
           </p>
         )}
       </section>

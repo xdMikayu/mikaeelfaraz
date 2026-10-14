@@ -1,7 +1,7 @@
 # Matchday design rules: kit colours
 
-The football app at `/sport`, a product with its own look. The direction ("B: kit colours") was picked from three
-mockups. Check every screen against this file before it ships.
+The sports app at `/sport` (football, cricket, F1, and tennis and wrestling to come), a product with its own look. The
+direction ("B: kit colours") was picked from three mockups. Check every screen against this file before it ships.
 
 ## The idea
 
@@ -31,9 +31,19 @@ two earlier versions of this app shipped them.
 | Black and white | Everything else |
 | Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions, F1 sectors): more ink means more. F1 tyres too: more ink is a softer compound, wet tyres outlined |
 
-- Near-white kits fall back to the club's alternate colour when it has a darker one.
+- Every team colour goes through `src/lib/sport/kit-colors.mjs`, wherever it comes from:
+  - ESPN's raw screen primaries become the colour of the real shirt: `#0000fa` a royal blue, `#ffff00` a kit yellow,
+    neon greens a true green. Designed colours (Chelsea's blue, Villa's claret) pass unchanged.
+  - One colour per team on a page: its block, its chart lines, its bars and its share of a forecast all match.
+    `matchKits` decides it once per match.
+  - In a block, a white kit takes the club's darker alternate when it has one; when it doesn't, or when the away
+    side has to change into white, the block is a pale grey (`--sp-kit-white`) so it doesn't merge with the page.
+  - When two kits clash the away side changes to its other kit, as on the pitch.
+  - On the page, a colour that's too pale to read as a line (Man City's sky blue on white) gets a deeper shade of
+    itself, never a different colour; a white kit is drawn in the page's ink.
 - Coloured blocks get a hairline edge so white halves don't merge with the page.
-- Dark mode is neutral near-black (`#121212`), never navy. The kit colours are unchanged.
+- Dark mode is neutral near-black (`#121212`), never navy. The kit colours are unchanged; only their lines lighten
+  where they need to.
 
 ## Type
 
@@ -50,33 +60,53 @@ two earlier versions of this app shipped them.
 - Statuses are text: "FT" in grey, "38'" in red, "20:30" in ink.
 - Fantasy plates follow the same rule: black when the player's match is over, red while it's on, an outline with
   the kick-off time while it's still to come.
-- Tabs and the day picker are words, underlined when active. The sports row at the top of Scores is the one
-  exception: each sport's mark over its name, underlined when active.
-- The tab bar is a plain bar with a hairline top edge.
+- Tabs, the day picker and the league picker are words, underlined when active. Never boxed pills.
+- One rule above each section. Two sections never stack two rules with a gap between them.
+- Lists of shares are ranked bars, biggest first, every row named. Never a stacked bar with labels that don't fit.
 
-## Sport marks
+## Navigation
 
-Every sport has a mark in `public/sport/marks/`, in the same family as the app icon:
+- The header names the sport you're in: "Matchday · F1", the sport in heavy type. Pages don't repeat it in their
+  own heading: a page's heading is its subject ("Wednesday 14 October", "United States Grand Prix").
+- Phones: the sport's sections are tabs under the header (Scores · Fantasy · Tables · Following). The sports wait in
+  a drawer behind the menu button, since switching sport is occasional. No bottom tab bar.
+- Desktop: the same list is a 236 px sidebar, the current sport's sections nested under it.
+- Settings is its own page: spoilers, appearance, the order of the sports and the one Matchday opens on.
+- Every row in the drawer and sidebar is at least 44 px tall.
 
-- A rounded square of the sport's own surface: grass, the cricket pitch, a court, asphalt, the ring.
-- One object on it, split down the middle: red on the left, white on the right. A shirt, a ball split along its
-  seam, a car, a mask. Where a split object would read as something else (a red and white tennis ball looks like a
-  baseball), the surface takes the split instead: hard court and clay either side of the net.
-- Flat colours, no outlines, gradients or shadows; ink (`#111`) only for details like a collar or wheels.
-- Checked at 180, 60, 32 and 16 px on light and dark before it ships.
+## Sport pictograms
 
-The app icon stays the football mark. A sport page uses its own mark as the browser-tab icon; saved to the home
-screen, it's still Matchday.
+Each sport is a pictogram drawn for the app (`SportGlyph` in `_components/glyphs.jsx`), not a logo:
+
+- The navigation glyphs' grid and stroke: 22 units, 1.6 stroke, round caps and joins, outline first.
+- Balanced to carry about the same ink: a ball, a bat and ball, a tennis ball's seams (diagonal, so it doesn't read
+  as a baseball), a chequered flag, a championship belt.
+- Words lead and the pictogram follows: the active sport gets weight and a 2 px ink rule, never a filled pill.
+- A sport page's browser-tab icon is its pictogram (`public/sport/marks/`); saved to the home screen, it's still
+  Matchday.
 
 ## Team markers
 
 In lists, a small shirt in the kit colour (with the alternate colour at the collar) stands in for a crest. Crests
-appear only on white discs inside kit-colour blocks.
+appear only on white discs inside kit-colour blocks, and in league tables.
+
+## Tables
+
+A bar beside each place says what it leads to, from ESPN's notes: ink for a reward (darker for a bigger one), an
+outline for a play-off, red for the drop, and a line where one zone ends. No other colours.
+
+## Match events
+
+- Goals lead: the scorer heavier, and the score it made in the scoreboard's type on the outer side of the name.
+  Substitutions recede.
+- A red card in a kit-colour block sits on a small white chip, so it reads on a red kit too.
+- The win-probability chart marks each goal with a ball above it and a faint rule in the scorers' colour.
 
 ## Motion
 
 - A new goal flashes the score once.
-- Nothing else moves except the page.
+- Live timing is calm: no flashing rows, no pulsing dots.
+- Nothing else moves except the page and the drawer.
 
 ## Words
 

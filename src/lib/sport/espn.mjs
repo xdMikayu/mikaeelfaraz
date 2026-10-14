@@ -3,6 +3,7 @@
 // shapes the pages use; nothing downstream touches ESPN field names.
 import { xgFor } from './xg.mjs';
 import { pricesOf } from './odds.mjs';
+import { kitHex } from './kit-colors.mjs';
 
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 const WEB = 'https://site.web.api.espn.com/apis/v2/sports/soccer';
@@ -101,8 +102,8 @@ function side(c) {
     short: t.shortDisplayName ?? t.displayName,
     abbr: t.abbreviation,
     logo: logoOf(t),
-    color: t.color ? `#${t.color.replace('#', '')}` : null,
-    alt: t.alternateColor ? `#${t.alternateColor.replace('#', '')}` : null,
+    color: kitHex(t.color),
+    alt: kitHex(t.alternateColor),
     score: c.score == null ? null : Number(typeof c.score === 'object' ? c.score.value ?? c.score.displayValue : c.score),
     shootout: c.shootoutScore != null ? Number(c.shootoutScore) : null,
     winner: Boolean(c.winner),
@@ -131,6 +132,7 @@ export function normaliseMatch(e, league) {
   return {
     id: String(e.id),
     league: league ?? e.league?.slug ?? null,
+    competition: e.league?.abbreviation ?? e.league?.name ?? null,
     date: comp.date ?? e.date,
     status,
     home: { ...home, red: details.filter((d) => d.red && d.side === 'home').length },
@@ -523,26 +525,28 @@ export async function fetchTeam(slug, teamId, opts) {
   }
   if (!past && !next) return null;
   const team = past?.team ?? next?.team ?? {};
-  // Schedules leave out kit colours; the league's club list has them.
-  const clubs = await get(`${SITE}/${slug}/teams`, opts).catch(() => null);
-  const kits = Object.fromEntries((clubs?.sports?.[0]?.leagues?.[0]?.teams ?? []).map(({ team: t }) => [String(t.id), { color: t.color, alt: t.alternateColor }]));
-  const paint = (side) => {
-    const k = kits[side.id];
-    if (!side.color && k?.color) side.color = `#${k.color.replace('#', '')}`;
-    if (!side.alt && k?.alt) side.alt = `#${k.alt.replace('#', '')}`;
-    return side;
+  const pastMatches = (past?.events ?? []).map((e) => normaliseMatch(e, e.league?.slug ?? slug));
+  const nextMatches = (next?.events ?? []).map((e) => normaliseMatch(e, e.league?.slug ?? slug));
+  // Schedules leave out kit colours; each competition's club list has them: the league's, then the
+  // European or cup competition of any opponent still without colours.
+  const kits = {};
+  const learn = (d) => {
+    for (const { team: t } of d?.sports?.[0]?.leagues?.[0]?.teams ?? []) kits[String(t.id)] ??= { color: kitHex(t.color), alt: kitHex(t.alternateColor) };
   };
-  const map = (e) => {
-    const m = normaliseMatch(e, e.league?.slug ?? slug);
-    paint(m.home);
-    paint(m.away);
-    return m;
-  };
-  const results = (past?.events ?? []).map(map).filter((m) => m.status.state === 'post').sort((a, b) => new Date(b.date) - new Date(a.date));
-  const fixtures = (next?.events ?? []).map(map).filter((m) => m.status.state !== 'post').sort((a, b) => new Date(a.date) - new Date(b.date));
+  learn(await get(`${SITE}/${slug}/teams`, opts).catch(() => null));
+  const all = [...pastMatches, ...nextMatches];
+  const others = [...new Set(all.filter((m) => [m.home, m.away].some((s) => !s.color && !kits[s.id])).map((m) => m.league))].filter((l) => l && l !== slug && !/friendly|charity/.test(l)).slice(0, 3);
+  for (const d of await Promise.all(others.map((l) => get(`${SITE}/${l}/teams`, opts).catch(() => null)))) learn(d);
+  for (const s of all.flatMap((m) => [m.home, m.away])) {
+    s.color ??= kits[s.id]?.color ?? null;
+    s.alt ??= kits[s.id]?.alt ?? null;
+  }
+  const results = pastMatches.filter((m) => m.status.state === 'post').sort((a, b) => new Date(b.date) - new Date(a.date));
+  const fixtures = nextMatches.filter((m) => m.status.state !== 'post').sort((a, b) => new Date(a.date) - new Date(b.date));
+  const own = kits[String(team.id ?? teamId)];
   return {
     league: slug,
-    team: { id: String(team.id ?? teamId), name: team.displayName, abbr: team.abbreviation, logo: team.logo ?? logoOf(team), color: team.color ? `#${team.color}` : null, standing: team.standingSummary ?? null, record: team.recordSummary ?? null },
+    team: { id: String(team.id ?? teamId), name: team.displayName, abbr: team.abbreviation, logo: team.logo ?? logoOf(team), color: kitHex(team.color) ?? own?.color ?? null, alt: kitHex(team.alternateColor) ?? own?.alt ?? null, standing: team.standingSummary ?? null, record: team.recordSummary ?? null },
     results,
     fixtures,
   };
