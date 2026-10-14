@@ -3,22 +3,18 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PrefsProvider, usePrefs } from './prefs';
-import { ScoresIcon, FantasyIcon, TablesIcon, FollowIcon } from './glyphs';
+import { ScoresIcon, FantasyIcon, TablesIcon, FollowIcon, MenuIcon, CloseIcon, SettingsIcon, SportGlyph } from './glyphs';
 import Crest from './Crest';
-import { SPORTS } from './SportsBar';
+import { SPORTS, sportOf } from './nav';
 import { LEAGUES } from '@/lib/sport/leagues.mjs';
 
-// Scores covers the match and team pages, and the other sports' pages.
-const SCORES = ['/sport/match', '/sport/team', ...SPORTS.filter((s) => s.href !== '/sport').map((s) => s.href)];
-const NAV = [
-  { href: '/sport', label: 'Scores', icon: ScoresIcon, match: (p) => p === '/sport' || SCORES.some((h) => p.startsWith(h)) },
-  { href: '/sport/fantasy', label: 'Fantasy', icon: FantasyIcon, match: (p) => p.startsWith('/sport/fantasy') },
-  { href: '/sport/table/eng.1', label: 'Tables', icon: TablesIcon, match: (p) => p.startsWith('/sport/table') },
-  { href: '/sport/following', label: 'Following', icon: FollowIcon, match: (p) => p.startsWith('/sport/following') },
-];
+// The frame of every page: the header ("Matchday · F1"), the sports with their sections (a sidebar
+// on desktop, a drawer on phones), and football's tab bar along the bottom on phones.
 
-// The mark: a half-and-half shirt on the centre spot, split along the halfway line (the home-screen
-// icon is the same drawing, public/sport/icon.svg).
+const TAB_ICONS = { Scores: ScoresIcon, Fantasy: FantasyIcon, Tables: TablesIcon, Following: FollowIcon };
+
+// The mark: a half-and-half shirt on the centre spot, split along the halfway line. It's the
+// home-screen icon (public/sport/icon.svg); the pages themselves carry only the name.
 const SHIRT = 'M212 114C221 134 236 143 256 143C276 143 291 134 300 114L368 134L426 198L392 238L352 212L352 400Q352 412 340 412L172 412Q160 412 160 400L160 212L120 238L86 198L144 134Z';
 export function Mark({ size = 26 }) {
   const id = useId().replace(/:/g, '');
@@ -45,11 +41,19 @@ export function Mark({ size = 26 }) {
   );
 }
 
-export function Wordmark() {
+/** "Matchday · F1": the name, then where you are. */
+export function Wordmark({ sport }) {
   return (
     <span className="sp-word">
-      <Mark />
       Matchday
+      {sport && (
+        <>
+          <span className="sp-word-dot" aria-hidden="true">
+            ·
+          </span>
+          <span className="sp-word-sport">{sport}</span>
+        </>
+      )}
     </span>
   );
 }
@@ -89,95 +93,206 @@ function HomeScreenHint() {
   );
 }
 
-function Rail() {
+/**
+ * Everything you can go to: each sport, with the sections of the one you're in under it, then
+ * football's teams and tables when you're in football, and the settings.
+ */
+function SideNav() {
   const pathname = usePathname();
   const { prefs } = usePrefs();
+  const here = sportOf(pathname);
   const tables = prefs.order.filter((s) => !prefs.off.includes(s)).map((s) => LEAGUES.find((l) => l.slug === s)).filter((l) => l?.table).slice(0, 8);
   return (
-    <aside className="sp-rail" aria-label="Sections">
-      <Link href="/sport" className="mb-4" style={{ height: 'auto', padding: 0, margin: '0 0 18px' }}><Wordmark /></Link>
-      {NAV.map(({ href, label, icon: Icon, match }) => (
-        <Link key={href} href={href} aria-current={match(pathname) ? 'page' : undefined}>
-          <Icon /> {label}
-        </Link>
-      ))}
-      {prefs.teams.length > 0 && (
-        <div className="sp-rail-sub">
-          <span className="sp-tiny sp-muted" style={{ padding: '0 0 4px' }}>Your teams</span>
+    <nav className="sp-side" aria-label="Sports">
+      <ul className="sp-side-sports">
+        {SPORTS.map((s) => {
+          const on = here?.key === s.key;
+          return (
+            <li key={s.key}>
+              <Link href={s.href} className="sp-side-sport" aria-current={on && pathname === s.href ? 'page' : on ? 'true' : undefined}>
+                <SportGlyph sport={s.key} />
+                <span>{s.label}</span>
+              </Link>
+              {on && s.sections && (
+                <ul className="sp-side-sections">
+                  {s.sections.map((x) => (
+                    <li key={x.href}>
+                      <Link href={x.href} aria-current={x.match(pathname) ? 'page' : undefined}>
+                        {x.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {here?.key === 'football' && prefs.teams.length > 0 && (
+        <div className="sp-side-group">
+          <span className="sp-side-head">Your teams</span>
           {prefs.teams.slice(0, 10).map((t) => (
             <Link key={t.id} href={`/sport/team?id=${t.id}${t.leagues?.[0] ? `&l=${t.leagues[0]}` : ''}`}>
-              <Crest src={t.logo} size={18} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
+              <Crest src={t.logo} size={18} /> <span className="sp-side-clip">{t.name}</span>
             </Link>
           ))}
         </div>
       )}
-      <div className="sp-rail-sub">
-        <span className="sp-tiny sp-muted" style={{ padding: '0 0 4px' }}>Tables</span>
-        {tables.map((l) => (
-          <Link key={l.slug} href={`/sport/table/${l.slug}`} aria-current={pathname === `/sport/table/${l.slug}` ? 'page' : undefined}>{l.name}</Link>
-        ))}
-      </div>
-      <p className="sp-tiny sp-muted" style={{ marginTop: 'auto', lineHeight: 1.5 }}>
-        Scores from ESPN, fantasy from FPL. No ads, no tracking. <Link className="sp-link" href="/sport/following#about">About the data</Link>
-      </p>
-    </aside>
-  );
-}
-
-function Tabbar() {
-  const pathname = usePathname();
-  return (
-    <nav className="sp-tabbar" aria-label="Sections">
-      {NAV.map(({ href, label, icon: Icon, match }) => (
-        <Link key={href} href={href} aria-current={match(pathname) ? 'page' : undefined}>
-          <Icon />
-          {label}
+      {here?.key === 'football' && (
+        <div className="sp-side-group">
+          <span className="sp-side-head">Tables</span>
+          {tables.map((l) => (
+            <Link key={l.slug} href={`/sport/table/${l.slug}`} aria-current={pathname === `/sport/table/${l.slug}` ? 'page' : undefined}>
+              {l.name}
+            </Link>
+          ))}
+        </div>
+      )}
+      <div className="sp-side-group sp-side-foot">
+        <Link href="/sport/settings" className="sp-side-settings" aria-current={pathname.startsWith('/sport/settings') ? 'page' : undefined}>
+          <SettingsIcon /> Settings
         </Link>
-      ))}
+        <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0', lineHeight: 1.5 }}>
+          No ads, no tracking, no accounts.{' '}
+          <Link className="sp-link" href="/sport/settings#about">
+            About the data
+          </Link>
+        </p>
+      </div>
     </nav>
   );
 }
 
-/** The top bar. From the home screen there's no browser back button, so match and team pages get one. */
-function Top() {
+/** Desktop: the sidebar, always there. */
+function Rail() {
+  const here = sportOf(usePathname());
+  return (
+    <aside className="sp-rail">
+      <Link href={here?.href ?? '/sport'} className="sp-rail-brand">
+        <Wordmark sport={here?.label} />
+      </Link>
+      <SideNav />
+    </aside>
+  );
+}
+
+/** Phones: the same, sliding in from the left. Closes on a choice, on Escape and on a tap outside. */
+function Drawer({ open, onClose }) {
+  const pathname = usePathname();
+  const panel = useRef(null);
+  const first = useRef(pathname);
+  useEffect(() => {
+    if (pathname !== first.current) onClose();
+    first.current = pathname;
+  }, [pathname, onClose]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const key = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', key);
+    const root = document.documentElement;
+    const was = root.style.overflow;
+    root.style.overflow = 'hidden';
+    panel.current?.querySelector('a[aria-current], a')?.focus();
+    return () => {
+      document.removeEventListener('keydown', key);
+      root.style.overflow = was;
+    };
+  }, [open, onClose]);
+  return (
+    <div className={`sp-drawer${open ? ' sp-drawer-open' : ''}`} aria-hidden={!open} inert={open ? undefined : ''}>
+      <div className="sp-drawer-scrim" onClick={onClose} />
+      <div className="sp-drawer-panel" role="dialog" aria-modal="true" aria-label="Sports and sections" ref={panel}>
+        <div className="sp-drawer-top">
+          <Wordmark />
+          <button className="sp-icon-tap" onClick={onClose} aria-label="Close the menu">
+            <CloseIcon />
+          </button>
+        </div>
+        <SideNav />
+      </div>
+    </div>
+  );
+}
+
+/** Football's sections along the bottom, on phones. */
+function Tabbar({ sport }) {
+  const pathname = usePathname();
+  return (
+    <nav className="sp-tabbar" aria-label="Football">
+      {sport.sections.map(({ href, label, match }) => {
+        const Icon = TAB_ICONS[label];
+        return (
+          <Link key={href} href={href} aria-current={match(pathname) ? 'page' : undefined}>
+            <Icon />
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** The top bar on phones: the menu, then "Matchday · F1". From the home screen, match and team pages get a back button. */
+function Top({ onMenu, open }) {
   const pathname = usePathname();
   const router = useRouter();
   const params = useSearchParams();
   const standalone = useStandalone();
+  const here = sportOf(pathname);
   const detail = pathname.startsWith('/sport/match') || pathname.startsWith('/sport/team');
   // Back only returns to a page seen inside the app; opened straight onto a match, it goes to the scores.
-  const here = `${pathname}?${params}`;
-  const landing = useRef(here);
+  const at = `${pathname}?${params}`;
+  const landing = useRef(at);
   const moved = useRef(false);
   useEffect(() => {
-    if (here !== landing.current) moved.current = true;
-  }, [here]);
+    if (at !== landing.current) moved.current = true;
+  }, [at]);
   return (
     <header className="sp-top">
       <div className="sp-top-in">
-        {standalone && detail && (
+        {standalone && detail ? (
           <button className="sp-back" onClick={() => (moved.current ? router.back() : router.push('/sport'))}>
             <span aria-hidden="true">‹</span> Back
           </button>
+        ) : (
+          <button className="sp-icon-tap" onClick={onMenu} aria-label="Sports and sections" aria-expanded={open}>
+            <MenuIcon />
+          </button>
         )}
-        <Link href="/sport" aria-label="Matchday, today's scores"><Wordmark /></Link>
+        <Link href={here?.href ?? '/sport'} aria-label={`Matchday${here ? `, ${here.label}` : ''}`}>
+          <Wordmark sport={here ? here.label : 'Settings'} />
+        </Link>
       </div>
     </header>
+  );
+}
+
+function Frame({ children }) {
+  const pathname = usePathname();
+  const here = sportOf(pathname);
+  const [open, setOpen] = useState(false);
+  const close = useRef(() => setOpen(false)).current;
+  const tabs = here?.key === 'football';
+  return (
+    <>
+      <Top onMenu={() => setOpen(true)} open={open} />
+      <Drawer open={open} onClose={close} />
+      <div className="sp-frame">
+        <Rail />
+        <main className={`sp-main${tabs ? ' sp-main-tabs' : ''}`} id="main">
+          <HomeScreenHint />
+          {children}
+        </main>
+      </div>
+      {tabs && <Tabbar sport={here} />}
+    </>
   );
 }
 
 export default function SportShell({ children }) {
   return (
     <PrefsProvider>
-      <Top />
-      <div className="sp-frame">
-        <Rail />
-        <main className="sp-main" id="main">
-          <HomeScreenHint />
-          {children}
-        </main>
-      </div>
-      <Tabbar />
+      <Frame>{children}</Frame>
     </PrefsProvider>
   );
 }

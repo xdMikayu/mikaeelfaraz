@@ -213,7 +213,7 @@ function Championship({ st, cal, color, named }) {
   const rows = data ? (kind === 'drivers' ? data.drivers : data.constructors) : [];
   const lead = rows[0]?.points ?? 0;
   return (
-    <section className="sp-section">
+    <section className="sp-section" id="championship">
       <div className="sp-pad sp-section-head">
         <h2 className="sp-h2">Championship</h2>
         <div className="sp-tabs" role="radiogroup" aria-label="Championship" style={{ border: 0, gap: 14 }}>
@@ -269,7 +269,7 @@ function Championship({ st, cal, color, named }) {
 function Calendar({ cal, st, color, now }) {
   const next = nextRace(cal.races, now);
   return (
-    <section className="sp-section">
+    <section className="sp-section" id="calendar">
       <div className="sp-pad sp-section-head">
         <h2 className="sp-h2">Calendar</h2>
         <span className="sp-tiny sp-muted">{cal.season}</span>
