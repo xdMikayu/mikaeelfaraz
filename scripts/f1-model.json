@@ -1,0 +1,76 @@
+{
+ "built": "2026-10-14T10:49:30Z",
+ "inputs": [
+  "grid"
+ ],
+ "weights": {
+  "grid": 1.942,
+  "quali": 0.0,
+  "longRun": 0.0,
+  "form": 0.0
+ },
+ "dnf": 0.1357,
+ "trainedOn": {
+  "races": 65,
+  "seasons": [
+   2024,
+   2025,
+   2026
+  ]
+ },
+ "test": {
+  "from": 2025,
+  "chosen": "grid",
+  "gainOnGrid": 0.0,
+  "races": 41,
+  "logLoss": 1.078,
+  "winnerChance": 0.436,
+  "favouriteWon": 28,
+  "podiumBrier": 0.0624,
+  "pointsBrier": 0.1619,
+  "calibration": [
+   {
+    "from": 0,
+    "to": 0.05,
+    "said": 0.009,
+    "happened": 0.003,
+    "n": 726
+   },
+   {
+    "from": 0.05,
+    "to": 0.15,
+    "said": 0.078,
+    "happened": 0.065,
+    "n": 46
+   },
+   {
+    "from": 0.15,
+    "to": 0.35,
+    "said": 0.168,
+    "happened": 0.195,
+    "n": 41
+   },
+   {
+    "from": 0.35,
+    "to": 0.6,
+    "said": 0.574,
+    "happened": 0.657,
+    "n": 35
+   },
+   {
+    "from": 0.6,
+    "to": 1,
+    "said": 0.608,
+    "happened": 0.833,
+    "n": 6
+   }
+  ],
+  "gridOnly": {
+   "logLoss": 1.078,
+   "winnerChance": 0.436,
+   "favouriteWon": 28,
+   "podiumBrier": 0.0624,
+   "pointsBrier": 0.1619
+  }
+ }
+}

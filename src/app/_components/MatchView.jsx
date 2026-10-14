@@ -80,7 +80,7 @@ export default function MatchView() {
               <section className="sp-panel">
                 <div className="sp-section-head">
                   <h2 className="sp-h2">Expected goals</h2>
-                  <Link className="sp-tiny sp-muted sp-link" href="/sport/following#xg">Our estimate</Link>
+                  <Link className="sp-tiny sp-muted sp-link" href="/sport/settings#xg">Our estimate</Link>
                 </div>
                 <XgChart shots={data.shots} colors={colors} names={names} endMinute={live ? axisMinute(m.status.label) : null} />
                 {opta && (

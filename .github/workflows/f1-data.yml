@@ -1,0 +1,57 @@
+name: F1 data
+
+# After each F1 session, FastF1 reads F1's timing archive and writes small JSON files for the F1
+# pages (scripts/sport/f1_sessions.py): positions, gaps, tyres and pace for races and sprints,
+# sectors and the two fastest laps' traces for qualifying, long runs for practice, and after
+# qualifying a race prediction. They go to the f1-data branch, which the site reads through
+# /api/sport/f1/data, so new data never rebuilds the site. Every two hours from Friday to Monday
+# (UTC), when sessions happen; a run with nothing new takes about a minute. FastF1 allows 500
+# requests an hour, about 50 sessions, so a long catch-up finishes over several runs.
+on:
+  schedule:
+    - cron: '17 */2 * * 5,6,0,1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: f1-data
+  cancel-in-progress: false
+
+jobs:
+  sessions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the f1-data branch (the first run starts it)
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir data-branch && cd data-branch
+          git init -q
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin f1-data; then
+            git checkout -q -b f1-data FETCH_HEAD
+          else
+            git checkout -q --orphan f1-data
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/sport/f1-requirements.txt
+      - run: pip install -r scripts/sport/f1-requirements.txt
+      - name: Read new sessions
+        run: python scripts/sport/f1_sessions.py --out data-branch/f1 --cache "$RUNNER_TEMP/fastf1"
+      - name: Push them to f1-data
+        run: |
+          cd data-branch
+          git add -A f1
+          if git diff --cached --quiet; then
+            echo "Nothing new."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "F1 data: new sessions [skip netlify]"
+          git push -q origin f1-data

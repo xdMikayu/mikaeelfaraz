@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { LEAGUES } from '@/lib/sport/leagues.mjs';
+import { SPORTS } from './nav';
 
 // Everything the viewer chooses lives in their own browser; there are no accounts.
 const KEY = 'md-prefs-v1';
@@ -17,6 +18,8 @@ export const DEFAULTS = {
   fplRival: {}, // league id -> the manager you last compared yourself with there
   fplWatch: [], // FPL player ids starred to keep an eye on
   homeHint: true, // the one-time "Add to Home Screen" note on iPhone and iPad
+  sports: SPORTS.map((s) => s.key), // the order of the sports in the menu
+  start: 'football', // the sport Matchday opens on
 };
 
 // The browser bar and the home-screen status bar follow the chosen theme, not just the system's.
@@ -33,6 +36,9 @@ function read() {
       }
     }
     p.order = p.order.filter((s) => LEAGUES.some((l) => l.slug === s));
+    // Sports added since go to the end of the viewer's order.
+    p.sports = [...p.sports.filter((k) => SPORTS.some((x) => x.key === k)), ...SPORTS.map((x) => x.key).filter((k) => !p.sports.includes(k))];
+    if (!SPORTS.some((x) => x.key === p.start)) p.start = 'football';
     return p;
   } catch {
     return DEFAULTS;

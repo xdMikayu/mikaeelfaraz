@@ -28,6 +28,73 @@ export const FollowIcon = ({ filled }) => (
   </svg>
 );
 
+export const MenuIcon = () => (
+  <svg {...nav}>
+    <path d="M3.5 6.5h15M3.5 11h15M3.5 15.5h15" />
+  </svg>
+);
+
+export const CloseIcon = () => (
+  <svg {...nav}>
+    <path d="m5.5 5.5 11 11m0-11-11 11" />
+  </svg>
+);
+
+export const SettingsIcon = () => (
+  <svg {...nav}>
+    <path d="M3.5 6.5h9M16.5 6.5h2M3.5 15.5h2M9.5 15.5h9" />
+    <circle cx="14.5" cy="6.5" r="2" />
+    <circle cx="7.5" cy="15.5" r="2" />
+  </svg>
+);
+
+// The sports, drawn on the same grid and stroke as the rest and balanced to carry about the same
+// ink: a ball, a bat and ball, a tennis ball's seams, a chequered flag and a championship belt.
+const SPORT_GLYPHS = {
+  football: (
+    <>
+      <circle cx="11" cy="11" r="8.5" />
+      <path d="m11 7.6 3.2 2.3-1.2 3.8H9l-1.2-3.8Z" />
+      <path d="M11 7.6V2.5M14.2 9.9l4.5-1.5M13 13.7l2.8 3.9M9 13.7l-2.8 3.9M7.8 9.9 3.3 8.4" />
+    </>
+  ),
+  cricket: (
+    <>
+      <path d="m12.3 4.3 4.4 4.4-9.2 9.2a1.8 1.8 0 0 1-2.5 0l-1.9-1.9a1.8 1.8 0 0 1 0-2.5Z" />
+      <path d="m8.6 13.4 3.2-3.2" />
+      <path d="m14.5 6.5 4.2-4.2" strokeWidth="2.4" />
+      <circle cx="17" cy="17" r="2.6" fill="currentColor" stroke="none" />
+    </>
+  ),
+  tennis: (
+    <>
+      <circle cx="11" cy="11" r="8.5" />
+      <path d="M5.2 5.3c2.7 3.2 2.7 8.2 0 11.4M16.8 5.3c-2.7 3.2-2.7 8.2 0 11.4" transform="rotate(-40 11 11)" />
+    </>
+  ),
+  f1: (
+    <>
+      <path d="M4.5 20V2.8" />
+      <path d="M4.5 3.5h14v10h-14" />
+      <path d="M4.5 3.5h4.7v3.3H4.5zM13.8 3.5h4.7v3.3h-4.7zM9.2 6.8h4.6v3.4H9.2zM4.5 10.2h4.7v3.3H4.5zM13.8 10.2h4.7v3.3h-4.7z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  wrestling: (
+    <>
+      <path d="M1.6 9h3.2M17.2 9h3.2M1.6 13h3.2M17.2 13h3.2M1.6 9v4M20.4 9v4" />
+      <path d="M4.8 8.4h2v5.2h-2zM15.2 8.4h2v5.2h-2z" />
+      <circle cx="11" cy="11" r="5.9" />
+      <path d="m11 7.6 1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3Z" fill="currentColor" stroke="none" />
+    </>
+  ),
+};
+
+export const SportGlyph = ({ sport, size = 22 }) => (
+  <svg {...nav} width={size} height={size}>
+    {SPORT_GLYPHS[sport]}
+  </svg>
+);
+
 export function Star({ on, size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 22 22" aria-hidden fill={on ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">

@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Matchday football: a half-and-half shirt on the centre spot, split along the halfway line. -->
-  <defs><clipPath id="football-sq"><rect width="512" height="512" rx="112"/></clipPath><clipPath id="football-obj"><path d="M212 114C221 134 236 143 256 143C276 143 291 134 300 114L368 134L426 198L392 238L352 212L352 400Q352 412 340 412L172 412Q160 412 160 400L160 212L120 238L86 198L144 134Z"/></clipPath></defs>
-  <g clip-path="url(#football-sq)"><rect width="512" height="512" fill="#2f8d4e"/><path fill="#2a8346" d="M64 0h64v512H64zM192 0h64v512h-64zM320 0h64v512h-64zM448 0h64v512h-64z"/>
-    <g fill="none" stroke="#fff" stroke-opacity=".62" stroke-width="9"><path d="M256 0v512"/><circle cx="256" cy="262" r="190"/></g>
-    <g clip-path="url(#football-obj)"><path fill="#d6001c" d="M0 0h256v512H0z"/><path fill="#fff" d="M256 0h256v512H256z"/></g>
-    <path d="M212 114C221 134 236 143 256 143C276 143 291 134 300 114" fill="none" stroke="#111" stroke-width="14" stroke-linecap="round"/></g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#fff"/><g transform="translate(5 5)" fill="none" stroke="#111" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8.5" /> <path d="m11 7.6 3.2 2.3-1.2 3.8H9l-1.2-3.8Z" /> <path d="M11 7.6V2.5M14.2 9.9l4.5-1.5M13 13.7l2.8 3.9M9 13.7l-2.8 3.9M7.8 9.9 3.3 8.4" /></g></svg>
