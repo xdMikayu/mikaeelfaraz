@@ -48,27 +48,28 @@ export const SettingsIcon = () => (
   </svg>
 );
 
-// The sports, drawn on the same grid and stroke as the rest: a ball, a bat and ball, a tennis ball's
-// seam, a chequered flag and a championship belt.
+// The sports, drawn on the same grid and stroke as the rest and balanced to carry about the same
+// ink: a ball, a bat and ball, a tennis ball's seams, a chequered flag and a championship belt.
 const SPORT_GLYPHS = {
   football: (
     <>
       <circle cx="11" cy="11" r="8.5" />
-      <path d="m11 7.3 3.5 2.6-1.3 4.1H8.8L7.5 9.9Z" fill="currentColor" />
-      <path d="M11 7.3V2.5M14.5 9.9l4.4-1.4M13.2 14l2.8 3.9M8.8 14 6 17.9M7.5 9.9 3.1 8.5" />
+      <path d="m11 7.6 3.2 2.3-1.2 3.8H9l-1.2-3.8Z" />
+      <path d="M11 7.6V2.5M14.2 9.9l4.5-1.5M13 13.7l2.8 3.9M9 13.7l-2.8 3.9M7.8 9.9 3.3 8.4" />
     </>
   ),
   cricket: (
     <>
-      <path d="m12.6 4.6 3.8 3.8-8.9 8.9a1.6 1.6 0 0 1-2.3 0l-1.5-1.5a1.6 1.6 0 0 1 0-2.3Z" />
-      <path d="m14.5 6.5 4-4" />
-      <circle cx="16.5" cy="16.5" r="2.3" fill="currentColor" />
+      <path d="m12.3 4.3 4.4 4.4-9.2 9.2a1.8 1.8 0 0 1-2.5 0l-1.9-1.9a1.8 1.8 0 0 1 0-2.5Z" />
+      <path d="m8.6 13.4 3.2-3.2" />
+      <path d="m14.5 6.5 4.2-4.2" strokeWidth="2.4" />
+      <circle cx="17" cy="17" r="2.6" fill="currentColor" stroke="none" />
     </>
   ),
   tennis: (
     <>
       <circle cx="11" cy="11" r="8.5" />
-      <path d="M5 5c2.9 3.3 2.9 8.7 0 12M17 5c-2.9 3.3-2.9 8.7 0 12" />
+      <path d="M5.2 5.3c2.7 3.2 2.7 8.2 0 11.4M16.8 5.3c-2.7 3.2-2.7 8.2 0 11.4" transform="rotate(-40 11 11)" />
     </>
   ),
   f1: (
@@ -80,11 +81,10 @@ const SPORT_GLYPHS = {
   ),
   wrestling: (
     <>
-      <path d="M1.8 8.6h3.6M16.6 8.6h3.6M1.8 13.4h3.6M16.6 13.4h3.6M1.8 8.6v4.8M20.2 8.6v4.8" />
-      <rect x="5.4" y="7.8" width="2.4" height="6.4" rx="0.6" />
-      <rect x="14.2" y="7.8" width="2.4" height="6.4" rx="0.6" />
-      <circle cx="11" cy="11" r="4.6" />
-      <path d="m11 8.6.8 1.6 1.7.3-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.3Z" fill="currentColor" stroke="none" />
+      <path d="M1.6 9h3.2M17.2 9h3.2M1.6 13h3.2M17.2 13h3.2M1.6 9v4M20.4 9v4" />
+      <path d="M4.8 8.4h2v5.2h-2zM15.2 8.4h2v5.2h-2z" />
+      <circle cx="11" cy="11" r="5.9" />
+      <path d="m11 7.6 1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3Z" fill="currentColor" stroke="none" />
     </>
   ),
 };

@@ -158,7 +158,6 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
   const [open, setOpen] = useState(null);
   const [mode, setMode] = useState('int');
   const history = useRef({});
-  const flash = useRef({ at: null, pos: {}, changed: new Set() });
   const latest = buf.at(-1);
 
   // Each driver's gap to the car ahead at the end of each lap, for whether it's closing.
@@ -214,16 +213,6 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
     );
   }
 
-  // Position changes since the last state shown get a flash.
-  if (flash.current.at !== shown.at) {
-    const was = flash.current.pos;
-    flash.current = {
-      at: shown.at,
-      pos: Object.fromEntries(shown.drivers.map((d) => [d.n, d.pos])),
-      changed: new Set(shown.drivers.filter((d) => was[d.n] != null && was[d.n] !== d.pos).map((d) => d.n)),
-    };
-  }
-
   const t = shown;
   const names = Object.fromEntries(t.drivers.map((d) => [d.n, d.last]));
   const left = t.clock ? (t.clock.running ? t.clock.left - (target - Date.parse(t.at)) / 1000 : t.clock.left) : null;
@@ -237,7 +226,7 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
         <Status t={t} left={left} minutes={s.minutes} age={delay ? null : age} delay={delay} tv={tv} names={names} />
       </section>
       {followed && <Following d={followed} t={t} loss={loss} names={names} onStop={() => setFollow(null)} />}
-      <Tower t={t} mode={mode} setMode={setMode} open={open} setOpen={setOpen} follow={follow} setFollow={setFollow} changed={flash.current.changed} loss={loss} names={names} />
+      <Tower t={t} mode={mode} setMode={setMode} open={open} setOpen={setOpen} follow={follow} setFollow={setFollow} loss={loss} names={names} />
       {t.session.kind === 'race' && live && <Strategy t={t} names={names} history={history.current} />}
       {t.incidents.length > 0 && <Stewards list={t.incidents} names={names} />}
       {t.messages.length > 0 && <RaceControl t={t} names={names} />}
@@ -437,7 +426,7 @@ function Following({ d, t, loss, names, onStop }) {
 }
 
 /** The running order. Race: gap to the car ahead (or the leader), last lap, tyres. Qualifying: this part's times and the cut. */
-function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, changed, loss, names }) {
+function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, loss, names }) {
   const kind = t.session.kind;
   const q = /sprint/i.test(t.session.name ?? '') ? 'SQ' : 'Q';
   const cols = kind === 'race' ? 7 : 6;
@@ -465,12 +454,12 @@ function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, changed, lo
       )}
       {kind === 'race' && t.session.status !== 'waiting' && (
         <div className="sp-pad sp-f1-tower-head">
-          <div className="sp-f1-seg" role="radiogroup" aria-label="Gaps">
+          <div className="sp-tabs" role="radiogroup" aria-label="Gaps">
             <button role="radio" aria-checked={mode === 'int'} onClick={() => setMode('int')}>
               Gap to the car ahead
             </button>
             <button role="radio" aria-checked={mode === 'gap'} onClick={() => setMode('gap')}>
-              To the leader
+              Gap to the leader
             </button>
           </div>
         </div>
@@ -502,7 +491,7 @@ function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, changed, lo
             const prev = rows[i - 1];
             const label = outIn[d.n] && outIn[d.n] !== outIn[prev?.n] ? `Out in ${q}${outIn[d.n]}` : null;
             const isOpen = open === d.n;
-            const cls = [d.n === follow ? 'sp-mine' : '', changed.has(d.n) ? 'sp-flash' : '', d.out || outIn[d.n] ? 'sp-f1-gone' : '', isOpen ? 'sp-f1-open' : ''].filter(Boolean).join(' ');
+            const cls = [d.n === follow ? 'sp-mine' : '', d.out || outIn[d.n] ? 'sp-f1-gone' : '', isOpen ? 'sp-f1-open' : ''].filter(Boolean).join(' ');
             return (
               <Fragment key={d.n}>
                 {label && (
