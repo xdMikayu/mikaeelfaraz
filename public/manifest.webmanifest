@@ -2,7 +2,7 @@
   "id": "/sport",
   "name": "Matchday",
   "short_name": "Matchday",
-  "description": "Football scores, match detail, live Fantasy Premier League points and AI gameweek advice. No ads.",
+  "description": "Live football, cricket and F1 with the sums done for you, and Fantasy Premier League points as they happen. No ads.",
   "start_url": "/sport",
   "scope": "/sport",
   "display": "standalone",

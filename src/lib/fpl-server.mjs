@@ -137,7 +137,7 @@ export async function getLive(event) {
 }
 
 const num10 = (v) => (/^\d{1,10}$/.test(v ?? '') ? Number(v) : null);
-const KINDS = { static: 0, fixtures: 0, live: 1, entry: 2, league: 2 };
+const KINDS = { static: 0, fixtures: 0, top: 0, live: 1, entry: 2, league: 2 };
 
 /**
  * What /api/sport/fpl/... asks for: { kind, id, event, legacy } or { error, status }.
@@ -156,6 +156,13 @@ export function fplRequest(parts = [], q = new URLSearchParams()) {
   const id = num10(legacy ? q.get('id') : rest[0]);
   if (!id) return { error: 'Need an id', status: 400 };
   return { kind, id, event, legacy };
+}
+
+/** The overall leader: the team the fantasy page offers as an example to look around with. */
+export async function getTop() {
+  const s = await fpl('/leagues-classic/314/standings/?page_standings=1', 3600e3);
+  const r = s?.standings?.results?.[0];
+  return r ? { entry: r.entry, team: r.entry_name, manager: r.player_name } : null;
 }
 
 /** Every fixture of the season, for looking several gameweeks ahead. */

@@ -40,22 +40,25 @@ export default function Today() {
     .map((slug) => ({ slug, matches: shown.filter((m) => m.league === slug && !mine.includes(m)) }))
     .filter((g) => g.matches.length);
 
-  // The strip at the top: what's live (your teams first); with nothing live, what's next.
+  // The cards at the top: what's live, your teams first. With nothing live, your teams' next
+  // matches, or else just the next kick-off; the list below has the rest, so the cards never fill
+  // the screen with matches it repeats.
   const ranked = (list) => [...list].sort((a, b) => Number(followed.has(b.home.id) || followed.has(b.away.id)) - Number(followed.has(a.home.id) || followed.has(a.away.id)));
-  const upcoming = matches.filter((m) => m.status.state === 'pre' && !m.status.off && new Date(m.date) > Date.now());
-  const featured = live.length ? ranked(live) : ranked(upcoming).slice(0, 8);
+  const upcoming = matches.filter((m) => m.status.state === 'pre' && !m.status.off && new Date(m.date) > Date.now()).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const mineNext = upcoming.filter((m) => followed.has(m.home.id) || followed.has(m.away.id));
+  const featured = live.length ? ranked(live) : mineNext.length ? mineNext.slice(0, 3) : upcoming.slice(0, 1);
   const lgName = (slug) => LEAGUE_BY_SLUG[slug]?.short ?? data?.leagues?.[slug]?.abbr ?? slug;
 
   if (!day) return <Skeleton />;
   const isToday = day === todayYmd();
   const shownLive = liveOnly ? live : featured.slice(0, 3);
+  // Your teams' cards stand in for their rows.
+  const mineRows = live.length ? mine : mine.filter((m) => !shownLive.includes(m));
   return (
     <div className="sp-read">
       <div className="sp-pad" style={{ paddingTop: 14 }}>
-        <div className="sp-section-head" style={{ marginBottom: 4 }}>
-          <h1 className="sp-h1">{isToday ? 'Today' : day === todayYmd(1) ? 'Tomorrow' : day === todayYmd(-1) ? 'Yesterday' : ymdToDate(day).toLocaleDateString(undefined, { weekday: 'long' })}</h1>
-          <span className="sp-small sp-muted">{ymdToDate(day).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-        </div>
+        {/* The day strip already says "Today"; the heading gives the date it is. */}
+        <h1 className="sp-h1" style={{ marginBottom: 4 }}>{longDate(ymdToDate(day))}</h1>
         <div className="sp-days" role="group" aria-label="Day" style={{ borderBottom: '1px solid var(--sp-rule)' }}>
           {DAYS.map((o) => {
             const ymd = todayYmd(o);
@@ -81,7 +84,7 @@ export default function Today() {
       {(live.length > 0 || (featured.length > 0 && isToday)) && (
         <section aria-label={live.length ? 'Live now' : 'Coming up'} style={{ marginTop: 16 }}>
           <div className="sp-section-head sp-pad" style={{ marginBottom: 8 }}>
-            <h2 className="sp-h2">{live.length ? (liveOnly ? 'Everything live' : 'Live now') : 'Coming up'}</h2>
+            <h2 className="sp-h2">{live.length ? (liveOnly ? 'Everything live' : 'Live now') : mineNext.length ? 'Your teams next' : 'Next up'}</h2>
             {live.length > 3 && (
               <button className="sp-small sp-link" style={{ fontWeight: 700 }} onClick={() => setLiveOnly((v) => !v)}>
                 {liveOnly ? 'Back to all matches' : `All ${live.length} live`}
@@ -94,7 +97,7 @@ export default function Today() {
         </section>
       )}
 
-      {mine.length > 0 && <Group title="Your teams" matches={mine} showLeague leagues={data?.leagues} />}
+      {mineRows.length > 0 && <Group title="Your teams" matches={mineRows} showLeague leagues={data?.leagues} />}
       {byLeague.map((g) => (
         <Group key={g.slug} slug={g.slug} title={LEAGUE_BY_SLUG[g.slug]?.name ?? g.slug} matches={g.matches} leagues={data?.leagues} />
       ))}

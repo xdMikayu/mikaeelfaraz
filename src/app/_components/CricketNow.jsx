@@ -1,9 +1,9 @@
 'use client';
-import Link from 'next/link';
 import { useLive, useAge } from './useLive';
-import { ShirtMark } from './glyphs';
+import { teamColors, useDark } from './colors';
+import { CricketCard } from './CricketLive';
 import { kickoff, shortDate, zoneLabel } from './time';
-import { isLive, started, bigMatch, situation, describe } from '@/lib/sport/cricket.mjs';
+import { isLive, started, bigMatch } from '@/lib/sport/cricket.mjs';
 import about from '@/lib/sport/cricket/about.json';
 
 async function getJson(url, signal) {
@@ -47,58 +47,26 @@ export function Status({ m, said }) {
 }
 
 function Match({ m }) {
-  const done = m.state === 'post';
-  const sit = situation(m);
-  const words = describe(sit);
-  // "batting" only while that innings is going on: not once they're all out, declared or their overs are up.
-  const inId = sit && !sit.allOut && !sit.declared && sit.kind !== 'set' ? sit.bat : null;
   return (
     <li className="sp-cm">
       <p className="sp-cm-meta">{[series(m.league.name), m.title, town(m.venue)].filter(Boolean).join(' · ')}</p>
-      {m.teams.map((t) => {
-        const batting = t.id === inId;
-        return (
-          <div key={t.id} className={`sp-cm-team${batting ? ' sp-cm-bat' : ''}${done && t.winner ? ' sp-won' : ''}${done && !t.winner && m.teams.some((x) => x.winner) ? ' sp-lost' : ''}`}>
-            <ShirtMark color={t.color} size={20} />
-            <span className="sp-tn">
-              {t.name}
-              {batting && <small className="sp-cm-batting">batting</small>}
-            </span>
-            <span className="sp-cm-runs">
-              {t.runs}
-              {t.overs && <small> ({t.overs})</small>}
-            </span>
-          </div>
-        );
-      })}
-      {words && (
-        <p className="sp-cm-sit">
-          <b>{words.bold}</b>
-          {words.rest}
-        </p>
-      )}
-      <Status m={m} said={Boolean(words)} />
-      {m.read && <MatchRead m={m} read={m.read} />}
-      {m.read?.record && <GroundRecord m={m} read={m.read} />}
-      {m.league?.id && (
-        <Link className="sp-cm-more" href={`/sport/cricket/match?l=${m.league.id}&id=${m.id}`}>
-          {m.state === 'pre' ? 'Teams and preview' : 'Scorecard, players and stats'} <span aria-hidden="true">›</span>
-        </Link>
-      )}
+      <CricketCard m={m} />
+      {m.state === 'in' && <Status m={m} said />}
+      {m.read && <MatchRead m={m} read={m.read} said={m.state === 'in'} />}
     </li>
   );
 }
 
-/** Two-way bar in the sides' colours, each side's chance under it. */
+/** Two-way bar in the sides' colours (the same as on the match page), each side's chance under it. */
 export function Chances({ m, chances }) {
   const [a, b] = m.teams;
-  // Two sides in the same colour (or none) fall back to ink and grey.
-  const same = !a.color || !b.color || a.color.toLowerCase() === b.color.toLowerCase();
+  const dark = useDark();
+  const c = teamColors(a ?? {}, b ?? {}, dark);
   return (
     <div className="sp-cm-odds">
       <div className="sp-split" role="img" aria-label={`Chance of winning: ${a.name} ${pct(chances[0])}, ${b.name} ${pct(chances[1])}`}>
-        <i style={{ width: `${chances[0] * 100}%`, background: same ? 'var(--sp-ink)' : a.color }} />
-        <i style={{ width: `${chances[1] * 100}%`, background: same ? 'var(--sp-rule-2)' : b.color }} />
+        <i style={{ width: `${chances[0] * 100}%`, background: c.home }} />
+        <i style={{ width: `${chances[1] * 100}%`, background: c.away }} />
       </div>
       <div className="sp-split-l">
         <span>
@@ -118,14 +86,24 @@ const competitionOf = (m) => (m.international ? (m.women ? 'women’s internatio
  * Matchday's read under the score: where the innings is heading or what a chase usually brings,
  * par at the ground, each side's chance, and in a Test's last innings how chases that size went.
  */
-export function MatchRead({ m, read }) {
+export function MatchRead({ m, read, said = false }) {
   const now = read.now;
   const before = m.state === 'pre' || !started(m);
   const chances = now?.chances ?? (before ? read.pre : null);
   const team = (id) => m.teams.find((t) => t.id === id)?.name;
   let line = null;
   if (now?.kind === 'first') {
-    line = (
+    // `said`: the scoreboard above already gives the projected total, so this gives its range.
+    line = said ? (
+      now.projected.lo === now.projected.hi ? null : (
+      <>
+        <b>
+          Most likely between {now.projected.lo} and {now.projected.hi}
+        </b>
+        , against a par of {read.par} here.
+      </>
+      )
+    ) : (
       <>
         <b>Projected total: about {now.projected.mean}</b>, most likely between {now.projected.lo} and {now.projected.hi}. Par here is {read.par}.
       </>

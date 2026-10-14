@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { fetchMatch } from '@/lib/sport/espn.mjs';
+import { fetchMatch, fetchStandings, fetchScoreboard } from '@/lib/sport/espn.mjs';
+import { asItStands, ifTheyWin, moveWords } from '@/lib/sport/as-it-stands.mjs';
 import { optaXg } from '@/lib/sport/fplmap.mjs';
 import { LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
 import { useLive, Freshness } from './useLive';
@@ -15,6 +16,7 @@ import Lineups from './Lineups';
 import { Ball, Card, SecondYellow, SubArrows, Missed, Screen, Star } from './glyphs';
 import { kickoff, longDate, until } from './time';
 import { useMatchRates, ForecastPanel, BookmakersPanel, WinPathChart, Deserved, MatchupsToWatch } from './MatchForecast';
+import { useScrolledPast, StickyBar, StickyTeam } from './Sticky';
 
 const hot = (d) => {
   if (!d) return false;
@@ -29,6 +31,7 @@ export default function MatchView() {
   const { data, error, at } = useLive((signal) => (id ? fetchMatch('all', id, { signal }) : Promise.resolve(null)), [id], { every: 20000, live: hot });
   const opta = useOpta(data);
   const rates = useMatchRates(data);
+  const table = useTableNow(data?.match);
   const dark = useDark();
   const [tab, setTab] = useState('overview');
   const { hidden, reveal } = useSpoiler(data?.match);
@@ -55,7 +58,8 @@ export default function MatchView() {
 
   return (
     <div>
-      <Header m={m} data={data} hidden={hidden} reveal={reveal} at={at} error={error} />
+      <Header m={m} data={data} hidden={hidden} reveal={reveal} at={at} error={error} band={!hidden && <TableBand m={m} table={table} names={names} />} />
+      {!hidden && data.shootout?.length > 0 && <Shootout m={m} kicks={data.shootout} colors={colors} names={names} />}
 
       <div className="sp-pad" style={{ marginTop: 12 }}>
         <div className="sp-tabs" role="tablist">
@@ -83,6 +87,7 @@ export default function MatchView() {
                   <Link className="sp-tiny sp-muted sp-link" href="/sport/settings#xg">Our estimate</Link>
                 </div>
                 <XgChart shots={data.shots} colors={colors} names={names} endMinute={live ? axisMinute(m.status.label) : null} />
+                {live && <Momentum shots={data.shots} now={axisMinute(m.status.label)} names={names} />}
                 {opta && (
                   <p className="sp-tiny sp-muted sp-num" style={{ margin: '8px 0 0' }}>
                     Opta’s xG from FPL’s live data: {names.home} {opta.home.toFixed(2)}, {names.away} {opta.away.toFixed(2)}.
@@ -114,7 +119,7 @@ export default function MatchView() {
                   <h2 className="sp-h2">Stats</h2>
                   <button className="sp-tiny sp-link sp-ink2" onClick={() => setTab('stats')}>All stats</button>
                 </div>
-                <Stats stats={data.stats.slice(0, 6)} colors={colors} />
+                <Stats stats={data.stats.slice(0, 6)} colors={colors} early={live && axisMinute(m.status.label) < 5} />
               </section>
             )}
             {(!pre || !showStuff) && <MatchInfo data={data} />}
@@ -141,7 +146,7 @@ export default function MatchView() {
             <span />
             <span>{names.away}</span>
           </div>
-          <Stats stats={data.stats} colors={colors} />
+          <Stats stats={data.stats} colors={colors} early={live && axisMinute(m.status.label) < 5} />
           <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0' }}>From ESPN’s match feed.</p>
         </section>
       )}
@@ -189,8 +194,124 @@ function useFirstTrue(v) {
   return flash;
 }
 
-function Header({ m, data, hidden, reveal, at, error }) {
+/**
+ * The league's table and its matches today, for "as it stands": only in leagues with a table, and
+ * only before and during the match (after it, ESPN's table takes the result itself).
+ */
+function useTableNow(m) {
+  const slug = m && LEAGUE_BY_SLUG[m.league]?.table && m.status.state !== 'post' && !m.status.off ? m.league : null;
+  const { data } = useLive(
+    // Without the league's other matches it still counts this one.
+    (signal) => (slug ? Promise.all([fetchStandings(slug, { signal }), fetchScoreboard(slug, null, { signal }).catch(() => null)]).then(([standings, board]) => ({ standings, board })) : Promise.resolve(null)),
+    [slug],
+    { every: 60000, live: () => m?.status.state === 'in' },
+  );
+  return data;
+}
+
+/** "go up to 6th" with the place in the scoreboard's type. */
+function Move({ name, move }) {
+  const words = moveWords(move);
+  const [, lead, place] = words.match(/^(.*?)(\d+\w\w|top)$/) ?? [null, words, ''];
+  return (
+    <span className="sp-band-move">
+      <strong>{name}</strong> {lead}
+      <b>{place}</b>
+    </span>
+  );
+}
+
+/**
+ * Under the header, in ink: what the score means. While it's live, the table as it stands, with
+ * every match in the league being played counted as if it ended now; before kick-off, where a win
+ * would take each side.
+ */
+function TableBand({ m, table, names }) {
+  const live = m.status.state === 'in';
+  // The second leg of a tie: the score across both legs, which is what decides it.
+  if (m.leg === 2 && m.home.agg != null && m.away.agg != null && (live || m.status.state === 'pre')) {
+    const [h, a] = [m.home.agg, m.away.agg];
+    const lead = h === a ? null : h > a ? 'home' : 'away';
+    return (
+      <div className="sp-band" aria-live="polite">
+        <span className="sp-band-label">{live ? 'On aggregate' : 'After the first leg'}</span>
+        <span className="sp-band-main">
+          <span className="sp-band-move">
+            {lead ? (
+              <>
+                <strong>{names[lead]}</strong> lead <b>{Math.max(h, a)}–{Math.min(h, a)}</b>
+              </>
+            ) : (
+              <>
+                Level at <b>{h}–{a}</b>
+                {live ? `, ${Number.parseInt(m.status.label, 10) > 90 ? 'penalties' : 'extra time'} if it stays that way` : ''}
+              </>
+            )}
+          </span>
+        </span>
+      </div>
+    );
+  }
+  if (!table?.standings) return null;
+  let r = null;
+  if (live) {
+    // This match from its own feed, which is fresher than the league's scoreboard.
+    const others = (table.board?.matches ?? []).filter((x) => x.id !== m.id && x.status.state === 'in');
+    r = asItStands(table.standings, m.home.id, m.away.id, [m, ...others]);
+  } else if (m.status.state === 'pre') {
+    r = ifTheyWin(table.standings, m.home.id, m.away.id);
+  }
+  if (!r) return null;
+  return (
+    <div className="sp-band" aria-live="polite">
+      <span className="sp-band-label">{live ? 'As it stands' : 'With a win'}</span>
+      <span className="sp-band-main">
+        <Move name={names.home} move={r.home} />
+        <Move name={names.away} move={r.away} />
+      </span>
+    </div>
+  );
+}
+
+/**
+ * A penalty shoot-out kick by kick: each side's kicks in order, scored in its colour, missed or saved
+ * in red with a cross (so it reads without colour), and while it's on, the kicks still to come.
+ */
+function Shootout({ m, kicks, colors, names }) {
+  const live = m.status.state === 'in';
+  const by = { home: kicks.filter((k) => k.side === 'home'), away: kicks.filter((k) => k.side === 'away') };
+  const most = Math.max(by.home.length, by.away.length);
+  // Five each, then a kick each in sudden death; while it's on, room for the next round.
+  const slots = Math.max(5, live && by.home.length === by.away.length && most >= 5 ? most + 1 : most);
+  const first = kicks[0]?.side;
+  const order = first === 'away' ? ['away', 'home'] : ['home', 'away'];
+  return (
+    <section className="sp-pens" aria-label={`Penalty shoot-out: ${names.home} ${by.home.filter((k) => k.outcome === 'scored').length}, ${names.away} ${by.away.filter((k) => k.outcome === 'scored').length}`}>
+      <h2 className="sp-h2">Penalties</h2>
+      {order.map((side) => (
+        <div key={side} className="sp-pens-row">
+          <span className="sp-pens-name">{names[side]}</span>
+          <span className="sp-pens-kicks">
+            {Array.from({ length: slots }, (_, i) => {
+              const k = by[side][i];
+              if (!k) return live ? <i key={i} className="sp-pens-kick sp-pens-yet" /> : null;
+              return k.outcome === 'scored' ? (
+                <i key={i} className="sp-pens-kick" style={{ background: colors[side] }} title={`${k.player ?? names[side]}: scored`} />
+              ) : (
+                <i key={i} className="sp-pens-kick sp-pens-miss" title={`${k.player ?? names[side]}: ${k.outcome}`}>×</i>
+              );
+            })}
+          </span>
+          <b className="sp-pens-total">{by[side].filter((k) => k.outcome === 'scored').length}</b>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Header({ m, data, hidden, reveal, at, error, band }) {
   const { isFollowed, toggle } = useFollow();
+  const [heroRef, scrolledPast] = useScrolledPast();
   const live = m.status.state === 'in';
   const pre = m.status.state === 'pre';
   const lg = LEAGUE_BY_SLUG[m.league];
@@ -200,16 +321,23 @@ function Header({ m, data, hidden, reveal, at, error }) {
   const half = (t, side, color) => (
     <div className="sp-hero-half" style={{ background: color, color: inkOn(color) }}>
       <span className="sp-hero-crest"><Crest src={t.logo} size={46} light /></span>
-      <Link href={`/sport/team?id=${t.id}&l=${m.league}`}>{t.name}</Link>
+      <span className="sp-hero-name">
+        <Link href={`/sport/team?id=${t.id}&l=${m.league}`}>{t.name}</Link>
+        {/* Beside the name, so both halves line up. */}
+        {!hidden && reds(side).length > 0 && (
+          <span className="sp-pips" aria-label={`${reds(side).length} red card${reds(side).length > 1 ? 's' : ''}`}>
+            {reds(side).map((r) => <Card key={r.id} red size={13} />)}
+          </span>
+        )}
+      </span>
       <button className="sp-hero-follow" onClick={() => toggle({ id: t.id, name: t.short, logo: t.logo, leagues: [m.league] })} aria-pressed={isFollowed(t.id)}>
         <Star on={isFollowed(t.id)} size={12} /> {isFollowed(t.id) ? 'Following' : 'Follow'}
       </button>
-      {!hidden && reds(side).length > 0 && <span className="sp-pips">{reds(side).map((r) => <Card key={r.id} red />)}</span>}
     </div>
   );
   return (
     <>
-      <header className="sp-hero">
+      <header className="sp-hero" ref={heroRef}>
         {half(m.home, 'home', kits['--home'])}
         {half(m.away, 'away', kits['--away'])}
         <p className="sp-hero-meta" style={{ margin: 0 }}>
@@ -229,12 +357,20 @@ function Header({ m, data, hidden, reveal, at, error }) {
           ) : (
             <>
               <b>{m.home.score ?? '–'}–{m.away.score ?? '–'}</b>
-              <span className={live ? 'sp-on' : ''}>{live ? m.status.label : m.status.long}</span>
+              <span className={live ? 'sp-on' : ''}>{live ? m.status.label : ended(m.status.long)}</span>
               {m.home.shootout != null && <span>Pens {m.home.shootout}–{m.away.shootout}</span>}
             </>
           )}
         </div>
       </header>
+      {band}
+      {live && !hidden && (
+        <StickyBar shown={scrolledPast}>
+          <StickyTeam fill={kits['--home']} ink={inkOn(kits['--home'])} name={m.home.abbr ?? m.home.short} score={m.home.score ?? 0} />
+          <StickyTeam fill={kits['--away']} ink={inkOn(kits['--away'])} name={m.away.abbr ?? m.away.short} score={m.away.score ?? 0} flip />
+          <span className="sp-stick-words sp-on">{m.home.shootout != null ? `Pens ${m.home.shootout}–${m.away.shootout}` : m.status.label}</span>
+        </StickyBar>
+      )}
       {!hidden && !pre && (goals('home').length > 0 || goals('away').length > 0) && (
         <div className="sp-scorers">
           {['home', 'away'].map((s) => (
@@ -242,7 +378,11 @@ function Header({ m, data, hidden, reveal, at, error }) {
               {goals(s).map((g) => (
                 <li key={g.id}>
                   {s === 'away' && <Ball size={12} own={g.kind === 'og'} />}
-                  <span>{initialled(g.players[0])} <span className="sp-num sp-muted">{g.minute}{g.kind === 'pen' ? ' pen' : g.kind === 'og' ? ' og' : ''}</span></span>
+                  {g.pending ? (
+                    <span className="sp-muted">Scorer to follow</span>
+                  ) : (
+                    <span>{initialled(g.players[0])} <span className="sp-num sp-muted">{g.minute}{g.kind === 'pen' ? ' pen' : g.kind === 'og' ? ' og' : ''}</span></span>
+                  )}
                   {s === 'home' && <Ball size={12} own={g.kind === 'og'} />}
                 </li>
               ))}
@@ -268,6 +408,12 @@ const ICON = {
   var: () => <Screen />,
 };
 
+/** ESPN's "Final Score - After Penalties" as "After penalties", so it fits the score plate. */
+const ended = (long = '') => {
+  const t = String(long).replace(/^final score\s*-\s*/i, '');
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+};
+
 /** "Riccardo Calafiori" -> "R. Calafiori", so names fit the narrow timeline columns on a phone. */
 const initialled = (name = '') => {
   const parts = name.trim().split(/\s+/);
@@ -289,24 +435,26 @@ function Timeline({ events, live, names }) {
             </li>
           );
         }
+        const goal = ['goal', 'pen', 'og'].includes(e.kind);
+        // A goal carries the score it made, in the scoreboard's type, on the outer side of the name.
+        const score = goal && e.score ? <span className="sp-tl-score">{e.score[0]}–{e.score[1]}</span> : null;
+        const how = [e.kind === 'pen' && 'penalty', e.kind === 'og' && 'own goal', goal && e.kind !== 'og' && e.players[1] && `assist ${initialled(e.players[1])}`].filter(Boolean).join(', ');
         const who = (
           <span className="sp-tl-who">
-            <b>{initialled(e.players[0])}</b>
+            <span className="sp-tl-line">
+              {e.side === 'home' && score}
+              <b>{e.pending ? 'Goal' : initialled(e.players[0])}</b>
+              {e.side === 'away' && score}
+            </span>
+            {e.pending && <small>details to follow</small>}
             {e.kind === 'sub' && e.players[1] && <small>for {initialled(e.players[1])}</small>}
-            {['goal', 'pen'].includes(e.kind) && (
-              <small className="sp-num">
-                {e.score ? `${e.score[0]}–${e.score[1]}` : ''}
-                {e.kind === 'pen' ? ', penalty' : ''}
-                {e.players[1] ? `, assist ${initialled(e.players[1])}` : ''}
-              </small>
-            )}
-            {e.kind === 'og' && <small className="sp-num">{e.score ? `${e.score[0]}–${e.score[1]}, ` : ''}own goal</small>}
+            {how && <small>{how}</small>}
             {e.kind === 'var' && <small>{e.text}</small>}
             {e.kind === 'pen-miss' && <small>Penalty {/saved/i.test(e.text) ? 'saved' : 'missed'}</small>}
           </span>
         );
         const icon = <span className="sp-tl-icon" aria-label={e.kind}>{ICON[e.kind](e)}</span>;
-        const tone = ['goal', 'pen', 'og'].includes(e.kind) ? 'sp-tl-goal' : e.kind === 'red' ? 'sp-tl-red' : '';
+        const tone = goal ? 'sp-tl-goal' : e.kind === 'red' ? 'sp-tl-red' : e.kind === 'sub' ? 'sp-tl-sub' : '';
         return (
           <li key={e.id} className={tone} aria-label={`${e.minute} ${e.kind} ${e.side === 'home' ? names.home : names.away} ${e.players.join(', ')}`}>
             <span className="sp-tl-home">{e.side === 'home' && <>{who}{icon}</>}</span>
@@ -319,7 +467,34 @@ function Timeline({ events, live, names }) {
   );
 }
 
-function Stats({ stats, colors }) {
+/**
+ * The last ten minutes in words, for who's on top now: "Last 10 minutes: City 4 shots (0.9 xG),
+ * Liverpool none." The xG chart shows the whole match; this says what it's doing at the moment.
+ */
+function Momentum({ shots, now, names }) {
+  if (!(now >= 10)) return null;
+  const recent = shots.filter((s) => axisMinute(s.minute) > now - 10);
+  const of = (side) => {
+    const list = recent.filter((s) => s.side === side);
+    const xg = list.reduce((t, s) => t + (s.xg ?? 0), 0);
+    return { n: list.length, xg };
+  };
+  const h = of('home');
+  const a = of('away');
+  const said = (side, x) => (x.n ? <><b>{names[side]}</b> {x.n} {x.n === 1 ? 'shot' : 'shots'} <span className="sp-num">({x.xg.toFixed(1)} xG)</span></> : <><b>{names[side]}</b> none</>);
+  // The side with more of the chances first.
+  const [first, second] = a.xg > h.xg ? [['away', a], ['home', h]] : [['home', h], ['away', a]];
+  return (
+    <p className="sp-small" style={{ margin: '10px 0 0' }}>
+      <span className="sp-muted">Last 10 minutes: </span>
+      {!h.n && !a.n ? 'no shots from either side.' : <>{said(...first)}, {said(...second)}.</>}
+    </p>
+  );
+}
+
+function Stats({ stats: all, colors, early = false }) {
+  // Possession in the first few minutes swings on a single spell on the ball (80% at 2′ means nothing).
+  const stats = early ? all.filter((x) => x.key !== 'possessionPct') : all;
   const poss = stats.find((x) => x.key === 'possessionPct');
   const rest = stats.filter((x) => x !== poss);
   return (

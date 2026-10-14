@@ -13,7 +13,9 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
   const flash = useScoreFlash(m);
   const hs = m.home.score;
   const as = m.away.score;
-  const result = (a, b) => (!done || hidden || a == null || b == null ? '' : a > b ? 'sp-won' : a < b ? 'sp-lost' : '');
+  // Level after extra time, a shoot-out decides it: ESPN marks the winner even when it leaves out the shoot-out score.
+  const beat = (me, them) => me.score > them.score || (me.score === them.score && me.winner && !them.winner);
+  const result = (me, them) => (!done || hidden || me.score == null || them.score == null ? '' : beat(me, them) ? 'sp-won' : beat(them, me) ? 'sp-lost' : '');
   const label = `${m.home.name} v ${m.away.name}`;
   return (
     <div className="sp-row">
@@ -32,8 +34,8 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
       </div>
       <div className="sp-row-teams">
         {caption && <span className="sp-tiny sp-muted" style={{ lineHeight: 1.2, height: 14.4, fontWeight: 650 }}>{caption}</span>}
-        <TeamLine team={m.home} cls={result(hs, as)} hidden={hidden} />
-        <TeamLine team={m.away} cls={result(as, hs)} hidden={hidden} />
+        <TeamLine team={m.home} cls={result(m.home, m.away)} hidden={hidden} />
+        <TeamLine team={m.away} cls={result(m.away, m.home)} hidden={hidden} />
       </div>
       <div className={`sp-row-score${live ? ' sp-is-live' : ''}`}>
         {caption && <i aria-hidden style={{ display: 'block', height: 14.4 }} />}
@@ -41,8 +43,8 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
           <button className="sp-reveal" onClick={reveal}>Show</button>
         ) : (
           <>
-            <span className={`${result(hs, as) === 'sp-lost' ? 'sp-lost' : ''} ${flash.home ? 'sp-flash' : ''}`}>{hs ?? '–'}{m.home.shootout != null && <small className="sp-muted"> ({m.home.shootout})</small>}</span>
-            <span className={`${result(as, hs) === 'sp-lost' ? 'sp-lost' : ''} ${flash.away ? 'sp-flash' : ''}`}>{as ?? '–'}{m.away.shootout != null && <small className="sp-muted"> ({m.away.shootout})</small>}</span>
+            <span className={`${result(m.home, m.away) === 'sp-lost' ? 'sp-lost' : ''} ${flash.home ? 'sp-flash' : ''}`}>{hs ?? '–'}{m.home.shootout != null && <small className="sp-muted"> ({m.home.shootout})</small>}</span>
+            <span className={`${result(m.away, m.home) === 'sp-lost' ? 'sp-lost' : ''} ${flash.away ? 'sp-flash' : ''}`}>{as ?? '–'}{m.away.shootout != null && <small className="sp-muted"> ({m.away.shootout})</small>}</span>
           </>
         )}
       </div>

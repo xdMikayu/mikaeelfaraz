@@ -6,6 +6,7 @@ import { mainRole, versus, rolesFromLines, ROLE_ONE } from '@/lib/sport/matchups
 import { bookmakersView } from '@/lib/sport/odds.mjs';
 import { useLive } from './useLive';
 import { useMatchupIndex, useForecastKit, usePlayerLog, useNetXgModel } from './matchupData';
+import { Ball } from './glyphs';
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const minuteOf = (label) => Number(String(label ?? '').match(/^(\d+)/)?.[1] ?? 0);
@@ -74,7 +75,7 @@ export function ForecastPanel({ data, rates, colors, names }) {
             <div><dt>Expected goals</dt><dd className="sp-num">{rates.home.toFixed(2)}–{rates.away.toFixed(2)}</dd></div>
             <div><dt>Both score</dt><dd className="sp-num">{pct(odds.btts)}</dd></div>
             <div><dt>Over 2.5 goals</dt><dd className="sp-num">{pct(odds.over25)}</dd></div>
-            <div><dt>Clean sheet</dt><dd className="sp-num">{names.home} {pct(odds.csHome)} · {names.away} {pct(odds.csAway)}</dd></div>
+            <div><dt>Clean sheet</dt><dd className="sp-num">{names.home} {pct(odds.csHome)}<br />{names.away} {pct(odds.csAway)}</dd></div>
           </dl>
           <h3 className="sp-h3" style={{ margin: '14px 0 6px' }}>Most likely scores</h3>
           <div className="sp-scores">
@@ -111,7 +112,7 @@ export function BookmakersPanel({ prices, colors, names }) {
         <div><dt>Expected goals</dt><dd className="sp-num">{v.home.toFixed(2)}–{v.away.toFixed(2)}</dd></div>
         <div><dt>Both score</dt><dd className="sp-num">{pct(v.btts)}</dd></div>
         {prices.over != null && <div><dt>Over {prices.line} goals</dt><dd className="sp-num">{pct(prices.over)}</dd></div>}
-        <div><dt>Clean sheet</dt><dd className="sp-num">{names.home} {pct(v.csHome)} · {names.away} {pct(v.csAway)}</dd></div>
+        <div><dt>Clean sheet</dt><dd className="sp-num">{names.home} {pct(v.csHome)}<br />{names.away} {pct(v.csAway)}</dd></div>
       </dl>
       <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0' }}>
         Their win, draw and over/under prices with the bookmaker’s margin ({Math.round(prices.margin * 100)}%) taken out. Expected goals are the scoring rates that best fit those prices; both scoring and clean sheets follow from them.
@@ -132,15 +133,29 @@ export function WinPathChart({ data, rates, colors, names }) {
   const y = (p) => H - p * H;
   const line = (k) => path.map((p, i) => `${i ? 'L' : 'M'}${x(p.m).toFixed(1)} ${y(p[k]).toFixed(1)}`).join('');
   const last = path[path.length - 1];
+  // Each goal marked where it moved the lines: a ball above, a faint rule down in the scorers' colour.
+  const goals = data.events.filter((e) => ['goal', 'pen', 'og'].includes(e.kind) && e.side).map((e) => ({ id: e.id, side: e.side, at: Math.min(90, minuteOf(e.minute)), minute: e.minute })).filter((g) => g.at <= upTo);
   return (
     <section className="sp-panel">
       <div className="sp-section-head">
         <h2 className="sp-h2">Win probability</h2>
         <span className="sp-tiny sp-muted">Minute by minute</span>
       </div>
+      {goals.length > 0 && (
+        <div className="sp-wp-goals" aria-hidden="true">
+          {goals.map((g) => (
+            <span key={g.id} style={{ left: `${(g.at / 90) * 100}%` }} title={`${names[g.side]}, ${g.minute}`}>
+              <Ball size={11} />
+            </span>
+          ))}
+        </div>
+      )}
       <svg className="sp-wp" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Now: ${names.home} ${pct(last.home)}, draw ${pct(last.draw)}, ${names.away} ${pct(last.away)}`}>
         <path d={`M0 ${y(0.5)}H${W}`} stroke="var(--sp-rule-2)" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
         <path d={`M${x(45)} 0V${H}`} stroke="var(--sp-rule)" vectorEffect="non-scaling-stroke" />
+        {goals.map((g) => (
+          <path key={g.id} d={`M${x(g.at).toFixed(1)} 0V${H}`} stroke={colors[g.side]} strokeOpacity="0.35" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+        ))}
         <path d={line('home')} fill="none" stroke={colors.home} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
         <path d={line('away')} fill="none" stroke={colors.away} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
       </svg>

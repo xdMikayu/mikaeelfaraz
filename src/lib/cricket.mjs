@@ -8,6 +8,8 @@
 // the match's length for a multi-day game. situation() works out who leads, trails or needs what,
 // so nobody has to add up innings in their head.
 
+import { kitHex } from './kit-colors.mjs';
+
 /** "346 & 218/4 (68.2 ov)" → { runs: '346 & 218/4', overs: '68.2 ov' }; overs is null when absent. */
 export function splitScore(score = '') {
   const m = String(score).trim().match(/^(.*?)\s*\(([^()]*)\)$/);
@@ -25,7 +27,7 @@ function team(c, battingId) {
     id: String(t.id ?? c.id),
     name: t.displayName ?? t.name ?? '',
     short: t.abbreviation ?? t.shortDisplayName ?? '',
-    color: /^#[0-9a-f]{6}$/i.test(t.color ?? '') ? t.color : /^[0-9a-f]{6}$/i.test(t.color ?? '') ? `#${t.color}` : null,
+    color: kitHex(t.color),
     runs,
     overs,
     winner: truthy(c.winner),
@@ -191,6 +193,9 @@ export function situation(m) {
     return { ...base, kind: diff > 0 ? 'lead' : diff < 0 ? 'trail' : 'level', runs: Math.abs(diff) };
   }
 
+  // At the break ESPN's score line can drop the overs limit ("20 ov", not "20/20 ov"); the format
+  // still says it: 20 overs a side in a T20, 50 in a one-day match.
+  if (o.max == null) o.max = /T20/i.test(m.format ?? '') ? 120 : /ODI|One-Day|List A/i.test(m.format ?? '') ? 300 : null;
   const rate = o.balls ? now.runs / (o.balls / 6) : null;
   const target = o.target ?? (theirs.length === 1 ? theirs[0].runs + 1 : null);
   if (target != null) {
@@ -199,7 +204,7 @@ export function situation(m) {
     if (need <= 0) return { ...base, kind: 'won', margin: plural(left, 'wicket') };
     // All out or out of balls short of the target: the side that batted first has won, or it's a tie.
     if (out || balls === 0) return need === 1 ? { ...base, kind: 'tied' } : { ...base, kind: 'won', team: other.name, margin: plural(need - 1, 'run') };
-    return { ...base, kind: 'chase', runs: need, balls, target, rate, needRate: balls ? need / (balls / 6) : null };
+    return { ...base, kind: 'chase', runs: need, balls, bowled: o.balls, target, rate, needRate: balls ? need / (balls / 6) : null };
   }
   // Batting first: all out or the overs used up means the chase's target is set.
   if (out || (o.max != null && o.balls >= o.max)) return { ...base, kind: 'set', team: other.name, runs: now.runs + 1, by: bat.name, maxOvers: o.max ? o.max / 6 : null };
