@@ -148,8 +148,9 @@ What following cricket live taught, applied to football and F1 too:
   clock, the flag and the one sentence (F1). It takes no room until it's needed (`_components/Sticky.jsx`).
 - **One sentence says what it means**, in an ink band under the scoreboard, its numbers big:
   - Football, in a league: "As it stands: **Liverpool** go up to **6th** · **LASK** stay **27th**", with every match
-    in the league being played counted as if it ended now (`src/lib/sport/as-it-stands.mjs`); before kick-off,
-    where a win would take each side.
+    in the league being played counted as if it ended now, and finished ones until ESPN's table has them
+    (`src/lib/sport/as-it-stands.mjs`); before kick-off, where a win would take each side; after the whistle,
+    "Full time", for the rest of the day. In the second leg of a tie, the aggregate.
   - F1: "**Verstappen** leads by **4.2 s**, 12 laps to go"; in qualifying, who's out as it stands; "provisional
     pole"; in practice, the fastest.
 - **Trust the score over the details.** ESPN's score moves before its events and its ball-by-ball. A goal the score
