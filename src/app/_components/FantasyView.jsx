@@ -33,7 +33,9 @@ const liveGw = (live) => live?.fixtures.some((f) => (f.started && !f.finished) |
 
 export default function FantasyView() {
   const { prefs, update, ready } = usePrefs();
-  const entryId = prefs.fplEntry;
+  // Someone without a team (or not ready to give its ID) can look around with the overall leader's.
+  const [example, setExample] = useState(null);
+  const entryId = prefs.fplEntry ?? example?.entry ?? null;
   const [revealed, setRevealed] = useState(false);
   const st = useLive((signal) => api('static', signal), [], { every: 300000, live: () => true });
   const gw = st.data?.current;
@@ -46,7 +48,7 @@ export default function FantasyView() {
   });
 
   if (!ready) return null;
-  if (!entryId) return <Setup onSave={(id) => update({ fplEntry: id })} />;
+  if (!entryId) return <Setup onSave={(id) => update({ fplEntry: id })} onExample={setExample} />;
   if (prefs.spoilers === 'all' && !revealed) {
     return (
       <div className="sp-empty">
@@ -61,13 +63,21 @@ export default function FantasyView() {
     return (
       <div className="sp-empty">
         <p style={{ margin: '0 0 12px' }}>Couldn’t load team {entryId} ({entry.error}).</p>
-        <button className="sp-btn" onClick={() => update({ fplEntry: null })}>Use a different team ID</button>
+        <button
+          className="sp-btn"
+          onClick={() => {
+            update({ fplEntry: null });
+            setExample(null);
+          }}
+        >
+          Use a different team ID
+        </button>
       </div>
     );
-  return <Live st={st.data} live={live.data} entry={entry.data} fixtures={season.data} odds={odds.data?.fixtures ?? null} oddsAt={odds.data?.at ?? null} liveAt={live.at} liveErr={live.error} />;
+  return <Live st={st.data} live={live.data} entry={entry.data} fixtures={season.data} odds={odds.data?.fixtures ?? null} oddsAt={odds.data?.at ?? null} liveAt={live.at} liveErr={live.error} example={prefs.fplEntry ? null : example} onLeave={() => setExample(null)} />;
 }
 
-function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr }) {
+function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, example, onLeave }) {
   const { prefs, update } = usePrefs();
   const mx = useMatchupIndex();
   const learned = useNetXgModel();
@@ -104,6 +114,16 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr }) {
 
   return (
     <div className="sp-read">
+      {example && (
+        <div className="sp-hint" role="note">
+          <span>
+            An example: <b>{example.team}</b>, the overall leader’s team.
+          </span>
+          <button className="sp-link" onClick={onLeave}>
+            Use your own
+          </button>
+        </div>
+      )}
       {team ? (
         <section className="sp-fhead" aria-label="Gameweek points">
           <p className="sp-small" style={{ fontWeight: 700, margin: 0 }}>
@@ -128,7 +148,15 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr }) {
           )}
           <p className="sp-tiny sp-muted" style={{ margin: '6px 0 0' }}>
             <Freshness at={liveAt} error={liveErr} live={isLive} every={30} /> ·{' '}
-            <button className="sp-link" onClick={() => update({ fplEntry: null, fplLeague: null })}>Change team</button>
+            <button
+              className="sp-link"
+              onClick={() => {
+                update({ fplEntry: null, fplLeague: null });
+                onLeave();
+              }}
+            >
+              Change team
+            </button>
           </p>
         </section>
       ) : (
@@ -528,10 +556,21 @@ function FantasySkeleton() {
   );
 }
 
-function Setup({ onSave }) {
+function Setup({ onSave, onExample }) {
   const [v, setV] = useState('');
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [looking, setLooking] = useState(false);
+  const look = async () => {
+    setLooking(true);
+    setErr(null);
+    try {
+      onExample(await api('top'));
+    } catch (e) {
+      setErr(`FPL didn’t answer just now (${e.message}). Try again in a minute.`);
+      setLooking(false);
+    }
+  };
   const save = async (e) => {
     e.preventDefault();
     const id = Number(v.trim().match(/(\d{1,10})/)?.[1]);
@@ -566,6 +605,13 @@ function Setup({ onSave }) {
         <button className="sp-btn sp-btn-primary" style={{ height: 46 }} disabled={busy}>{busy ? 'Checking…' : 'Show my team'}</button>
       </form>
       <p className="sp-tiny sp-muted sp-pad" style={{ marginTop: 12 }}>The ID stays in this browser. FPL team pages are public, so no password is needed or asked for.</p>
+      <p className="sp-small sp-ink2 sp-pad" style={{ marginTop: 18 }}>
+        No team, or just looking?{' '}
+        <button className="sp-link" style={{ fontWeight: 750, color: 'var(--sp-ink)' }} disabled={looking} onClick={look}>
+          {looking ? 'Loading…' : 'See the overall leader’s team'}
+        </button>
+        , with everything this page does for yours.
+      </p>
     </div>
   );
 }

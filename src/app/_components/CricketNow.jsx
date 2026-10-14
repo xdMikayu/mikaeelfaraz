@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useLive, useAge } from './useLive';
 import { ShirtMark } from './glyphs';
+import { teamColors, useDark } from './colors';
 import { kickoff, shortDate, zoneLabel } from './time';
 import { isLive, started, bigMatch, situation, describe } from '@/lib/sport/cricket.mjs';
 import about from '@/lib/sport/cricket/about.json';
@@ -89,16 +90,16 @@ function Match({ m }) {
   );
 }
 
-/** Two-way bar in the sides' colours, each side's chance under it. */
+/** Two-way bar in the sides' colours (the same as on the match page), each side's chance under it. */
 export function Chances({ m, chances }) {
   const [a, b] = m.teams;
-  // Two sides in the same colour (or none) fall back to ink and grey.
-  const same = !a.color || !b.color || a.color.toLowerCase() === b.color.toLowerCase();
+  const dark = useDark();
+  const c = teamColors(a ?? {}, b ?? {}, dark);
   return (
     <div className="sp-cm-odds">
       <div className="sp-split" role="img" aria-label={`Chance of winning: ${a.name} ${pct(chances[0])}, ${b.name} ${pct(chances[1])}`}>
-        <i style={{ width: `${chances[0] * 100}%`, background: same ? 'var(--sp-ink)' : a.color }} />
-        <i style={{ width: `${chances[1] * 100}%`, background: same ? 'var(--sp-rule-2)' : b.color }} />
+        <i style={{ width: `${chances[0] * 100}%`, background: c.home }} />
+        <i style={{ width: `${chances[1] * 100}%`, background: c.away }} />
       </div>
       <div className="sp-split-l">
         <span>

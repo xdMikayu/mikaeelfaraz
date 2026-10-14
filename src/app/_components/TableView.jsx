@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { fetchStandings } from '@/lib/sport/espn.mjs';
 import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
@@ -19,18 +19,12 @@ export default function TableView({ slug }) {
 
   return (
     <div className="sp-read">
-      <div className="sp-pad" style={{ paddingTop: 16 }}>
-        <h1 className="sp-h1">Tables</h1>
-        <nav className="sp-days" aria-label="Competition" style={{ margin: '12px 0 10px' }}>
-          {choices.map((l) => (
-            <Link key={l.slug} href={`/sport/table/${l.slug}`} className="sp-pill" aria-current={l.slug === slug ? 'page' : undefined}
-              style={l.slug === slug ? { height: 36, padding: '0 14px', fontSize: 13.5, background: 'var(--sp-brand)', color: '#fff' } : { height: 36, padding: '0 14px', fontSize: 13.5, background: 'var(--sp-surface)', color: 'var(--sp-ink-2)', border: '1px solid var(--sp-rule)' }}>
-              {l.short}
-            </Link>
-          ))}
-        </nav>
-        <p className="sp-tiny sp-muted" style={{ margin: '0 0 6px' }}>
-          <b style={{ color: 'var(--sp-ink-2)' }}>{lg?.name}</b> · {data?.season ?? ''}{data?.season ? '. ' : ''}<Freshness at={at} error={error} />
+      <div className="sp-pad" style={{ paddingTop: 10 }}>
+        <h1 className="sp-sr">{lg?.name} table</h1>
+        <LeaguePicker choices={choices} slug={slug} />
+        <p className="sp-tiny sp-muted" style={{ margin: '10px 0 6px' }}>
+          {data?.season ? `${data.season} · ` : ''}
+          <Freshness at={at} error={error} />
         </p>
       </div>
       {hidden ? (
@@ -50,6 +44,21 @@ export default function TableView({ slug }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** The competitions as words, the one shown underlined and scrolled into view. */
+function LeaguePicker({ choices, slug }) {
+  const here = useRef(null);
+  useEffect(() => here.current?.scrollIntoView({ block: 'nearest', inline: 'center' }), [slug]);
+  return (
+    <nav className="sp-days sp-leagues" aria-label="Competition">
+      {choices.map((l) => (
+        <Link key={l.slug} href={`/sport/table/${l.slug}`} className="sp-day" ref={l.slug === slug ? here : undefined} aria-current={l.slug === slug ? 'page' : undefined}>
+          {l.short}
+        </Link>
+      ))}
+    </nav>
   );
 }
 

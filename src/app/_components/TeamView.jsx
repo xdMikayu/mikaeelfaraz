@@ -8,10 +8,13 @@ import { useFollow, usePrefs } from './prefs';
 import Crest from './Crest';
 import MatchRow from './MatchRow';
 import MatchCard from './MatchCard';
-import { inkOn } from './colors';
+import { inkOn, useDark } from './colors';
+import { fillOf, isWhite, lineOf } from '@/lib/sport/kit-colors.mjs';
 import { Star } from './glyphs';
 import TeamAnalysis from './TeamAnalysis';
-import { teamColors, useDark } from './colors';
+
+/** ESPN's name for a competition outside the team's league: "Club Friendly" reads "Friendly". */
+const competition = (m) => LEAGUE_BY_SLUG[m.league]?.name ?? (m.competition ? m.competition.replace(/^Club Friendly$/i, 'Friendly') : 'Other competition');
 
 export default function TeamView() {
   const q = useSearchParams();
@@ -25,6 +28,7 @@ export default function TeamView() {
   const { prefs } = usePrefs();
   const dark = useDark();
   const [all, setAll] = useState(false);
+  const [allResults, setAllResults] = useState(false);
   if (!id) return <p className="sp-empty">No team given.</p>;
   if (!data) return error ? <p className="sp-empty">Couldn’t load this team from ESPN.</p> : <div className="sp-skel" style={{ height: 400, margin: 16 }} />;
 
@@ -32,8 +36,11 @@ export default function TeamView() {
   // Every competition the team appears in, so following it pulls in cup and European matches too.
   const leagues = [...new Set([data.league, ...results.map((m) => m.league), ...fixtures.map((m) => m.league)])].filter((s) => LEAGUE_BY_SLUG[s]);
   const following = isFollowed(team.id);
-  const kit = /^#[0-9a-f]{6}$/i.test(team.color ?? '') ? team.color : '#333333';
+  // The same colour as the team's half of a match header; its charts use the shade of it that reads on the page.
+  const fill = fillOf(team);
+  const kit = isWhite(fill) ? 'var(--sp-kit-white)' : fill;
   const next = all ? fixtures : fixtures.slice(0, 5);
+  const past = allResults ? results : results.slice(0, 6);
   // Only name the competition when it isn't the team's league (cups, Europe, friendlies).
   // Last five results from this team's side: W, D or L.
   const form = results.slice(0, 5).reverse().map((m) => {
@@ -42,11 +49,11 @@ export default function TeamView() {
     const r = mine.score > opp.score ? 'W' : mine.score < opp.score ? 'L' : 'D';
     return { id: m.id, r, t: `${mine.score}–${opp.score} ${m.home.id === team.id ? 'v' : 'at'} ${opp.short}` };
   });
-  const other = (m) => (m.league === data.league ? null : LEAGUE_BY_SLUG[m.league]?.name ?? 'Other competition');
+  const other = (m) => (m.league === data.league ? null : competition(m));
 
   return (
     <div className="sp-read" style={{ paddingTop: 0 }}>
-      <header style={{ background: kit, color: inkOn(kit), padding: '18px 16px 16px' }}>
+      <header className={isWhite(fill) ? 'sp-kit-edge' : undefined} style={{ background: kit, color: inkOn(kit), padding: '18px 16px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <span className="sp-hero-crest"><Crest src={team.logo} size={46} light /></span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -75,7 +82,7 @@ export default function TeamView() {
         </section>
       )}
 
-      {!(prefs.spoilers === 'all') && <TeamAnalysis team={team} fixtures={fixtures} color={teamColors(team, { color: null }, dark).home} />}
+      {!(prefs.spoilers === 'all') && <TeamAnalysis team={team} fixtures={fixtures} color={lineOf(fill, dark)} />}
 
       <section className="sp-group">
         <header className="sp-ghead"><h2 className="sp-h3">Fixtures</h2></header>
@@ -89,7 +96,12 @@ export default function TeamView() {
 
       <section className="sp-group">
         <header className="sp-ghead"><h2 className="sp-h3">Results</h2></header>
-        {results.length ? results.map((m) => <MatchRow key={m.id} m={m} showDate caption={other(m)} />) : <p className="sp-note" style={{ padding: 16, margin: 0 }}>No results this season yet.</p>}
+        {results.length ? past.map((m) => <MatchRow key={m.id} m={m} showDate caption={other(m)} />) : <p className="sp-note" style={{ padding: 16, margin: 0 }}>No results this season yet.</p>}
+        {results.length > 6 && (
+          <p style={{ margin: 0, padding: '10px 16px', borderTop: '1px solid var(--sp-rule)' }}>
+            <button className="sp-small sp-link sp-ink2" onClick={() => setAllResults((v) => !v)}>{allResults ? 'Show fewer' : `All ${results.length} results`}</button>
+          </p>
+        )}
       </section>
       <p className="sp-note sp-pad" style={{ marginTop: 10 }}>Fixtures list league matches ESPN has scheduled; cup ties appear once they’re drawn.</p>
     </div>

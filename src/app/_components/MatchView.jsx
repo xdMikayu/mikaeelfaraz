@@ -200,11 +200,18 @@ function Header({ m, data, hidden, reveal, at, error }) {
   const half = (t, side, color) => (
     <div className="sp-hero-half" style={{ background: color, color: inkOn(color) }}>
       <span className="sp-hero-crest"><Crest src={t.logo} size={46} light /></span>
-      <Link href={`/sport/team?id=${t.id}&l=${m.league}`}>{t.name}</Link>
+      <span className="sp-hero-name">
+        <Link href={`/sport/team?id=${t.id}&l=${m.league}`}>{t.name}</Link>
+        {/* Beside the name, so both halves line up. */}
+        {!hidden && reds(side).length > 0 && (
+          <span className="sp-pips" aria-label={`${reds(side).length} red card${reds(side).length > 1 ? 's' : ''}`}>
+            {reds(side).map((r) => <Card key={r.id} red size={13} />)}
+          </span>
+        )}
+      </span>
       <button className="sp-hero-follow" onClick={() => toggle({ id: t.id, name: t.short, logo: t.logo, leagues: [m.league] })} aria-pressed={isFollowed(t.id)}>
         <Star on={isFollowed(t.id)} size={12} /> {isFollowed(t.id) ? 'Following' : 'Follow'}
       </button>
-      {!hidden && reds(side).length > 0 && <span className="sp-pips">{reds(side).map((r) => <Card key={r.id} red />)}</span>}
     </div>
   );
   return (
@@ -289,24 +296,25 @@ function Timeline({ events, live, names }) {
             </li>
           );
         }
+        const goal = ['goal', 'pen', 'og'].includes(e.kind);
+        // A goal carries the score it made, in the scoreboard's type, on the outer side of the name.
+        const score = goal && e.score ? <span className="sp-tl-score">{e.score[0]}–{e.score[1]}</span> : null;
+        const how = [e.kind === 'pen' && 'penalty', e.kind === 'og' && 'own goal', goal && e.kind !== 'og' && e.players[1] && `assist ${initialled(e.players[1])}`].filter(Boolean).join(', ');
         const who = (
           <span className="sp-tl-who">
-            <b>{initialled(e.players[0])}</b>
+            <span className="sp-tl-line">
+              {e.side === 'home' && score}
+              <b>{initialled(e.players[0])}</b>
+              {e.side === 'away' && score}
+            </span>
             {e.kind === 'sub' && e.players[1] && <small>for {initialled(e.players[1])}</small>}
-            {['goal', 'pen'].includes(e.kind) && (
-              <small className="sp-num">
-                {e.score ? `${e.score[0]}–${e.score[1]}` : ''}
-                {e.kind === 'pen' ? ', penalty' : ''}
-                {e.players[1] ? `, assist ${initialled(e.players[1])}` : ''}
-              </small>
-            )}
-            {e.kind === 'og' && <small className="sp-num">{e.score ? `${e.score[0]}–${e.score[1]}, ` : ''}own goal</small>}
+            {how && <small>{how}</small>}
             {e.kind === 'var' && <small>{e.text}</small>}
             {e.kind === 'pen-miss' && <small>Penalty {/saved/i.test(e.text) ? 'saved' : 'missed'}</small>}
           </span>
         );
         const icon = <span className="sp-tl-icon" aria-label={e.kind}>{ICON[e.kind](e)}</span>;
-        const tone = ['goal', 'pen', 'og'].includes(e.kind) ? 'sp-tl-goal' : e.kind === 'red' ? 'sp-tl-red' : '';
+        const tone = goal ? 'sp-tl-goal' : e.kind === 'red' ? 'sp-tl-red' : e.kind === 'sub' ? 'sp-tl-sub' : '';
         return (
           <li key={e.id} className={tone} aria-label={`${e.minute} ${e.kind} ${e.side === 'home' ? names.home : names.away} ${e.players.join(', ')}`}>
             <span className="sp-tl-home">{e.side === 'home' && <>{who}{icon}</>}</span>

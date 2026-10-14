@@ -8,6 +8,8 @@
 // the match's length for a multi-day game. situation() works out who leads, trails or needs what,
 // so nobody has to add up innings in their head.
 
+import { kitHex } from './kit-colors.mjs';
+
 /** "346 & 218/4 (68.2 ov)" → { runs: '346 & 218/4', overs: '68.2 ov' }; overs is null when absent. */
 export function splitScore(score = '') {
   const m = String(score).trim().match(/^(.*?)\s*\(([^()]*)\)$/);
@@ -25,7 +27,7 @@ function team(c, battingId) {
     id: String(t.id ?? c.id),
     name: t.displayName ?? t.name ?? '',
     short: t.abbreviation ?? t.shortDisplayName ?? '',
-    color: /^#[0-9a-f]{6}$/i.test(t.color ?? '') ? t.color : /^[0-9a-f]{6}$/i.test(t.color ?? '') ? `#${t.color}` : null,
+    color: kitHex(t.color),
     runs,
     overs,
     winner: truthy(c.winner),

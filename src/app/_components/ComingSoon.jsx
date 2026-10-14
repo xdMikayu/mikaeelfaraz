@@ -127,17 +127,19 @@ export default function ComingSoon({ sport }) {
   return (
     <div className="sp-read">
       <div className="sp-pad" style={{ paddingTop: 14 }}>
-        <div className="sp-section-head" style={{ marginBottom: 4 }}>
-          <h1 className="sp-h1">{p.title}</h1>
-          <span className="sp-small sp-muted">{p.status ?? 'Coming soon'}</span>
-        </div>
-        <p className="sp-prose sp-small" style={{ margin: 0 }}>{p.intro}</p>
+        {/* The header already names the sport; the page opens on where it stands. */}
+        <h1 className="sp-sr">{p.title}</h1>
+        <p className="sp-prose sp-small" style={{ margin: 0 }}>
+          <b style={{ color: 'var(--sp-ink)' }}>{p.status ?? 'Coming soon'}.</b> {p.intro}
+        </p>
       </div>
       {Now && <Now />}
       {p.status ? (
         // Where the section already shows plenty, its plans wait behind a tap.
         <details className="sp-pad sp-section sp-about">
-          <summary>What’s still to come, and where the data comes from</summary>
+          <summary>
+            <span className="sp-chev" aria-hidden="true">›</span>What’s still to come, and where the data comes from
+          </summary>
           <Plan p={p} />
         </details>
       ) : (

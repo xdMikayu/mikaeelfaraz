@@ -3,6 +3,8 @@
 // commentary (each over, the partnerships, how each batter was out, the last few balls). Pure
 // functions over ESPN's JSON, so they can be tested.
 
+import { kitHex } from './kit-colors.mjs';
+
 const num = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
 const decode = (s) =>
   String(s ?? '')
@@ -59,7 +61,7 @@ export function matchFromSummary(sum) {
     id: String(c.team?.id ?? c.id),
     name: c.team?.displayName ?? '',
     short: c.team?.abbreviation ?? '',
-    color: /^[0-9a-f]{6}$/i.test(c.team?.color ?? '') ? `#${c.team.color}` : null,
+    color: kitHex(c.team?.color),
     logo: c.team?.logos?.[0]?.href ?? c.team?.logo ?? null,
     score: c.score ?? '',
     winner: c.winner === true || c.winner === 'true',

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { kitHex } from './kit-colors.mjs';
 import { splitScore, cricketNow, cricketDay, leaguesOn, upcomingInternationals, fullMember, bigMatch, isLive, inningsOf, ballsOf, oversOf, situation, describe } from './cricket.mjs';
 
 test('cricket scores: runs and overs apart, Test innings joined, declarations kept', () => {
@@ -32,7 +33,7 @@ test('cricket now: internationals first, live before scheduled before results, t
   assert.deepEqual(all.map((m) => m.id), ['t1', 'i1', 'q1', 'r1']);
   const [t] = all;
   assert.deepEqual([t.international, t.format, t.title, t.session, t.status, t.venue], [true, 'Test', '1st Test', 'Day 3', 'South Africa trail by 143 runs', 'Somewhere, Town']);
-  assert.deepEqual(t.teams.map((x) => [x.name, x.runs, x.overs, x.batting, x.color]), [['South Africa', '247/8', '69 ov', true, '#ace411'], ['Australia', '390', null, false, '#f3f702']]);
+  assert.deepEqual(t.teams.map((x) => [x.name, x.runs, x.overs, x.batting, x.color]), [['South Africa', '247/8', '69 ov', true, kitHex('#ace411')], ['Australia', '390', null, false, kitHex('#f3f702')]]);
   assert.equal(isLive(t), true);
   assert.equal(isLive(all.find((m) => m.id === 'r1')), false); // stumps: nothing is happening
   assert.equal(all.find((m) => m.id === 'q1').teams[0].winner, true);
@@ -58,7 +59,7 @@ test('cricket fixtures: a match on several days counts once; only internationals
     day([ev('soon', '2026-10-13T14:00:00Z', 'pre'), ev('later', '2026-10-15T14:00:00Z', 'pre')]),
   ], now);
   assert.deepEqual(list.map((m) => m.id), ['soon', 'later']);
-  assert.deepEqual(list[0].teams.map((t) => [t.short, t.color, t.winner, t.batting]), [['PAK', '#07df52', false, false], ['SL', null, false, false]]);
+  assert.deepEqual(list[0].teams.map((t) => [t.short, t.color, t.winner, t.batting]), [['PAK', kitHex('07df52'), false, false], ['SL', null, false, false]]);
   assert.equal(cricketDay(day([ev('x', '2026-10-13T14:00:00Z', 'pre')]))[0].venue, 'Rawalpindi Cricket Stadium');
 });
 
