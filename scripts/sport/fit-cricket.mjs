@@ -15,7 +15,8 @@
 //   shape      the runs a side still makes from any point, as a share of par, by balls and wickets
 //              left (the curve the Duckworth–Lewis method uses), and how widely it varies.
 //   chase      the chance a chasing side wins from what it can expect against what it needs, its
-//              weights changing as the chase goes on.
+//              weights changing as the chase goes on; and for the last few balls, how each ball goes
+//              in each situation, so the end of a chase can be worked out one ball at a time.
 //   first      the chance the side batting first wins from its projected total against par.
 //   ratings    Elo ratings for every team, with home advantage and the gap between the full
 //              members and the associates, and how much they still matter once the match is under way.
@@ -30,7 +31,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseVenue, sameGround } from '../../src/lib/sport/cricket-venues.mjs';
-import { runsLeft, projectTotal, chaseInputs, chaseWin, firstWin, eloWin, ratingIn, withStrength, compKey } from '../../src/lib/sport/cricket-model.mjs';
+import { runsLeft, projectTotal, chaseInputs, chaseWin, firstWin, eloWin, ratingIn, withStrength, compKey, endKeys, BALL_RUNS } from '../../src/lib/sport/cricket-model.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = join(ROOT, 'src/lib/sport/cricket');
@@ -54,6 +55,12 @@ const LONG = {
 const HL_LEVEL = 900;
 const HL_SHAPE = 1200;
 const HL_CHASE = 1500;
+// The last balls of a chase are worked out one at a time (lastBalls in cricket-model.mjs): on their
+// own with END.from balls left or fewer, blended into the chase model up to END.to. Each situation
+// leans on the coarser one by END_PRIOR balls' worth. Chosen on the seasons held out: over the last
+// four overs, 3 and 18 scored best or close to it in all four formats, and nearby settings much the same.
+const END = { from: 3, to: 18 };
+const END_PRIOR = 20;
 const r0 = Math.round;
 const r1 = (x) => Math.round(x * 10) / 10;
 const r3 = (x) => Math.round(x * 1000) / 1000;
@@ -292,6 +299,51 @@ function fitShape(innings, F) {
   return { balls: N, z, b: bs, sdA: r4(A), sdB: r4(B) };
 }
 
+/* ------------------------------------------------------------------ the last balls of a chase */
+
+/**
+ * How a ball goes near the end of a chase: for each situation (endKeys), the chance of each number of
+ * runs (wides and no-balls bowled before it counted on it) and of wickets, as runs·3 + wickets, from
+ * every legal ball of every chase with END.to balls left or fewer, recent seasons weighted most. A
+ * situation with few balls of its own leans on the coarser one after it.
+ */
+function fitEnd(list, F, at) {
+  const K = (BALL_RUNS + 1) * 3;
+  const counts = new Map();
+  const chains = new Map();
+  for (const m of list) {
+    const inn = m.inns[1];
+    const target = inn.target?.[0] ?? m.inns[0].runs + 1;
+    const w = recency(m.t, at, HL_CHASE);
+    for (let i = F.balls - END.to; i < Math.min(inn.c.length, F.balls); i++) {
+      const so = i ? inn.c[i - 1] : 0;
+      const down = i ? inn.w[i - 1] : 0;
+      if (down >= 10 || so >= target) break;
+      const ball = Math.min(inn.c[i] - so, BALL_RUNS) * 3 + Math.min(inn.w[i] - down, 2);
+      const keys = endKeys(target - so, F.balls - i, 10 - down);
+      chains.set(keys[0], keys);
+      for (const k of keys) {
+        const c = counts.get(k) ?? new Array(K + 1).fill(0);
+        c[ball] += w;
+        c[K] += w;
+        counts.set(k, c);
+      }
+    }
+  }
+  const rates = {};
+  const smooth = ([k, ...up]) => {
+    if (!rates[k]) {
+      const c = counts.get(k);
+      const parent = up.length ? smooth(up) : null;
+      rates[k] = c.slice(0, K).map((x, i) => (parent ? (x + END_PRIOR * parent[i]) / (c[K] + END_PRIOR) : x / c[K]));
+    }
+    return rates[k];
+  };
+  for (const keys of chains.values()) smooth(keys);
+  // In ten-thousandths: plenty for the sums, and shorter to store.
+  return { ...END, rates: Object.fromEntries(Object.entries(rates).map(([k, p]) => [k, p.map((x) => Math.round(x * 1e4))])) };
+}
+
 /* ------------------------------------------------------------------ Elo */
 
 const poolOf = (m) => (m.club ? compOf(m) : 'intl');
@@ -420,7 +472,7 @@ function fitFormat(key, at, { sample = 3 } = {}) {
       firstStates.push({ st, par, y: won(m, m.inns[0].team), w, rest: (2 * F.balls - b) / (2 * F.balls), pS: pBat });
     }
   }
-  const chase = { coef: logit(chaseRows).map(r4) };
+  const chase = { coef: logit(chaseRows).map(r4), end: fitEnd(recent.filter((x) => x.inns[1]?.c?.length), F, at) };
   const base = logit(chaseRows.map((r) => ({ x: r.base, y: r.y, w: r.w })));
   const fc = logit(firstRows);
   const first = { a: r4(fc[0]), b: r4(fc[1]) };
@@ -478,6 +530,12 @@ function scorePeriod(fit, at, end, acc) {
       const p = chaseWin(shape, chase, st, par);
       acc.chase.push({ y: won(m, chasing), p: withStrength(p, pChase, st.left / (2 * F.balls), gamma.chase), pNo: p, pFlat: chaseWin(shape, chase, st, parFlat), pBase: sigmoid(dot(baseInputs(st, F), base)), stage: b / F.balls, year, pool: compOf(m) });
     }
+    // Every ball of the last twenty-four, with the last balls worked out one at a time and without.
+    for (let b = F.balls - 24; b < F.balls && b <= m.inns[1].c.length; b++) {
+      const st = chaseState(m, b, target, F);
+      if (!st) break;
+      acc.end.push({ y: won(m, chasing), p: chaseWin(shape, chase, st, par), pCurve: chaseWin(shape, { coef: chase.coef }, st, par), left: st.left });
+    }
     const pBat = s ? (i1.team === m.teams[0] ? s.p : 1 - s.p) : 0.5;
     for (let b = 0; b < F.balls && b <= i1.c.length; b += 12) {
       const st = firstState(m, b);
@@ -495,7 +553,7 @@ function scorePeriod(fit, at, end, acc) {
 
 function validate(key) {
   const F = FORMATS[key];
-  const acc = { stages: F.balls === 120 ? [36, 60, 90] : [60, 150, 240], proj: {}, chase: [], first: [], pre: [], matches: 0, bias: {} };
+  const acc = { stages: F.balls === 120 ? [36, 60, 90] : [60, 150, 240], proj: {}, chase: [], end: [], first: [], pre: [], matches: 0, bias: {} };
   const settings = [];
   for (const Y of YEARS) {
     const at = Date.parse(`${Y}-01-01`);
@@ -516,6 +574,7 @@ function validate(key) {
       const rows = acc.chase.filter(f);
       if (rows.length) console.log(`  ${key} ${name} chase (${rows.length}): predicted ${r0(mean(rows.map((r) => r.pNo)) * 100)} won ${r0(mean(rows.map((r) => r.y)) * 100)} ll ${r3(logLoss(rows.map((r) => ({ ...r, p: r.pNo }))))}:`, calibration(rows, (r) => r.pNo));
     }
+    for (const [band, rows] of Object.entries(endBands(acc.end))) console.log(`  ${key} last balls, ${band} left (${rows.length}): worked out ${r3(logLoss(rows))} ${calibration(rows, (r) => r.p)} | curve alone ${r3(logLoss(rows.map((r) => ({ ...r, p: r.pCurve }))))} ${calibration(rows, (r) => r.pCurve)}`);
     console.log(`  ${key} first innings against par, by year:`, Object.entries(acc.bias).map(([y, a]) => `${y}: ${(Math.exp(mean(a)) * 100 - 100).toFixed(1)}%`).join(' '));
   }
   const err = (a) => (a.length ? r1(mean(a)) : null);
@@ -532,11 +591,17 @@ function validate(key) {
       calibration: bins(acc.chase),
       byYear: Object.fromEntries(Object.entries(by(acc.chase, (r) => r.year)).map(([y, rows]) => [y, { predicted: r1(mean(rows.map((r) => r.p)) * 100), won: r1(mean(rows.map((r) => r.y)) * 100), logLoss: r3(logLoss(rows)) }])),
     },
+    // The last twenty-four balls of each chase, by how many are left: log loss with the last balls worked
+    // out and with the curve alone.
+    lastBalls: Object.fromEntries(Object.entries(endBands(acc.end)).map(([band, rows]) => [band, { states: rows.length, logLoss: r4(logLoss(rows)), curveAlone: r4(logLoss(rows.map((r) => ({ ...r, p: r.pCurve })))), calibration: bins(rows), curveCalibration: bins(rows.map((r) => ({ ...r, p: r.pCurve }))) }])),
     first: { states: acc.first.length, logLoss: r3(logLoss(acc.first)), withoutRatings: r3(logLoss(acc.first.map((r) => ({ ...r, p: r.pNo })))), brier: r3(brier(acc.first)), calibration: bins(acc.first) },
     preMatch: { matches: acc.pre.length, logLoss: r3(logLoss(acc.pre)), coinFlip: r3(Math.log(2)), favouriteWon: r1((acc.pre.filter((r) => (r.p > 0.5) === (r.y === 1)).length / acc.pre.length) * 100) },
     settings,
   };
 }
+
+/** States with 1–3, 4–6, 7–12 and 13–24 balls left. */
+const endBands = (rows) => Object.fromEntries([[1, 3], [4, 6], [7, 12], [13, 24]].map(([lo, hi]) => [`${lo}-${hi}`, rows.filter((r) => r.left >= lo && r.left <= hi)]));
 
 /** Predicted against actual, in tenths: [[mean predicted %, actual %, states], ...]. */
 function bins(rows) {
@@ -669,7 +734,7 @@ const report = {};
 for (const key of Object.keys(FORMATS)) {
   const t0 = Date.now();
   report[key] = validate(key);
-  console.log(key, JSON.stringify({ ...report[key], chase: { ...report[key].chase, calibration: undefined }, first: { ...report[key].first, calibration: undefined } }), `${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  console.log(key, JSON.stringify({ ...report[key], chase: { ...report[key].chase, calibration: undefined }, lastBalls: Object.fromEntries(Object.entries(report[key].lastBalls).map(([b, x]) => [b, { ...x, calibration: undefined, curveCalibration: undefined }])), first: { ...report[key].first, calibration: undefined } }), `${((Date.now() - t0) / 1000).toFixed(1)} s`);
 }
 if (process.env.VALIDATE_ONLY) process.exit(0);
 
