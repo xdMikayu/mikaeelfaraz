@@ -210,7 +210,7 @@ export default function Home() {
               <dt>Status</dt><dd>Live and public, with no ads or tracking</dd>
             </dl>
           </div>
-          <p className="try mono">Score a goal, bowl the last over, pick a circuit.</p>
+          <p className="try mono">Tap the screens: score a goal, bowl the last over, pick who wins in Austin.</p>
           <MatchdayMini />
         </section>
 
