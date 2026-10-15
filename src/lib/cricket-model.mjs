@@ -21,7 +21,8 @@ export function normCdf(x) {
 /**
  * The share of a par innings still to come with `left` balls left and `down` wickets down:
  * { mean, sd }, both as fractions of par. shape: { balls, z: [10], b: [10], sdA, sdB } from the fit,
- * where mean = z[w]·(1 − e^(−b[w]·left/balls)), the form the Duckworth–Lewis method uses.
+ * where mean = z[w]·(1 − e^(−b[w]·left/balls)), the form the Duckworth–Lewis method uses. The fit keeps
+ * each wicket's curve on or below the one before, so a wicket more down never means more to come.
  */
 export function runsLeft(shape, left, down) {
   if (left <= 0 || down >= 10) return { mean: 0, sd: 0 };
