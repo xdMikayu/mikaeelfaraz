@@ -58,14 +58,101 @@ export function chaseInputs(shape, state, par) {
 }
 
 /**
- * The chance a chasing side wins. chase: { coef } from the fit, a weight for each of chaseInputs:
- * logit = (a0 + a1·u) + (b0 + b1·u)·x + (c0 + c1·u)·t.
+ * The chance a chasing side wins; a tie counts as half. chase: { coef, end } from the fit. coef: a
+ * weight for each of chaseInputs, logit = (a0 + a1·u) + (b0 + b1·u)·x + (c0 + c1·u)·t. end: the last
+ * balls worked out one at a time (lastBalls), on their own with end.from balls left or fewer and
+ * blended into the curve up to end.to.
  */
 export function chaseWin(shape, chase, state, par) {
   if (state.need <= 0) return 1;
-  if (state.left <= 0 || state.wickets >= 10) return 0;
-  const z = chaseInputs(shape, state, par).reduce((s, v, i) => s + v * chase.coef[i], 0);
-  return clamp(logistic(z), 0.001, 0.999);
+  if (state.left <= 0 || state.wickets >= 10) return state.need === 1 ? 0.5 : 0;
+  const curve = (left, wickets) => logistic(chaseInputs(shape, { ...state, left, wickets }, par).reduce((s, v, i) => s + v * chase.coef[i], 0));
+  const end = chase.end;
+  if (!end) return clamp(curve(state.left, state.wickets), 0.001, 0.999);
+  // The curve and the worked-out chance can disagree, and as the blend shifts a ball at a time a ball
+  // more could then read as worse. So the last balls are held from the end up: a ball more or a wicket
+  // more in hand never lowers the chance, and further out the curve never reads lower than they do.
+  const hand = 10 - state.wickets;
+  const upto = Math.min(state.left, end.to);
+  const held = [];
+  for (let h = 1; h <= hand; h++) {
+    held[h] = [];
+    for (let b = 1; b <= upto; b++) {
+      const w = b <= end.from ? 1 : b >= end.to ? 0 : (end.to - b) / (end.to - end.from);
+      let p = w * lastBalls(end, state.need, b, h) + (1 - w) * curve(b, 10 - h);
+      if (b > 1) p = Math.max(p, held[h][b - 1]);
+      if (h > 1) p = Math.max(p, held[h - 1][b]);
+      held[h][b] = p;
+    }
+  }
+  const p = state.left > end.to ? Math.max(curve(state.left, state.wickets), held[hand][upto]) : held[hand][upto];
+  return clamp(p, 0.001, 0.999);
+}
+
+/* ------------------------------------------------------------------ the last balls of a chase */
+
+// Runs to come aren't spread like a bell curve at the very end: one ball can go for six. So with a
+// few balls left the chance is worked out ball by ball instead, from how each ball has gone in the
+// same situation: runs (0 to BALL_RUNS, counting any wides and no-balls bowled before it) and wickets
+// (0 to 2), as one index, runs·3 + wickets.
+export const BALL_RUNS = 8;
+
+const handBand = (hand) => (hand >= 7 ? 3 : hand >= 4 ? 2 : hand >= 2 ? 1 : 0);
+const needBand = (need) => (need <= 6 ? need : need <= 9 ? 7 : need <= 13 ? 8 : 9);
+const leftBand = (left) => (left <= 3 ? left : left <= 6 ? 4 : 5);
+
+/**
+ * The situations a ball's chances are learned for, finest first, each leaning on the next when it has
+ * few balls of its own: wickets in hand, runs needed and balls left; the same at any wickets; the runs
+ * needed alone; any ball. Runs needed are banded past six, balls left past three.
+ */
+export function endKeys(need, left, hand) {
+  const n = needBand(need);
+  const b = leftBand(left);
+  return [`${handBand(hand)}|${n}|${b}`, `${n}|${b}`, `n${n}`, 'all'];
+}
+
+const endMemo = new WeakMap();
+
+/**
+ * The chance a chasing side wins from here, worked out exactly: end.rates[situation] gives the chance
+ * of each way the next ball can go (in ten-thousandths), each way leads to a new situation, and so on
+ * to the end of the innings. A tie counts as half. hand: wickets in hand.
+ *
+ * A side is never likelier to win with a wicket fewer in hand or a ball fewer left, or less likely
+ * with a run fewer to get. Where thin situations' rates say otherwise, that's noise, so the chance
+ * is held between those neighbours.
+ */
+export function lastBalls(end, need, left, hand) {
+  let memo = endMemo.get(end);
+  if (!memo) endMemo.set(end, (memo = new Map()));
+  const chance = (n, b, h) => {
+    if (n <= 0) return 1;
+    if (b <= 0 || h <= 0) return n === 1 ? 0.5 : 0;
+    if (n > BALL_RUNS * b + 1) return 0;
+    const id = (n * 64 + b) * 16 + h;
+    const known = memo.get(id);
+    if (known != null) return known;
+    const p = endKeys(n, b, h)
+      .map((k) => end.rates[k])
+      .find(Boolean);
+    let s = 0;
+    let total = 0;
+    for (let i = 0; i < p.length; i++) {
+      if (!p[i]) continue;
+      const n2 = n - Math.floor(i / 3);
+      const h2 = h - (i % 3);
+      s += p[i] * (n2 <= 0 ? 1 : h2 <= 0 || b === 1 ? (n2 === 1 ? 0.5 : 0) : chance(n2, b - 1, h2));
+      total += p[i];
+    }
+    let c = s / total;
+    if (h > 1) c = Math.max(c, chance(n, b, h - 1));
+    if (b > 1) c = Math.max(c, chance(n, b - 1, h));
+    if (n > 1) c = Math.min(c, chance(n - 1, b, h));
+    memo.set(id, c);
+    return c;
+  };
+  return chance(need, left, hand);
 }
 
 /**

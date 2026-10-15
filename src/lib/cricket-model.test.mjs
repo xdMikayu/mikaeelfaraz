@@ -60,6 +60,57 @@ test('chances: a chase gets likelier with fewer runs needed and wickets in hand,
   assert.ok(first(110) > 0.6 && first(60) < 0.4);
 });
 
+test('the last balls: worked out one at a time, close to how such finishes have gone', () => {
+  const at = (need, left, wickets) => chaseWin(F.shape, F.chase, { need, left, wickets, target: 168 }, 175);
+  // In Cricsheet's men's T20 chases, sides needing these won about 63%, 12%, 87% and 35% of the
+  // time (a tie as half). The bell curve alone said 70%, 3%, 84% and 37%.
+  const cases = [
+    [2, 1, 5, 0.5, 0.75],
+    [6, 1, 5, 0.06, 0.2],
+    [1, 1, 9, 0.75, 0.95],
+    [14, 6, 5, 0.2, 0.5],
+  ];
+  for (const [need, left, wickets, lo, hi] of cases) {
+    const p = at(need, left, wickets);
+    assert.ok(p > lo && p < hi, `${need} off ${left} with ${wickets} down: ${p}`);
+  }
+  // Settled: won, tied (half), lost.
+  assert.equal(at(0, 2, 5), 1);
+  assert.equal(at(1, 0, 5), 0.5);
+  assert.equal(at(2, 0, 5), 0);
+  assert.equal(at(1, 3, 10), 0.5);
+});
+
+test('the last balls: never likelier with more runs needed, fewer balls left or fewer wickets in hand', () => {
+  for (const key of ['t20-male', 'odi-female']) {
+    const M = tables.model.formats[key];
+    const at = (need, left, wickets) => chaseWin(M.shape, M.chase, { need, left, wickets, target: 168 }, 175);
+    // Across the end of the blend too (18 balls left), where a dot ball must never help.
+    for (let left = 1; left <= 21; left++) {
+      for (let wickets = 0; wickets <= 9; wickets++) {
+        for (let need = 1; need <= 45; need++) {
+          const p = at(need, left, wickets);
+          assert.ok(at(need + 1, left, wickets) <= p + 1e-9, `${key}: ${need + 1} off ${left} beats ${need} (${wickets} down)`);
+          assert.ok(at(need, left + 1, wickets) >= p - 1e-9, `${key}: ${need} off ${left + 1} trails ${left} balls (${wickets} down)`);
+          // Wickets within the last balls; further out the curve is as it was.
+          if (wickets < 9 && left <= M.chase.end.to) assert.ok(at(need, left, wickets + 1) <= p + 1e-9, `${key}: ${need} off ${left}, ${wickets + 1} down beats ${wickets}`);
+        }
+      }
+    }
+  }
+});
+
+test('the last balls only: well before them the chances are the curve’s, unchanged', () => {
+  const curve = { coef: F.chase.coef };
+  for (const st of [
+    { need: 40, left: 30, wickets: 3, target: 168 },
+    { need: 90, left: 60, wickets: 2, target: 168 },
+    { need: 181, left: 120, wickets: 0, target: 181 },
+  ])
+    assert.equal(chaseWin(F.shape, F.chase, st, 175), chaseWin(F.shape, curve, st, 175));
+  assert.deepEqual([F.chase.end.from, F.chase.end.to], [3, 18]);
+});
+
 test('ratings: Elo is symmetric, home helps, full members get their edge only in internationals, and the nudge fades', () => {
   const elo = { home: 50, tier: 400 };
   assert.ok(Math.abs(eloWin(elo, 1600, 1500) + eloWin(elo, 1500, 1600) - 1) < 1e-12);
