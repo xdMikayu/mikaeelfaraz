@@ -92,8 +92,31 @@ test('the last balls: never likelier with more runs needed, fewer balls left or 
           const p = at(need, left, wickets);
           assert.ok(at(need + 1, left, wickets) <= p + 1e-9, `${key}: ${need + 1} off ${left} beats ${need} (${wickets} down)`);
           assert.ok(at(need, left + 1, wickets) >= p - 1e-9, `${key}: ${need} off ${left + 1} trails ${left} balls (${wickets} down)`);
-          // Wickets within the last balls; further out the curve is as it was.
-          if (wickets < 9 && left <= M.chase.end.to) assert.ok(at(need, left, wickets + 1) <= p + 1e-9, `${key}: ${need} off ${left}, ${wickets + 1} down beats ${wickets}`);
+          if (wickets < 9) assert.ok(at(need, left, wickets + 1) <= p + 1e-9, `${key}: ${need} off ${left}, ${wickets + 1} down beats ${wickets}`);
+        }
+      }
+    }
+  }
+});
+
+test('wickets: a wicket more down never means more runs to come or a better chance, in any format, at any point', () => {
+  for (const [key, M] of Object.entries(tables.model.formats)) {
+    const N = M.shape.balls;
+    const par = key.startsWith('odi') ? 260 : 165;
+    for (let left = 1; left <= N; left++) {
+      for (let w = 0; w < 9; w++) assert.ok(runsLeft(M.shape, left, w + 1).mean <= runsLeft(M.shape, left, w).mean, `${key}: more to come ${w + 1} down than ${w}, ${left} balls left`);
+    }
+    // The chances and the projected total, through the whole innings.
+    for (let left = 1; left <= N; left += left < 20 ? 1 : 7) {
+      for (let w = 0; w < 9; w++) {
+        for (let need = 1; need <= 1.5 * par; need += need < 20 ? 1 : 13) {
+          const st = (down) => ({ need, left, wickets: down, target: par + 1 });
+          assert.ok(chaseWin(M.shape, M.chase, st(w + 1), par) <= chaseWin(M.shape, M.chase, st(w), par) + 1e-12, `${key}: ${need} off ${left} likelier ${w + 1} down than ${w}`);
+        }
+        for (let runs = 0; runs <= 1.6 * par; runs += 10) {
+          const st = (down) => ({ runs, balls: N - left, wickets: down });
+          assert.ok(firstWin(M.shape, M.first, st(w + 1), par) <= firstWin(M.shape, M.first, st(w), par) + 1e-12, `${key}: batting first, ${runs} after ${N - left} balls, better ${w + 1} down than ${w}`);
+          assert.ok(projectTotal(M.shape, st(w + 1), par).mean <= projectTotal(M.shape, st(w), par).mean + 1e-9, `${key}: ${runs} after ${N - left} balls heads higher ${w + 1} down than ${w}`);
         }
       }
     }

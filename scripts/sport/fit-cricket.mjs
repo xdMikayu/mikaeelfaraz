@@ -256,13 +256,18 @@ function fitShape(innings, F) {
       cells.set(key, c);
     }
   }
+  // One curve for each number of wickets down, each kept on or below the one before at every balls
+  // left: a wicket more down never means more runs to come. Fitted separately they can cross, and a
+  // chase could then read likelier with a wicket more down. So each curve's z is capped, for its b, at
+  // what keeps it under the last one, as stored (z rounded down, so the rounding can't break it).
   const z = [];
   const bs = [];
+  let above = null;
   for (let d = 0; d < 10; d++) {
     const pts = [...cells.entries()].filter(([k]) => k % 10 === d).map(([k, c]) => ({ left: Math.floor(k / 10), n: c[0], m: c[1] / c[0] })).filter((p) => p.n > 2);
     let best = { err: Infinity };
     for (let i = 0; i < 400; i++) {
-      const b = 0.05 * Math.pow(1.025, i);
+      const b = r4(0.05 * Math.pow(1.025, i));
       let num = 0;
       let den = 0;
       for (const p of pts) {
@@ -270,13 +275,16 @@ function fitShape(innings, F) {
         num += p.n * p.m * f;
         den += p.n * f * f;
       }
-      const zz = num / den;
+      let zz = num / den;
+      if (above) for (let left = 1; left <= N; left++) zz = Math.min(zz, above[left] / (1 - Math.exp((-b * left) / N)));
+      zz = Math.floor(zz * 1e4) / 1e4;
       let err = 0;
       for (const p of pts) err += p.n * (p.m - zz * (1 - Math.exp((-b * p.left) / N))) ** 2;
       if (err < best.err) best = { err, z: zz, b };
     }
-    z.push(r4(best.z));
-    bs.push(r4(best.b));
+    z.push(best.z);
+    bs.push(best.b);
+    above = Array.from({ length: N + 1 }, (_, left) => best.z * (1 - Math.exp((-best.b * left) / N)));
   }
   // Spread: sd = A·mean^B across well-filled cells.
   const pts = [...cells.values()].filter((c) => c[0] > 40).map((c) => ({ m: c[1] / c[0], sd: Math.sqrt(Math.max(1e-6, c[2] / c[0] - (c[1] / c[0]) ** 2)), n: c[0] })).filter((p) => p.m > 0.02);
