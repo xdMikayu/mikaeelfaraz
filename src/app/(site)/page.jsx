@@ -4,6 +4,7 @@ import CopyEmail from './_components/CopyEmail';
 import ThemeToggle from './_components/ThemeToggle';
 import Alphabet from './_components/Alphabet';
 import MifolioMini from './_components/MifolioMini';
+import MatchdayMini from './_components/MatchdayMini';
 import TaskLab from './_components/TaskLab';
 import OnboardingFlow from './_components/OnboardingFlow';
 import MeasureLab from './_components/MeasureLab';
@@ -175,35 +176,42 @@ export default function Home() {
 
         <section className="sec" id="matchday" aria-labelledby="matchday-h">
           <div className="sec-head">
-            <h2 id="matchday-h">A football tracker</h2>
+            <h2 id="matchday-h">Matchday, live sport in plain words</h2>
             <p>Designed and built October 2026</p>
           </div>
           <div className="product">
             <div>
-              <h3>Matchday</h3>
-              <p className="tag faint">Football scores and live fantasy points · Next.js, ESPN and FPL feeds</p>
+              <p className="tag faint">Football, cricket and F1, live · Next.js, ESPN, FPL, Jolpica, F1 live timing, Claude API</p>
               <p>
-                The score apps I used had got slower and louder: pop-up ads over the match, favourites moved around, ratings
-                nobody could explain. Matchday puts the teams you follow first, refreshes only while a match is on, and says
-                how old every number is. A spoiler mode hides scores until you tap.
+                The score apps I used had got slower and louder: pop-up ads over the match, favourites moved around,
+                numbers nobody could explain. Matchday puts the teams you follow first, refreshes only while something
+                is on, and says how old every number is.
               </p>
               <p>
-                Match pages have a shot map and an expected-goals timeline from my own model, fitted on 25,513 shots from
-                StatsBomb’s open data and shown next to Opta’s figure where FPL publishes it. The fantasy page works out live
-                points, projected autosubs and which players move you against your mini-league.
+                Every live page says in one sentence what the score means: where it leaves the table, what a chasing side
+                needs off how many balls, who leads the race and by how much. Under it are models I built: expected
+                goals fitted on 25,513 shots from StatsBomb’s open data, win chances from Cricsheet’s ball-by-ball
+                records, and race analysis from F1’s own timing.
+              </p>
+              <p>
+                I test it during live matches. They show up what a test can’t: ESPN’s score arrives about 17 seconds
+                before the goal’s details, so the page trusts the score and says the scorer is to follow.
               </p>
               <p className="links">
-                <a href="/sport">Open Matchday</a>
+                <a className="btn" href="/sport" target="_blank" rel="noopener">Open Matchday ↗</a>
                 <a href="/sport/settings#xg">How the xG model works</a>
               </p>
             </div>
             <dl>
-              <dt>Role</dt><dd>Designer and sole engineer</dd>
-              <dt>Data</dt><dd>ESPN’s public feed straight from the browser; FPL through two cached routes</dd>
-              <dt>Cost</dt><dd>Nothing to run: static pages, no database, no paid APIs</dd>
-              <dt>Status</dt><dd>Football now; cricket, F1 and wrestling to follow</dd>
+              <dt>Role</dt><dd>Designed and built it</dd>
+              <dt>Sports</dt><dd>Football with fantasy, cricket and F1; tennis and wrestling next</dd>
+              <dt>Data</dt><dd>ESPN, FPL, Jolpica, FastF1 and F1’s live timing</dd>
+              <dt>Cost</dt><dd>No database; only the fantasy advice and team news call a paid API</dd>
+              <dt>Status</dt><dd>Live and public, with no ads or tracking</dd>
             </dl>
           </div>
+          <p className="try mono">Score a goal, bowl the last over, pick a circuit.</p>
+          <MatchdayMini />
         </section>
 
         <section className="sec" id="notes" aria-labelledby="notes-h">
