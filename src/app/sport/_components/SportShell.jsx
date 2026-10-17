@@ -3,14 +3,17 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PrefsProvider, usePrefs } from './prefs';
-import { MenuIcon, CloseIcon, SettingsIcon, SportGlyph } from './glyphs';
+import { MenuIcon, CloseIcon, SettingsIcon, SearchIcon, SportGlyph } from './glyphs';
 import Crest from './Crest';
+import TabBar from './TabBar';
+import Find, { useFind } from './Find';
 import { SPORTS, sportOf } from './nav';
 import { LEAGUES } from '@/lib/sport/leagues.mjs';
 
 // The frame of every page. The header names the sport you're in ("Matchday · F1"); on phones the
-// sport's sections sit under it as tabs, since they're used all the time, while the other sports
-// wait in a drawer, since switching sport is occasional. On desktop all of it is the sidebar.
+// sport's sections are the tab bar at the bottom, in reach of a thumb, since they're used all the
+// time, while the other sports wait in a drawer, since switching sport is occasional. On desktop
+// all of it is the sidebar. Search, beside the tab bar or at the top of the sidebar, finds anything.
 
 // The mark, "the fixture": two halves facing each other across a gap, home and away, or a ball
 // about to be kicked off. Red and ink, Matchday's own colours, on a white tile that reads on any
@@ -82,7 +85,7 @@ function HomeScreenHint() {
  * Everything you can go to: each sport, with the sections of the one you're in under it, then
  * football's teams and tables when you're in football, and the settings.
  */
-function SideNav() {
+function SideNav({ onFind }) {
   const pathname = usePathname();
   const { prefs } = usePrefs();
   const here = sportOf(pathname);
@@ -90,6 +93,9 @@ function SideNav() {
   const sports = prefs.sports.map((k) => SPORTS.find((s) => s.key === k)).filter(Boolean);
   return (
     <nav className="sp-side" aria-label="Sports">
+      <button type="button" className="sp-side-find" onClick={onFind} aria-haspopup="dialog">
+        <SearchIcon /> Search <kbd>/</kbd>
+      </button>
       <ul className="sp-side-sports">
         {sports.map((s) => {
           const on = here?.key === s.key;
@@ -151,20 +157,20 @@ function SideNav() {
 }
 
 /** Desktop: the sidebar, always there. */
-function Rail() {
+function Rail({ onFind }) {
   const here = sportOf(usePathname());
   return (
     <aside className="sp-rail">
       <Link href={here?.href ?? '/sport'} className="sp-rail-brand">
         <Wordmark sport={here?.label} />
       </Link>
-      <SideNav />
+      <SideNav onFind={onFind} />
     </aside>
   );
 }
 
 /** Phones: the same, sliding in from the left. Closes on a choice, on Escape and on a tap outside. */
-function Drawer({ open, onClose }) {
+function Drawer({ open, onClose, onFind }) {
   const pathname = usePathname();
   const panel = useRef(null);
   const first = useRef(pathname);
@@ -195,24 +201,51 @@ function Drawer({ open, onClose }) {
             <CloseIcon />
           </button>
         </div>
-        <SideNav />
+        <SideNav
+          onFind={() => {
+            onClose();
+            onFind();
+          }}
+        />
       </div>
     </div>
   );
 }
 
-/** Phones: the sport's sections as tabs under the header. */
-function Sections({ sport }) {
+/**
+ * A link to part of a page (/sport/f1#calendar, from search or the tab bar) whose content loads
+ * after the page does: wait for it, then go there. Gives up after a few seconds.
+ */
+function useHashScroll() {
   const pathname = usePathname();
-  return (
-    <nav className="sp-sections" aria-label={`${sport.label} sections`}>
-      {sport.sections.map(({ href, label, match }) => (
-        <Link key={href} href={href} aria-current={match(pathname) ? 'page' : undefined}>
-          {label}
-        </Link>
-      ))}
-    </nav>
-  );
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return undefined;
+    let tries = 0;
+    const t = setInterval(() => {
+      const el = document.getElementById(id);
+      if (el || ++tries > 40) {
+        clearInterval(t);
+        el?.scrollIntoView({ block: 'start' });
+      }
+    }, 100);
+    return () => clearInterval(t);
+  }, [pathname]);
+}
+
+/** "/" opens search, or Cmd/Ctrl-K, unless you're typing somewhere. */
+function useFindKey(show) {
+  useEffect(() => {
+    const key = (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+      if ((e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) || (e.key === 'k' && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        show();
+      }
+    };
+    document.addEventListener('keydown', key);
+    return () => document.removeEventListener('keydown', key);
+  }, [show]);
 }
 
 /**
@@ -277,19 +310,27 @@ function Frame({ children }) {
   const here = sportOf(pathname);
   const [open, setOpen] = useState(false);
   const close = useRef(() => setOpen(false)).current;
+  const find = useFind();
   useStartSport();
+  useHashScroll();
+  useFindKey(find.show);
+  // A choice in search closes it, wherever it leads.
+  const params = useSearchParams();
+  const closeFind = find.close;
+  useEffect(() => closeFind(), [pathname, params, closeFind]);
   return (
     <>
       <Top onMenu={() => setOpen(true)} open={open} />
-      <Drawer open={open} onClose={close} />
-      {here?.sections && <Sections sport={here} />}
+      <Drawer open={open} onClose={close} onFind={find.show} />
       <div className="sp-frame">
-        <Rail />
+        <Rail onFind={find.show} />
         <main className="sp-main" id="main">
           <HomeScreenHint />
           {children}
         </main>
       </div>
+      <TabBar sport={here} onFind={find.show} />
+      <Find open={find.open} onClose={find.close} />
     </>
   );
 }

@@ -377,7 +377,7 @@ function Upcoming({ shown }) {
   const rows = (big.length ? big : list).slice(0, 8);
   const others = list.length - rows.length;
   return (
-    <section className="sp-section">
+    <section className="sp-section" id="coming-up">
       <h2 className="sp-h2">Coming up</h2>
       {!data && !error && <div className="sp-skel" style={{ height: 160, marginTop: 10, borderRadius: 6 }} />}
       {!data && error && <p className="sp-note">Couldn’t load the fixtures just now.</p>}
@@ -497,8 +497,12 @@ export default function CricketNow() {
         )}
         {data && <Elsewhere groups={groups} />}
         {data && <p className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>{zoneLabel()} · From ESPN · {age}</p>}
-        {data && <HowToRead />}
-        {data && <HowItWorks />}
+        {data && (
+          <div id="guide">
+            <HowToRead />
+            <HowItWorks />
+          </div>
+        )}
       </section>
       {data && <Upcoming shown={new Set(list.map((m) => m.id))} />}
     </div>

@@ -12,6 +12,7 @@ import Stats from './FantasyStats';
 import Players, { WatchStar } from './FantasyPlayers';
 import MatchupPanel from './FantasyMatchup';
 import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
+import { useParam, useTabInView } from './useParam';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
@@ -48,7 +49,6 @@ export default function FantasyView() {
   });
 
   if (!ready) return null;
-  if (!entryId) return <Setup onSave={(id) => update({ fplEntry: id })} onExample={setExample} />;
   if (prefs.spoilers === 'all' && !revealed) {
     return (
       <div className="sp-empty">
@@ -58,8 +58,8 @@ export default function FantasyView() {
     );
   }
   if (st.error && !st.data) return <p className="sp-empty">FPL isn’t answering ({st.error}). It’s often briefly down around deadlines; this page will retry.</p>;
-  if (!st.data || !live.data || (!entry.data && !entry.error)) return <FantasySkeleton />;
-  if (entry.error && !entry.data)
+  if (!st.data || !live.data || (entryId && !entry.data && !entry.error)) return <FantasySkeleton />;
+  if (entryId && entry.error && !entry.data)
     return (
       <div className="sp-empty">
         <p style={{ margin: '0 0 12px' }}>Couldn’t load team {entryId} ({entry.error}).</p>
@@ -74,10 +74,26 @@ export default function FantasyView() {
         </button>
       </div>
     );
-  return <Live st={st.data} live={live.data} entry={entry.data} fixtures={season.data} odds={odds.data?.fixtures ?? null} oddsAt={odds.data?.at ?? null} liveAt={live.at} liveErr={live.error} example={prefs.fplEntry ? null : example} onLeave={() => setExample(null)} />;
+  // Without a team (none given yet, or just looking) everything that doesn't need one still works.
+  return (
+    <Live
+      st={st.data}
+      live={live.data}
+      entry={entryId ? entry.data : null}
+      fixtures={season.data}
+      odds={odds.data?.fixtures ?? null}
+      oddsAt={odds.data?.at ?? null}
+      liveAt={live.at}
+      liveErr={live.error}
+      example={prefs.fplEntry ? null : example}
+      onLeave={() => setExample(null)}
+      onSave={(id) => update({ fplEntry: id })}
+      onExample={setExample}
+    />
+  );
 }
 
-function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, example, onLeave }) {
+function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, example, onLeave, onSave, onExample }) {
   const { prefs, update } = usePrefs();
   const mx = useMatchupIndex();
   const learned = useNetXgModel();
@@ -93,15 +109,27 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, exampl
   const teams = useMemo(() => Object.fromEntries(st.teams.map((t) => [t.id, t])), [st]);
   const gw = st.events.find((e) => e.id === live.event);
   const next = st.events.find((e) => e.next);
-  const picks = entry.gw;
+  const picks = entry?.gw ?? null;
   const team = picks ? teamLive(picks.picks, picks.chip, picks.hit, ctx) : null;
   const feed = useFeed(ctx, picks?.picks.map((p) => p.element) ?? []);
-  const [tab, setTab] = useState('team');
-  const leagueId = prefs.fplLeague && entry.leagues.some((l) => l.id === prefs.fplLeague) ? prefs.fplLeague : entry.leagues[0]?.id ?? null;
+  const leagueId = !entry ? null : prefs.fplLeague && entry.leagues.some((l) => l.id === prefs.fplLeague) ? prefs.fplLeague : entry.leagues[0]?.id ?? null;
+  // Every tab, and every tab's own tabs, is in the address, so search and links can open any of them.
+  const tabs = [
+    ['team', entry ? 'Team' : 'Your team'],
+    ...(entry ? [['plan', 'Planner']] : []),
+    ...(leagueId ? [['league', 'League']] : []),
+    ['gameweek', 'Gameweek'],
+    ['players', 'Players'],
+    ['stats', 'Stats'],
+  ];
+  const [tab, setTab] = useParam('tab', 'team', tabs.map(([k]) => k));
+  const [teamView, setTeamView] = useParam('view', 'pitch', ['pitch', 'list']);
+  const row = useRef(null);
+  useTabInView(row, tab);
   const allDone = live.fixtures.length > 0 && live.fixtures.every((f) => f.finished);
   const isLive = liveGw(live);
   // Overall rank now against last gameweek's, for the arrow.
-  const prevRank = entry.history.find((h) => h.event === live.event - 1)?.overall ?? null;
+  const prevRank = entry?.history.find((h) => h.event === live.event - 1)?.overall ?? null;
   const rankNow = picks?.overall ?? null;
   const moved = prevRank && rankNow ? prevRank - rankNow : 0;
   // The counting players by where they are in their gameweek.
@@ -124,7 +152,7 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, exampl
           </button>
         </div>
       )}
-      {team ? (
+      {!entry ? null : team ? (
         <section className="sp-fhead" aria-label="Gameweek points">
           <p className="sp-small" style={{ fontWeight: 700, margin: 0 }}>
             Gameweek {live.event}
@@ -184,23 +212,34 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, exampl
         </section>
       )}
 
-      <div className="sp-pad" style={{ marginTop: 6 }}>
-        <div className="sp-tabs" role="tablist">
-          <button role="tab" aria-selected={tab === 'team'} onClick={() => setTab('team')}>Pitch</button>
-          <button role="tab" aria-selected={tab === 'list'} onClick={() => setTab('list')}>List</button>
-          {fixtures && <button role="tab" aria-selected={tab === 'plan'} onClick={() => setTab('plan')}>Planner</button>}
-          {leagueId && <button role="tab" aria-selected={tab === 'league'} onClick={() => setTab('league')}>League</button>}
-          <button role="tab" aria-selected={tab === 'fixtures'} onClick={() => setTab('fixtures')}>Gameweek</button>
-          <button role="tab" aria-selected={tab === 'players'} onClick={() => setTab('players')}>Players</button>
-          <button role="tab" aria-selected={tab === 'stats'} onClick={() => setTab('stats')}>Stats</button>
+      <div className="sp-pad" style={{ marginTop: entry ? 6 : 10 }}>
+        <div className="sp-tabs" role="tablist" aria-label="Fantasy" ref={row}>
+          {tabs.map(([k, l]) => (
+            <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k, ['view', 'p'])}>
+              {l}
+            </button>
+          ))}
         </div>
       </div>
 
-      {tab === 'team' && team && <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} />}
-      {tab === 'plan' && fixtures && picks && <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} entry={entry} leagueId={leagueId} />}
-      {tab === 'list' && team && <TeamList team={team} ctx={ctx} teams={teams} />}
+      {tab === 'team' && !entry && <Setup onSave={onSave} onExample={onExample} />}
+      {tab === 'team' && team && (
+        <>
+          <div className="sp-pad">
+            <div className="sp-tabs" role="radiogroup" aria-label="Show the team" style={{ border: 0, gap: 14 }}>
+              {[['pitch', 'On the pitch'], ['list', 'As a list']].map(([k, l]) => (
+                <button key={k} role="radio" aria-checked={teamView === k} onClick={() => setTeamView(k)} style={{ height: 34, fontSize: 13.5 }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          {teamView === 'pitch' ? <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} /> : <TeamList team={team} ctx={ctx} teams={teams} />}
+        </>
+      )}
+      {tab === 'plan' && picks && (fixtures ? <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} entry={entry} leagueId={leagueId} /> : <div className="sp-skel" style={{ height: 460, margin: '14px 0 0' }} />)}
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
-      {tab === 'fixtures' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} oddsAt={oddsAt} />}
+      {tab === 'gameweek' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} oddsAt={oddsAt} />}
       {tab === 'players' && <Players st={st} ctx={ctx} teams={teams} squad={picks?.picks.map((p) => p.element) ?? []} fixtures={fixtures} kit={kit} />}
       {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
     </div>
@@ -592,7 +631,11 @@ function Setup({ onSave, onExample }) {
       <section className="sp-pad" style={{ paddingTop: 16 }}>
         <h1 className="sp-h1">Your team, live</h1>
         <p className="sp-ink2" style={{ margin: '8px 0 0', maxWidth: '46ch' }}>
-          Fantasy Premier League points as they happen, bonus as it stands, projected autosubs, and which players move you against your mini-league.
+          Fantasy Premier League points as they happen, bonus as it stands, projected autosubs, a planner for your captain, transfers and chips, and which players move you against your
+          mini-league.
+        </p>
+        <p className="sp-small sp-muted" style={{ margin: '8px 0 0', maxWidth: '46ch' }}>
+          Gameweek, Players and Stats work without a team: every match’s odds, prices, set pieces, team news and more.
         </p>
       </section>
       <form onSubmit={save} className="sp-panel" style={{ display: 'grid', gap: 10, marginTop: 16 }}>

@@ -28,7 +28,7 @@ export default function FollowingView() {
 
       <Teams />
 
-      <section className="sp-section">
+      <section className="sp-section" id="competitions">
         <h2 className="sp-h2">Competitions</h2>
         <p className="sp-small sp-ink2" style={{ margin: '4px 0 10px' }}>The order here is the order on the scores page. A team you follow still shows up when its competition is off.</p>
         <div className="sp-panel" style={{ padding: '0 16px' }}>
@@ -89,7 +89,7 @@ function Teams() {
       return { teams: t };
     });
   return (
-    <section className="sp-section">
+    <section className="sp-section" id="teams">
       <h2 className="sp-h2">Teams</h2>
       <p className="sp-small sp-ink2" style={{ margin: '4px 0 10px' }}>Their matches go to the top of the scores page, whichever competition they’re in.</p>
       {teams.length > 0 && (
@@ -146,7 +146,7 @@ function Alerts() {
     update({ alerts: p === 'granted' ? !prefs.alerts : false });
   };
   return (
-    <section className="sp-section">
+    <section className="sp-section" id="alerts">
       <h2 className="sp-h2">Alerts</h2>
       <div className="sp-panel" style={{ padding: '0 16px', marginTop: 10 }}>
         <div className="sp-toggle">

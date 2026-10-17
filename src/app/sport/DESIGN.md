@@ -13,7 +13,9 @@ one kit and half the other. Everything else stays out of the way.
 These are the patterns that make an interface read as AI-made. People list them on Reddit and Hacker News, and
 two earlier versions of this app shipped them.
 
-- Gradients of any kind, glows, radial "aurora" overlays, glassmorphism or backdrop blur.
+- Gradients of any kind, glows, radial "aurora" overlays, glassmorphism or backdrop blur. The one exception is
+  the phone tab bar's Liquid Glass (see Navigation): the platform's own material for controls floating over
+  the content, never on the content itself.
 - Purple, violet or indigo "brand" colours; neon accents on near-black or navy.
 - Drop shadows on cards; cards wrapped around every section; rounded-2xl everything.
 - Pills and badges on every status; pulsing dots.
@@ -73,11 +75,33 @@ two earlier versions of this app shipped them.
 
 - The header names the sport you're in: "Matchday · F1", the sport in heavy type. Pages don't repeat it in their
   own heading: a page's heading is its subject ("Wednesday 14 October", "United States Grand Prix").
-- Phones: the sport's sections are tabs under the header (Scores · Fantasy · Tables · Following). The sports wait in
-  a drawer behind the menu button, since switching sport is occasional. No bottom tab bar.
-- Desktop: the same list is a 236 px sidebar, the current sport's sections nested under it.
+- Phones: the sport's sections are a tab bar floating at the bottom, in reach of a thumb (Scores · Fantasy ·
+  Tables · Following; Scores · Coming up · Guide; Weekend · Championship · Calendar), with search as a round
+  button beside it. The sports wait in a drawer behind the menu button, since switching sport is occasional.
+- The tab bar is iOS 26's Liquid Glass (`_components/TabBar.jsx`), sized as iOS sizes its own:
+  - A capsule 62 px tall, 21 px above the home indicator once saved to the home screen, 10 px above Safari's own
+    bar in a tab; search a 62 px circle 8 px to the side, alone at the trailing edge for a sport with no
+    sections yet.
+  - The glass: the page blurred (20 px) and a little more vivid behind white at 70% (near-black at 72% in dark
+    mode), a bright rim top left, a hairline and a soft lift. Thick enough that its labels pass 4.5:1 over
+    anything, since Safari has no "reduce transparency" setting. With "Increase contrast" it's solid with an
+    outline; without blur, solid.
+  - Icon over a word in every tab; the section you're in is in heavier type on a lens, a plain tint (never glass
+    on glass). The lens moves the moment a finger lands on another tab and slides over with a little overshoot;
+    held and dragged along the bar it swells into a clear bubble that follows the finger, and letting go opens
+    the tab under it. No overshoot or swelling with "Reduce motion".
+  - Tabs that are parts of one page (F1's championship, cricket's guide) mark the part you've scrolled to. The
+    tab you're in takes you back to the top. The bar steps aside while the keyboard is up.
+- Desktop: the same list is a 236 px sidebar, the current sport's sections nested under it, search at its top
+  ("/" or Cmd-K opens it anywhere).
+- Search finds everything: with nothing typed it lists every feature, sport by sport, in a line each, so nothing
+  is only reachable by knowing where it is; typing narrows it to features, competitions, clubs and FPL players.
+  Every tab, and every tab's own tabs, is in the address (`/sport/fantasy?tab=players&view=sets`), so search,
+  links and the back button can open any of them. A new feature gets a line in `FEATURES` in `_components/nav.js`.
+- Nothing needs a team to be seen: without an FPL team ID, Fantasy's Gameweek, Players and Stats still work, and
+  the team tab says what a team adds.
 - Settings is its own page: spoilers, appearance, the order of the sports and the one Matchday opens on.
-- Every row in the drawer and sidebar is at least 44 px tall.
+- Every row in the drawer, the sidebar and search is at least 44 px tall.
 
 ## The mark
 
@@ -138,6 +162,20 @@ Built to be followed at a glance (`_components/CricketLive.jsx`):
 - **At the innings break** the band gives the target, the cards become "Not out" and "Best bowling", and nothing
   says anyone is batting.
 - Lists use the same scoreboard as a card that opens the match, with each side's chance under it.
+
+## Set pieces
+
+Who each Premier League club aims for at corners and free kicks into the box (`_components/SetPieces.jsx`,
+built into `public/sport/data/pl/setpieces.json` by `scripts/sport/build-matchups.mjs`):
+
+- Counted from Opta's commentary on ESPN: every shot or header that "followed a corner" or "a set piece
+  situation". A player's share is of his club's attempts while he was on the pitch. A flick-on, or a header
+  cleared before anyone shoots, isn't recorded, so they're attempts, never called first contacts.
+- A grid of every club, its crest and name, its attempts and goals, then the three players with the most
+  attempts, each a bar in the club's colour as long as his share. This season by default, last season a tap away.
+- On the Premier League's table page and in Fantasy (Players › Set pieces), where FPL's takers sit under each
+  club and the league's biggest threats are ranked above the grid, your own players ringed. A club's page has its
+  own: who it aims for, who delivers, and how it does at both ends.
 
 ## Live, every sport
 

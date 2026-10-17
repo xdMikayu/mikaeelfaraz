@@ -7,6 +7,7 @@ import { useLive, Freshness } from './useLive';
 import { usePrefs, useFollow } from './prefs';
 import Crest from './Crest';
 import SeasonForecast from './SeasonForecast';
+import { LeagueSetPieces } from './SetPieces';
 
 export default function TableView({ slug }) {
   const { prefs } = usePrefs();
@@ -38,6 +39,7 @@ export default function TableView({ slug }) {
         data.groups.map((g) => <Group key={g.name ?? 'all'} g={g} slug={slug} isFollowed={isFollowed} />)
       )}
       {!hidden && data && slug === 'eng.1' && data.groups[0]?.rows.length > 0 && <SeasonForecast rows={data.groups[0].rows} />}
+      {!hidden && data && slug === 'eng.1' && <LeagueSetPieces />}
       {!hidden && data && (
         <p className="sp-note sp-pad" style={{ marginTop: 10 }}>
           The bars mark what each place leads to, from ESPN’s notes; they can shift with cup winners. The table updates when a result is final, not during matches.
