@@ -48,6 +48,42 @@ export const SettingsIcon = () => (
   </svg>
 );
 
+export const SearchIcon = () => (
+  <svg {...nav}>
+    <circle cx="9.5" cy="9.5" r="6" />
+    <path d="m14 14 5 5" />
+  </svg>
+);
+
+export const CalendarIcon = () => (
+  <svg {...nav}>
+    <rect x="3" y="4.5" width="16" height="14.5" rx="2" />
+    <path d="M3 9h16M7.5 2.5v4M14.5 2.5v4" />
+    <path d="M7 13h2M12 13h2M7 16h2" />
+  </svg>
+);
+
+export const TrophyIcon = () => (
+  <svg {...nav}>
+    <path d="M7 3.5h8V8a4 4 0 0 1-8 0Z" />
+    <path d="M7 5.5H4.5c0 2.5 1.2 4 3 4.4M15 5.5h2.5c0 2.5-1.2 4-3 4.4M11 12v4M7.5 18.5h7M9 16h4" />
+  </svg>
+);
+
+export const GuideIcon = () => (
+  <svg {...nav}>
+    <path d="M11 6.5c-1.5-1.4-4-2-7-1.8v12.6c3-.2 5.5.4 7 1.8 1.5-1.4 4-2 7-1.8V4.7c-3-.2-5.5.4-7 1.8Z" />
+    <path d="M11 6.5v12.6" />
+  </svg>
+);
+
+export const FlagIcon = () => (
+  <svg {...nav}>
+    <path d="M5 20V3" />
+    <path d="M5 3.5h13l-2.5 4.5 2.5 4.5H5" />
+  </svg>
+);
+
 // The sports, drawn on the same grid and stroke as the rest and balanced to carry about the same
 // ink: a ball, a bat and ball, a tennis ball's seams, a chequered flag and a championship belt.
 const SPORT_GLYPHS = {

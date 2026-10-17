@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { projectAhead, POS } from '@/lib/sport/fpl.mjs';
 import { netFor } from '@/lib/sport/netxg.mjs';
 import { fetchTeam, fetchMatch } from '@/lib/sport/espn.mjs';
@@ -8,7 +8,10 @@ import { useLive } from './useLive';
 import { useNetXgData, useNetXgModel } from './matchupData';
 import { shirt, one, Face } from './fplbits';
 import { Star } from './glyphs';
+import Crest from './Crest';
 import Prices, { priceOutlook } from './FantasyPrices';
+import { useSetPieceSeason, SeasonSwitch, SetPieceGrid, SetPieceNote, seasonName, target } from './SetPieces';
+import { useParam, useTabInView } from './useParam';
 
 const VIEWS = [
   ['prices', 'Prices'],
@@ -22,7 +25,9 @@ const STATUS = { i: 'Injured', d: 'Doubtful', s: 'Suspended', u: 'Unavailable', 
 
 /** Everything about individual players: prices, comparison, watchlist, set pieces and team news. */
 export default function Players({ st, ctx, teams, squad, fixtures, kit }) {
-  const [view, setView] = useState('prices');
+  const [view, setView] = useParam('view', 'prices', VIEWS.map(([k]) => k));
+  const row = useRef(null);
+  useTabInView(row, view);
   const { prefs, update } = usePrefs();
   const watch = prefs.fplWatch ?? [];
   const toggleWatch = (id) => update((p) => ({ fplWatch: (p.fplWatch ?? []).includes(id) ? p.fplWatch.filter((x) => x !== id) : [...(p.fplWatch ?? []), id] }));
@@ -34,9 +39,9 @@ export default function Players({ st, ctx, teams, squad, fixtures, kit }) {
   return (
     <div>
       <div className="sp-pad" style={{ marginTop: 10 }}>
-        <div className="sp-tabs" role="tablist" aria-label="Players" style={{ gap: 16 }}>
+        <div className="sp-tabs" role="tablist" aria-label="Players" style={{ gap: 16 }} ref={row}>
           {VIEWS.map(([k, l]) => (
-            <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{ height: 36, fontSize: 14 }}>
+            <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k, ['p'])} style={{ height: 36, fontSize: 14 }}>
               {l}
               {k === 'watch' && watch.length ? ` ${watch.length}` : ''}
             </button>
@@ -46,7 +51,7 @@ export default function Players({ st, ctx, teams, squad, fixtures, kit }) {
       {view === 'prices' && <Prices st={st} teams={teams} squad={squad} />}
       {view === 'compare' && fixtures && <Compare st={st} ctx={ctx} teams={teams} fixtures={fixtures} gws={gws} kit={kit} watch={watch} toggleWatch={toggleWatch} />}
       {view === 'watch' && fixtures && <Watchlist ids={watch} st={st} ctx={ctx} teams={teams} fixtures={fixtures} gws={gws} toggleWatch={toggleWatch} />}
-      {view === 'sets' && <SetPieces st={st} teams={teams} />}
+      {view === 'sets' && <SetPieces st={st} ctx={ctx} teams={teams} squad={squad} />}
       {view === 'news' && <TeamNews st={st} teams={teams} kit={kit} />}
     </div>
   );
@@ -84,7 +89,17 @@ function Search({ st, teams, onPick, exclude }) {
 
 /** Up to three players side by side, best value in each row in bold. */
 function Compare({ st, ctx, teams, fixtures, gws, kit, watch, toggleWatch }) {
-  const [ids, setIds] = useState(() => watch.slice(0, 2));
+  // A player picked in search (?p=) comes first.
+  const [picked] = useParam('p', null);
+  const [ids, setIds] = useState(() => {
+    const p = Number(picked);
+    return p && ctx.elements[p] ? [p, ...watch.filter((id) => id !== p)].slice(0, 2) : watch.slice(0, 2);
+  });
+  // Picked again while Compare is open: he joins the ones already there.
+  useEffect(() => {
+    const p = Number(picked);
+    if (p && ctx.elements[p]) setIds((x) => (x.includes(p) ? x : [p, ...x].slice(0, 3)));
+  }, [picked, ctx.elements]);
   const nx = useNetXgData();
   const learned = useNetXgModel();
   const ahead = useMemo(() => projectAhead(ids, fixtures, gws, ctx), [ids, fixtures, gws, ctx]);
@@ -204,35 +219,105 @@ function Watchlist({ ids, st, ctx, teams, fixtures, gws, toggleWatch }) {
   );
 }
 
-/** Penalty, direct free-kick and corner order for every club, from FPL. */
-function SetPieces({ st, teams }) {
-  const KIND = ['Penalties', 'Free kicks', 'Corners'];
-  return (
-    <section className="sp-group">
-      <header className="sp-ghead" style={{ display: 'block' }}>
-        <h2 className="sp-h3">Set-piece takers</h2>
-        <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0' }}>First choice first, from FPL’s own list, which it updates through the season.</p>
-      </header>
-      {st.teams.map((t) => {
-        const of = (i) => st.elements.filter((e) => e.team === t.id && e.setPieces?.[i]).sort((a, b) => a.setPieces[i] - b.setPieces[i]);
-        return (
-          <div key={t.id} className="sp-sets">
-            <span className="sp-sets-club">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={shirt(t.code)} alt="" width="22" height="22" />
-              <b>{t.short}</b>
-            </span>
-            {KIND.map((k, i) => (
-              <span key={k} className="sp-tiny">
-                <span className="sp-muted" style={{ display: 'block' }}>{k}</span>
-                {of(i).slice(0, 3).map((e, j) => <span key={e.id} style={{ fontWeight: j === 0 ? 800 : 500 }}>{j ? ', ' : ''}{e.name}</span>)}
-                {of(i).length === 0 && <span className="sp-muted">–</span>}
-              </span>
+const POS_PLURAL = [[0, 'All'], [2, 'Defenders'], [3, 'Midfielders'], [4, 'Forwards']];
+
+/**
+ * Set pieces both ways: who each club aims for (our count from the match commentary, this season or
+ * last) and who takes them (FPL's own order, which it updates through the season).
+ */
+function SetPieces({ st, ctx, teams, squad }) {
+  const sp = useSetPieceSeason();
+  const [pos, setPos] = useState(0);
+  const mine = useMemo(() => new Set(squad), [squad]);
+  if (sp.error) return <p className="sp-empty">Couldn’t load the set-piece numbers ({sp.error}).</p>;
+  if (!sp.data || !sp.season) return <div className="sp-skel" style={{ height: 600, margin: 16 }} />;
+  const current = sp.season === sp.seasons[0];
+  const fplTeamOf = Object.fromEntries(Object.entries(sp.data.fplTeams).map(([f, e]) => [e, Number(f)]));
+  const table = sp.data.data[sp.season];
+  const leaders = Object.entries(table)
+    .flatMap(([club, t]) => t.targets.map((row) => ({ ...target(row), club })))
+    .filter((p) => !pos || ctx.elements[p.fpl]?.type === pos)
+    .sort((a, b) => b.a - a.a || b.x - a.x)
+    .slice(0, 10);
+  // FPL's takers only make sense against this season's clubs.
+  const takers = (espnId) => {
+    const club = fplTeamOf[espnId];
+    if (!current || !club) return null;
+    const of = (i) => st.elements.filter((e) => e.team === club && e.setPieces?.[i]).sort((a, b) => a.setPieces[i] - b.setPieces[i]).slice(0, 2);
+    const parts = [['Corners', 2], ['Pens', 0], ['Free kicks', 1]].map(([label, i]) => [label, of(i)]).filter(([, list]) => list.length);
+    if (!parts.length) return null;
+    return (
+      <p className="sp-spc-takers">
+        {parts.map(([label, list]) => (
+          <span key={label} style={{ display: 'block' }}>
+            {label}{' '}
+            {list.map((e, j) => (
+              <b key={e.id} style={{ color: 'var(--sp-ink-2)', fontWeight: j ? 550 : 800 }}>
+                {j ? ', ' : ''}
+                {e.name}
+              </b>
             ))}
-          </div>
-        );
-      })}
-    </section>
+          </span>
+        ))}
+      </p>
+    );
+  };
+  return (
+    <>
+      <section className="sp-panel">
+        <div className="sp-section-head" style={{ marginBottom: 4 }}>
+          <h2 className="sp-h2">Set-piece threats</h2>
+          <SeasonSwitch seasons={sp.seasons} season={sp.season} onPick={sp.setSeason} />
+        </div>
+        <p className="sp-small sp-ink2" style={{ margin: '0 0 8px' }}>
+          The most shots and headers from corners and free kicks into the box{current ? ' this season' : ` in ${seasonName(sp.season)}`}. The share is of his club’s attempts while he was on the pitch.
+        </p>
+        <div className="sp-tabs" role="radiogroup" aria-label="Position" style={{ border: 0, gap: 12 }}>
+          {POS_PLURAL.map(([k, l]) => (
+            <button key={k} role="radio" aria-checked={pos === k} onClick={() => setPos(k)} style={{ height: 30, fontSize: 13.5 }}>{l}</button>
+          ))}
+        </div>
+        {leaders.map((p, i) => {
+          const el = ctx.elements[p.fpl];
+          const club = sp.data.teams[p.club];
+          return (
+            <div key={`${p.club}-${p.id}`} className={`sp-cap${mine.has(p.fpl) ? ' sp-mine' : ''}`}>
+              <span className="sp-cap-n sp-num">{i + 1}</span>
+              {el ? <Face el={el} teams={teams} /> : <Crest src={`https://a.espncdn.com/i/teamlogos/soccer/500/${p.club}.png`} size={40} />}
+              <span style={{ minWidth: 0 }}>
+                <b className="sp-dif-name" style={{ display: 'block' }}>{el?.name ?? p.short}</b>
+                <span className="sp-tiny sp-muted sp-dif-line">
+                  {club?.short}
+                  {el ? ` · ${POS[el.type]} · £${el.cost.toFixed(1)}m` : ''}
+                  {mine.has(p.fpl) ? ' · in your team' : ''}
+                </span>
+                <span className="sp-tiny sp-ink2 sp-dif-line sp-num">
+                  {p.h} header{p.h === 1 ? '' : 's'} · {p.g} goal{p.g === 1 ? '' : 's'} · {p.x.toFixed(2)} xG
+                </span>
+              </span>
+              <span className="sp-cap-r">
+                <b className="sp-num">{p.a}</b>
+                <span className="sp-tiny sp-muted">attempts</span>
+                <span className="sp-tiny sp-ink2 sp-num">{p.on ? Math.round((p.a / p.on) * 100) : 0}% share</span>
+              </span>
+            </div>
+          );
+        })}
+        {leaders.length === 0 && <p className="sp-small sp-muted" style={{ margin: '8px 0 0' }}>Nobody yet.</p>}
+      </section>
+      <section className="sp-group">
+        <header className="sp-ghead" style={{ display: 'block' }}>
+          <h2 className="sp-h3">Who each club aims for</h2>
+          <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0' }}>
+            Each club’s attempts and goals from set pieces, then the three players with the most attempts and their share.{current ? ' Under them, FPL’s first and second choice to take them.' : ''}
+          </p>
+        </header>
+        <SetPieceGrid data={sp.data} season={sp.season} squad={mine} extra={takers} />
+        <div className="sp-pad">
+          <SetPieceNote mine={mine.size > 0} />
+        </div>
+      </section>
+    </>
   );
 }
 

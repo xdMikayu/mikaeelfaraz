@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { goalRates, matchOdds, rolling, slope } from '@/lib/sport/forecast.mjs';
 import { allowedByRole, ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { useMatchupIndex, useForecastKit, usePlayerLog } from './matchupData';
+import { TeamSetPieces } from './SetPieces';
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const ORDER = ['ST', 'W-L', 'AM', 'W-R', 'CM', 'FB-L', 'CB', 'FB-R'];
@@ -130,6 +131,8 @@ export default function TeamAnalysis({ team, fixtures, color }) {
           })()}
         </div>
       )}
+
+      <TeamSetPieces teamId={team.id} color={color} />
 
       {a.next.length > 0 && (
         <div className="sp-mu-block">

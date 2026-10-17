@@ -38,7 +38,7 @@ export default function SeasonForecast({ rows }) {
   const list = rows.map((r) => ({ r, s: sim.out[r.id] })).filter((x) => x.s).sort((a, b) => b.s.pts - a.s.pts);
   const n = rows.length;
   return (
-    <section className="sp-group" style={{ marginTop: 24 }}>
+    <section className="sp-group" id="forecast" style={{ marginTop: 24 }}>
       <header className="sp-ghead" style={{ display: 'block' }}>
         <h2 className="sp-h3">How the season could end</h2>
         <p className="sp-tiny sp-muted" style={{ margin: '2px 0 0' }}>

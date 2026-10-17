@@ -14,7 +14,7 @@ export default function SettingsView() {
 
       <Sports />
 
-      <section className="sp-section">
+      <section className="sp-section" id="spoilers">
         <h2 className="sp-h2">Spoilers</h2>
         <div className="sp-panel" style={{ padding: '0 16px', marginTop: 10 }}>
           {[
@@ -33,7 +33,7 @@ export default function SettingsView() {
         </div>
       </section>
 
-      <section className="sp-section">
+      <section className="sp-section" id="appearance">
         <h2 className="sp-h2">Appearance</h2>
         <div className="sp-tabs" style={{ marginTop: 6 }} role="radiogroup" aria-label="Theme">
           {[['system', 'Match my device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, l]) => (
@@ -60,7 +60,7 @@ function Sports() {
       return { sports: o };
     });
   return (
-    <section className="sp-section">
+    <section className="sp-section" id="sports">
       <h2 className="sp-h2">Sports</h2>
       <p className="sp-small sp-ink2" style={{ margin: '4px 0 10px' }}>
         The order they come in the menu, and the one Matchday opens on.

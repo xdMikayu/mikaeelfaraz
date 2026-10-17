@@ -1,11 +1,14 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { projectAhead, returnOdds, suggestTransfers, fixtureRates } from '@/lib/sport/fpl.mjs';
 import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
 import Record from './FantasyRecord';
 import Advice from './FantasyAdvice';
 import { TransferPlan, Chips, Rotations } from './FantasyOptimiser';
+import { useParam, useTabInView } from './useParam';
+
+const VIEWS = [['overview', 'Overview'], ['transfers', 'Transfers'], ['chips', 'Chips'], ['rotation', 'Rotation'], ['fixtures', 'Fixtures']];
 
 const pct = (p) => (p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
 const shade = (v, max) => Math.max(0, Math.min(1, v / max));
@@ -14,7 +17,9 @@ const oppLabel = (teams, f) => `${teams[f.opp]?.short ?? ''}${f.home ? '' : ' (A
 /** The weeks ahead: projected points, captaincy, transfers and fixtures, all from our model. */
 export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, entry, leagueId }) {
   const [horizon, setHorizon] = useState(5);
-  const [view, setView] = useState('overview');
+  const [view, setView] = useParam('view', 'overview', VIEWS.map(([k]) => k));
+  const row = useRef(null);
+  useTabInView(row, view);
   const [ticker, setTicker] = useState('att');
   // Plan from the next deadline: the current gameweek once it has started, else this one.
   const cur = st.events.find((e) => e.current);
@@ -79,8 +84,8 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
       </div>
 
       <div className="sp-pad">
-        <div className="sp-tabs" role="tablist" aria-label="Planner" style={{ gap: 16 }}>
-          {[['overview', 'Overview'], ['transfers', 'Transfers'], ['chips', 'Chips'], ['rotation', 'Rotation'], ['fixtures', 'Fixtures']].map(([k, l]) => (
+        <div className="sp-tabs" role="tablist" aria-label="Planner" style={{ gap: 16 }} ref={row}>
+          {VIEWS.map(([k, l]) => (
             <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} style={{ height: 36, fontSize: 14 }}>{l}</button>
           ))}
         </div>
