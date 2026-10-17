@@ -577,3 +577,20 @@ test('splitJsonObjects reads a Shortcuts queue file', () => {
   assert.equal(splitJsonObjects('{"a":1} trailing'), null);
   assert.equal(splitJsonObjects('[{"a":1}]'), null);
 });
+
+test('SIB texts in the October 2026 format (named card, numeric date)', () => {
+  const sms = 'A txn on your Covered Card XXXX1234 at Tamara for AED 34.16 on 09-10-2026 19:02 is approved. Your available balance is AED 5,432.10';
+  const r = parseSibSms(sms, NOW);
+  assert.equal(r.ok, true);
+  assert.equal(r.account, 'sib');
+  assert.equal(r.last4, '1234');
+  assert.equal(r.amount, 34.16);
+  assert.equal(r.currency, 'AED');
+  assert.equal(r.merchant, 'Tamara');
+  assert.equal(r.occurredAt, '2026-10-09T15:02:00.000Z');
+  assert.equal(r.availableBalance, 5432.1);
+  assert.equal(parseEvent({ source: 'sms', text: sms }, NOW).ok, true);
+  assert.equal(parseSibSms(sms.replace('is approved', 'is declined'), NOW).status, 'ignored');
+  // Old and new texts pasted together still split apart.
+  assert.equal(splitPastedMessages(`${SIB}\n${sms}`).length, 2);
+});

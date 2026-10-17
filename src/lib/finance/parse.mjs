@@ -114,20 +114,26 @@ function inferYear(m, d, hh, mi, now) {
   return candidate.getTime() > now.getTime() + 24 * 3600 * 1000 ? y - 1 : y;
 }
 
+// "A txn on your Card …", or a named card such as "A txn on your Covered Card …".
+const SIB_CARD = /txn on your\s+(?:[a-z]+\s+){0,2}?card\b/i;
+
 export function parseSibSms(text, now = new Date()) {
   const s = collapse(text);
-  if (!/txn on your card/i.test(s)) return null;
+  if (!SIB_CARD.test(s)) return null;
   if (/declined|rejected|not approved|unsuccessful/i.test(s)) {
     return { ok: false, status: 'ignored', reason: 'Declined transaction' };
   }
+  // "…on 21-Sep at 19:24…" (older texts) or "…on 09-10-2026 19:02…" (since Oct 2026).
   const m = s.match(
-    /txn on your card\s+[x*]*(\d{4})\s+at\s+(.+?)\s+for\s+([A-Z]{3})\s*(\d[\d,]*(?:\.\d+)?|\.\d+)\s+on\s+(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*(?:[-\s](\d{2,4}))?\s+at\s+(\d{1,2}):(\d{2})/i
+    /txn on your\s+(?:[a-z]+\s+){0,2}?card\s+[x*]*(\d{4})\s+at\s+(.+?)\s+for\s+([A-Z]{3})\s*(\d[\d,]*(?:\.\d+)?|\.\d+)\s+on\s+(?:(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*(?:[-\s](\d{2,4}))?\s+at|(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}))\s+(\d{1,2}):(\d{2})/i
   );
   if (!m) return { ok: false, status: 'unparsed', reason: 'Looks like SIB but the format was not recognised' };
-  const [, last4, merchantRaw, cur, amt, dd, mon, yy, hh, mi] = m;
-  const month = MONTHS[mon.toLowerCase()];
-  if (month == null) return { ok: false, status: 'unparsed', reason: `Unknown month "${mon}"` };
-  let year = yy ? Number(yy.length === 2 ? `20${yy}` : yy) : inferYear(month, +dd, +hh, +mi, now);
+  const [, last4, merchantRaw, cur, amt, nameDay, mon, yy, numDay, numMonth, numYear, hh, mi] = m;
+  const dd = nameDay || numDay;
+  const month = mon ? MONTHS[mon.toLowerCase()] : +numMonth - 1;
+  if (month == null || !(month >= 0 && month <= 11)) return { ok: false, status: 'unparsed', reason: `Unknown month "${mon || numMonth}"` };
+  const yearText = yy || numYear;
+  let year = yearText ? Number(yearText.length === 2 ? `20${yearText}` : yearText) : inferYear(month, +dd, +hh, +mi, now);
   const occurredAt = dubaiDate(year, month, +dd, +hh, +mi);
   const bal = s.match(/available (?:balance|limit) is\s*(?:([A-Z]{3})\s*)?(\d[\d,]*(?:\.\d+)?|\.\d+)/i);
   return finish({
@@ -410,10 +416,10 @@ export function splitPastedMessages(blob) {
   const s = String(blob || '').replace(/\r\n/g, '\n').trim();
   if (!s) return [];
   const count = (re) => (s.match(re) || []).length;
-  const nSib = count(/txn on your card/gi);
+  const nSib = count(/txn on your\s+(?:[a-z]+\s+){0,2}?card\b/gi);
   const nMashreq = count(/was used for a purchase/gi) + count(/transaction of [A-Z]{3}/gi);
   const parts = (re) => s.split(re).map((x) => x.trim()).filter(Boolean);
   if (nSib + nMashreq <= 1) return nSib + nMashreq === 1 ? [s] : parts(/\n\s*\n+/);
   // Cut right before each alert's opening phrase so multi-paragraph emails stay whole.
-  return parts(/(?=A txn on your Card)|(?=Dear Customer)|(?=Transaction of [A-Z]{3})/i).filter((x) => /txn on your card|was used for a purchase|transaction of [a-z]{3}/i.test(x));
+  return parts(/(?=A txn on your\s)|(?=Dear Customer)|(?=Transaction of [A-Z]{3})/i).filter((x) => SIB_CARD.test(x) || /was used for a purchase|transaction of [a-z]{3}/i.test(x));
 }

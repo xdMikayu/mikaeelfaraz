@@ -85,7 +85,7 @@ export default function Setup() {
         <div className="space-y-3">
           <Guide icon={MessageSquareText} title="SIB — forward bank SMS" status="iPhone Shortcuts · message trigger">
             <ol className="fin-steps mt-1">
-              <li>New shortcut → add trigger <b>When I receive a message</b> where <b>Message</b> contains <CopyText value="A txn on your Card" />. Automation on, Notify off.</li>
+              <li>New shortcut → add trigger <b>When I receive a message</b> where <b>Message</b> contains <CopyText value="A txn on your" />. Automation on, Notify off.</li>
               <li>Add <b>Get Contents of URL</b> → the endpoint below, Method <b>POST</b>, header <code className="fin-code">Authorization</code> = <code className="fin-code">Bearer YOUR_TOKEN</code>.</li>
               <li>Request Body <b>JSON</b>: <code className="fin-code">source</code> = <code className="fin-code">sms</code>, <code className="fin-code">text</code> = <b>Shortcut Input → Content</b>.</li>
             </ol>
