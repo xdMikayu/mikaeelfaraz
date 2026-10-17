@@ -2,7 +2,7 @@
 // Card numbers and balances below are made up — never commit real ones (public repo).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, normalizeMerchantLegacy, parseAmount, splitPastedMessages, dubaiParts } from './parse.mjs';
+import { parseEvent, parseTabbyAlert, parseSibSms, parseMashreqEmail, parseWalletEvent, normalizeMerchant, normalizeMerchantLegacy, parseAmount, splitPastedMessages, splitJsonObjects, dubaiParts } from './parse.mjs';
 import { keywordCategory, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES } from './categories.mjs';
 import { getPeriod, monthPeriod, rangePeriod } from './periods.mjs';
 import { planDuplicateMerges, planRenames, isStatementTwin, sameMerchant } from './dedupe.mjs';
@@ -562,4 +562,18 @@ test('cash accounts follow account emails and debit card balances, newest wins',
   assert.deepEqual(applyCardBalance(h, 17233.4, '2026-09-27T09:00:00Z'), { quantity: 17233.4, balance_at: '2026-09-27T09:00:00.000Z' });
   assert.equal(applyCardBalance(h, 900, '2026-09-01T09:00:00Z'), null); // an old alert
   assert.equal(applyCardBalance(h, null, '2026-09-28T09:00:00Z'), null);
+});
+
+test('splitJsonObjects reads a Shortcuts queue file', () => {
+  const a = { source: 'alert', received_at: '2026-10-17T12:28:31+04:00', title: 'Tabby', body: 'Transaction of AED 56.00 at RISE LLC was successful. "Thanks" {ok}' };
+  const b = { source: 'alert', received_at: '2026-10-17T13:02:10+04:00', title: 'Tabby', body: 'Line one\nline two' };
+  assert.deepEqual(splitJsonObjects(`${JSON.stringify(a)}\n${JSON.stringify(b)}\n`), [a, b]);
+  // Pretty-printed dictionaries, and blank lines between them.
+  assert.deepEqual(splitJsonObjects(`${JSON.stringify(a, null, 2)}\n\n\n${JSON.stringify(b, null, 4)}`), [a, b]);
+  assert.deepEqual(splitJsonObjects(' \n '), []);
+  // Plain alerts and half-written files are not a queue.
+  assert.equal(splitJsonObjects('A txn on your Card XXXX1234 at Digital Dubai for AED 6.30'), null);
+  assert.equal(splitJsonObjects('{"source":"alert","body":"cut off'), null);
+  assert.equal(splitJsonObjects('{"a":1} trailing'), null);
+  assert.equal(splitJsonObjects('[{"a":1}]'), null);
 });

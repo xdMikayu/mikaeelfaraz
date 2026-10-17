@@ -28,11 +28,12 @@ const DEMO_HOLDINGS = [
   { id: 'd7', asset: 'gold', karat: 24, grams: 20, cost_aed: 9200, note: 'Bar' },
 ];
 function demoHistory(latest) {
+  // A gentle climb to today's total with some wobble that fades out, so it lands exactly on it.
   const out = [];
   const today = Date.now();
-  let v = latest * 0.86;
   for (let i = 120; i >= 1; i--) {
-    v += (latest - v) * 0.02 + Math.sin(i / 6) * latest * 0.004;
+    const t = (120 - i) / 120;
+    const v = latest * (0.9 + 0.1 * t) + Math.sin(i / 6) * latest * 0.006 * (i / 120);
     out.push({ day: new Date(today - i * 86400000).toISOString().slice(0, 10), total: Math.round(v) });
   }
   return out;

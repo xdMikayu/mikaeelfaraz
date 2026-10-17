@@ -206,7 +206,8 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
       .maybeSingle();
     if (priorErr) throw priorErr;
     const stalled = prior && prior.status === 'pending' && now - new Date(prior.received_at) > 60 * 1000;
-    if (!stalled) return { status: 'duplicate', reason: 'Already received' };
+    // inFlight: the first attempt may still be running, so a queue shouldn't drop it yet.
+    if (!stalled) return { status: 'duplicate', reason: 'Already received', ...(prior?.status === 'pending' && { inFlight: true }) };
     raw = { id: prior.id };
   }
   const finishRaw = (patch) => db.from('fin_raw_events').update(patch).eq('id', raw.id);
