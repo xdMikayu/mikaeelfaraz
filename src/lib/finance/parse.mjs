@@ -366,6 +366,45 @@ export function parseEvent(event, now = new Date()) {
   return { ok: false, status: 'unparsed', reason: 'Not a recognised card alert' };
 }
 
+/**
+ * Read a text body made of JSON objects back to back, like the queue file the
+ * Shortcuts append to (one dictionary per alert, pretty-printed or not). Returns
+ * the objects, [] for a blank body, or null when the text isn't such a stream.
+ */
+export function splitJsonObjects(text) {
+  const s = String(text ?? '');
+  const out = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === '"') inString = false;
+    } else if (c === '"') {
+      if (depth === 0) return null;
+      inString = true;
+    } else if (c === '{') {
+      if (depth++ === 0) start = i;
+    } else if (c === '}') {
+      if (depth === 0) return null;
+      if (--depth === 0) {
+        try {
+          out.push(JSON.parse(s.slice(start, i + 1)));
+        } catch {
+          return null;
+        }
+      }
+    } else if (depth === 0 && !/[\s,]/.test(c)) {
+      return null;
+    }
+  }
+  return depth === 0 ? out : null;
+}
+
 /** Split a pasted blob of many messages into individual messages. */
 export function splitPastedMessages(blob) {
   const s = String(blob || '').replace(/\r\n/g, '\n').trim();
