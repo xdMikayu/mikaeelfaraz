@@ -2,6 +2,7 @@
 // Builds the Premier League matchup data the Matchday app reads as static files:
 //   public/sport/data/pl/index.json         xG allowed by role, team match logs, FPL -> ESPN ids
 //   public/sport/data/pl/players-<team>.json every match row for that club's current players
+//   public/sport/data/pl/setpieces.json     who each club aims for at set pieces, this season and last
 // Finished matches are cached in data/sport/pl-matches/<season>.json, so a weekly run only
 // fetches what's new. Everything comes from ESPN's public match summaries; costs nothing.
 //
@@ -12,6 +13,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchMatch } from '../../src/lib/sport/espn.mjs';
 import { playerRows, mainRole, ROLES } from '../../src/lib/sport/matchups.mjs';
+import { matchSetPieces, seasonSetPieces } from '../../src/lib/sport/setpieces.mjs';
 import { fplTeamFor } from '../../src/lib/sport/fplmap.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -30,6 +32,8 @@ const now = new Date();
 const CURRENT = now.getUTCMonth() >= 6 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
 const FROM = Number(arg('--from', CURRENT - 3));
 const SEASONS = Array.from({ length: CURRENT - FROM + 1 }, (_, i) => String(FROM + i));
+// Set pieces are kept for this season and last; older matches cached before them don't get them.
+const SET_PIECES = [String(CURRENT), String(CURRENT - 1)];
 
 async function json(url, tries = 4) {
   for (let i = 0; ; i++) {
@@ -89,14 +93,15 @@ for (const season of SEASONS) {
   cache[season] = await readJson(file, {});
   const { teams, matches } = await seasonMatches(season);
   for (const t of teams) teamInfo[t.id] = { name: t.displayName, abbr: t.abbreviation, short: t.shortDisplayName ?? t.displayName };
-  const todo = matches.filter((m) => !cache[season][m.id]);
+  const todo = matches.filter((m) => !cache[season][m.id] || (SET_PIECES.includes(season) && !cache[season][m.id].sp));
   console.log(`${season}: ${matches.length} finished, ${todo.length} to fetch`);
   let done = 0;
   await pool(todo, 6, async (m) => {
     const d = await fetchMatch('all', m.id).catch((e) => (console.warn(`  ${m.id}: ${e.message}`), null));
     if (!d || !d.lineups?.home || !d.hasShotData) return;
     const side = (s) => d.shots.filter((x) => x.side === s).reduce((t, x) => t + x.xg, 0);
-    cache[season][m.id] = {
+    // A match cached before set pieces were kept only gets them added; the rest stays as it was.
+    cache[season][m.id] ??= {
       d: m.date.slice(0, 10),
       h: d.match.home.id,
       a: d.match.away.id,
@@ -106,6 +111,7 @@ for (const season of SEASONS) {
       xa: Math.round(side('away') * 1000) / 1000,
       r: playerRows(d),
     };
+    if (SET_PIECES.includes(season)) cache[season][m.id].sp = matchSetPieces(d);
     if (++done % 50 === 0) console.log(`  ${done}/${todo.length}`);
   });
   await mkdir(CACHE, { recursive: true });
@@ -247,4 +253,34 @@ for (const [fplId, espnId] of Object.entries(fplIds)) {
   };
 }
 await writeFile(join(OUT, 'netxg.json'), JSON.stringify({ built: new Date().toISOString(), players: netxg }));
-console.log(`Wrote ${Object.keys(files).length} player files, index.json and netxg.json (${Object.keys(netxg).length} players)`);
+// Set pieces, this season and last: who each club aims for and who delivers, and how the club does
+// at both ends. Each player row ends in his FPL id (0 if he has none) and the short name FPL uses.
+const fplOf = Object.fromEntries(Object.entries(fplIds).map(([f, e]) => [e, Number(f)]));
+const webName = Object.fromEntries(fpl.elements.map((e) => [e.id, e.web_name]));
+// Without FPL's: the surname, with its particle ("van Dijk", "De Bruyne").
+const surname = (full) => {
+  const w = full.split(' ');
+  const at = w.findIndex((x, i) => i > 0 && i < w.length - 1 && /^(van|von|de|da|di|del|dos|das|du|la|le|ter|ten|el|al)$/i.test(x));
+  return w.length < 2 ? full : w.slice(at > 0 ? at : -1).join(' ');
+};
+const withFpl = (row) => [...row, fplOf[row[0]] ?? 0, webName[fplOf[row[0]]] ?? surname(row[1])];
+const setPieces = {};
+for (const season of SET_PIECES.filter((s) => cache[s])) {
+  const table = seasonSetPieces(Object.values(cache[season]));
+  for (const t of Object.values(table)) {
+    t.targets = t.targets.map(withFpl);
+    t.deliver = t.deliver.map(withFpl);
+  }
+  setPieces[season] = table;
+}
+// The clubs in them with their kit colours, for the bars: this season's from the league's club list,
+// any that went down from their own pages.
+const kits = {};
+for (const { team: t } of (await json(`${SITE}/eng.1/teams`))?.sports?.[0]?.leagues?.[0]?.teams ?? []) kits[String(t.id)] = { color: t.color ?? null, alt: t.alternateColor ?? null };
+const spTeams = {};
+for (const id of new Set(Object.values(setPieces).flatMap((t) => Object.keys(t)))) {
+  const kit = kits[id] ?? (await json(`${SITE}/eng.1/teams/${id}`).then((d) => d?.team && { color: d.team.color ?? null, alt: d.team.alternateColor ?? null }).catch(() => null));
+  spTeams[id] = { ...teamInfo[id], ...kit };
+}
+await writeFile(join(OUT, 'setpieces.json'), JSON.stringify({ built: new Date().toISOString(), seasons: Object.keys(setPieces).sort().reverse(), teams: spTeams, fplTeams: espnOfFpl, data: setPieces }));
+console.log(`Wrote ${Object.keys(files).length} player files, index.json, netxg.json (${Object.keys(netxg).length} players) and setpieces.json`);

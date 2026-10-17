@@ -41,6 +41,8 @@ export const useNetXgModel = () => useJson('netxg-model.json');
 export const useAccuracy = () => useJson('accuracy.json');
 /** Every match row for one club's current players: { espnId: { n, rows } }. */
 export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam}.json` : null);
+/** Set pieces club by club, this season and last (src/lib/sport/setpieces.mjs). */
+export const useSetPieces = () => useJson('setpieces.json');
 
 /** Team ratings and role factors from the index, ready for fpl.mjs withMatchups and match odds. */
 export function useForecastKit(ix, learned) {

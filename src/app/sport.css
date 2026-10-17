@@ -30,6 +30,15 @@
   --sp-mine: #f3f7f4;
   --sp-shirt-edge: rgba(0, 0, 0, 0.25);
   --sp-kit-white: #ececec; /* a white kit as a block: pale enough to read as white, dark enough to show on the page */
+  /* Liquid Glass, for the tab bar only: the page shows through, blurred and a little more vivid.
+     Thick enough that its labels pass 4.5:1 over anything, since Safari has no "reduce transparency". */
+  --sp-glass: rgba(255, 255, 255, 0.7);
+  --sp-glass-filter: blur(20px) saturate(1.8);
+  --sp-glass-hi: rgba(255, 255, 255, 0.8);
+  --sp-glass-hi-2: rgba(255, 255, 255, 0.45);
+  --sp-glass-rim: rgba(0, 0, 0, 0.1);
+  --sp-glass-lift: 0 8px 28px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+  --sp-lens: rgba(0, 0, 0, 0.075);
   --sp-sans: var(--font-sport, 'Archivo'), system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: var(--sp-page);
   color: var(--sp-ink);
@@ -70,6 +79,13 @@ html[data-sport-theme='dark'] .sp-root {
   --sp-mine: #172019;
   --sp-shirt-edge: rgba(255, 255, 255, 0.35);
   --sp-kit-white: #ececec;
+  --sp-glass: rgba(28, 28, 30, 0.72);
+  --sp-glass-filter: blur(20px) saturate(1.8) brightness(0.85);
+  --sp-glass-hi: rgba(255, 255, 255, 0.2);
+  --sp-glass-hi-2: rgba(255, 255, 255, 0.08);
+  --sp-glass-rim: rgba(0, 0, 0, 0.7);
+  --sp-glass-lift: 0 8px 28px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
+  --sp-lens: rgba(255, 255, 255, 0.15);
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-sport-theme='light']) .sp-root {
@@ -96,6 +112,13 @@ html[data-sport-theme='dark'] .sp-root {
     --sp-mine: #172019;
     --sp-shirt-edge: rgba(255, 255, 255, 0.35);
     --sp-kit-white: #ececec;
+    --sp-glass: rgba(28, 28, 30, 0.72);
+    --sp-glass-filter: blur(20px) saturate(1.8) brightness(0.85);
+    --sp-glass-hi: rgba(255, 255, 255, 0.2);
+    --sp-glass-hi-2: rgba(255, 255, 255, 0.08);
+    --sp-glass-rim: rgba(0, 0, 0, 0.7);
+    --sp-glass-lift: 0 8px 28px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
+    --sp-lens: rgba(255, 255, 255, 0.15);
   }
 }
 body:has(.sp-root) { background: #ffffff; }
@@ -130,7 +153,8 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 /* ---------- frame ---------- */
 .sp-frame { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 1fr; }
 @media (min-width: 1024px) { .sp-frame { grid-template-columns: 236px minmax(0, 1fr); gap: 44px; padding: 0 32px; } }
-.sp-main { min-width: 0; padding: 0 0 calc(48px + env(safe-area-inset-bottom, 0px)); }
+/* Phones keep the end of every page clear of the tab bar floating over it. */
+.sp-main { min-width: 0; padding: 0 0 calc(var(--sp-dock-h) + var(--sp-dock-gap) + 28px); }
 @media (min-width: 1024px) { .sp-main { padding: 20px 0 64px; } }
 .sp-pad { padding-left: 16px; padding-right: 16px; }
 @media (min-width: 1024px) { .sp-pad { padding-left: 0; padding-right: 0; } }
@@ -193,13 +217,102 @@ html[data-sport-theme='dark'] body:has(.sp-root) { background: #121212; }
 .sp-drawer-top { display: flex; align-items: center; justify-content: space-between; height: 46px; margin: 0 -10px 14px 0; }
 @media (min-width: 1024px) { .sp-drawer { display: none; } }
 
-/* Phones: the sport's sections as tabs under the header. */
-.sp-sections { display: flex; gap: 22px; padding: 0 16px; border-bottom: 1px solid var(--sp-rule); overflow-x: auto; scrollbar-width: none; }
-.sp-sections::-webkit-scrollbar { display: none; }
-.sp-sections a { display: flex; align-items: center; height: 46px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: 15px; font-weight: 700; color: var(--sp-muted); white-space: nowrap; }
-.sp-sections a:hover { color: var(--sp-ink); }
-.sp-sections a[aria-current='page'] { color: var(--sp-ink); font-weight: 850; border-bottom-color: var(--sp-ink); }
-@media (min-width: 1024px) { .sp-sections { display: none; } }
+/* Phones: the sport's sections as a tab bar floating over the bottom of the page, in Liquid Glass
+   (iOS 26's own material: what's underneath shows through, blurred and a little more vivid, behind a
+   bright rim). The one place the app uses glass: the controls that float over the content, never the
+   content itself, and never glass on glass (the lens under the current section is a plain tint).
+   Sized as iOS sizes its own: 62 px tall, 21 px above the home indicator once saved to the home
+   screen (in a Safari tab, 10 px above Safari's own bar, which takes the inset), search a circle 8 px
+   to the side. With "Increase contrast" it's solid with an outline. */
+.sp-root { --sp-dock-h: 62px; --sp-dock-gap: max(10px, calc(env(safe-area-inset-bottom, 0px) - 13px)); --sp-dock-side: 20px; }
+@media (display-mode: standalone) { .sp-root { --sp-dock-gap: max(21px, calc(env(safe-area-inset-bottom, 0px) - 13px)); } }
+.sp-glass {
+  background: var(--sp-glass);
+  -webkit-backdrop-filter: var(--sp-glass-filter);
+  backdrop-filter: var(--sp-glass-filter);
+  /* The light catching the top-left rim and, fainter, the bottom-right; a hairline; the lift off the page. */
+  box-shadow: inset 1.5px 2px 1px -1px var(--sp-glass-hi), inset -1px -1px 1px var(--sp-glass-hi-2), 0 0 0 0.5px var(--sp-glass-rim), var(--sp-glass-lift);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .sp-glass { background: var(--sp-page); } }
+@media (prefers-reduced-transparency: reduce) { .sp-glass { background: var(--sp-page); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@media (prefers-contrast: more) { .sp-glass { background: var(--sp-page); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 0 0 1.5px var(--sp-ink); } }
+
+.sp-dock { position: fixed; z-index: 40; left: max(var(--sp-dock-side), env(safe-area-inset-left, 0px)); right: max(var(--sp-dock-side), env(safe-area-inset-right, 0px)); bottom: var(--sp-dock-gap); display: flex; align-items: center; justify-content: center; gap: 8px; pointer-events: none; }
+.sp-dock > * { pointer-events: auto; }
+/* A sport without sections yet: search alone, at the trailing edge as on iOS. */
+.sp-dock-solo { justify-content: flex-end; }
+@media (min-width: 1024px) { .sp-dock { display: none; } }
+/* While a field has the keyboard up, the bar steps aside. */
+html.sp-typing .sp-dock { display: none; }
+.sp-dock-bar { position: relative; flex: 1; max-width: 460px; height: var(--sp-dock-h); padding: 4px; border-radius: 999px; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.sp-dock-bar a { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; color: color-mix(in srgb, var(--sp-ink) 84%, transparent); font-size: 10.5px; font-weight: 650; line-height: 1.2; letter-spacing: 0.01em; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.sp-dock-bar a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-dock-bar a svg { width: 25px; height: 25px; flex: none; transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.sp-dock-bar a.sp-dock-on { color: var(--sp-ink); font-weight: 850; }
+.sp-dock-bar a.sp-dock-on svg { stroke-width: 2; }
+/* The lens: under the section you're in, there the moment a finger lands on another, sliding over with a
+   little overshoot. Held and dragged, it swells into a clear bubble that follows the finger. */
+.sp-dock-lens { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; border-radius: 999px; background: var(--sp-lens); transition: transform 0.5s cubic-bezier(0.3, 1.3, 0.5, 1), scale 0.3s cubic-bezier(0.3, 1.5, 0.5, 1), background-color 0.2s, box-shadow 0.2s; will-change: transform; }
+.sp-dock-press .sp-dock-lens { scale: 1.06; }
+.sp-dock-drag .sp-dock-lens { transition: transform 50ms linear, scale 0.3s cubic-bezier(0.3, 1.5, 0.5, 1), background-color 0.2s, box-shadow 0.2s; scale: 1.16 1.1; background: color-mix(in srgb, var(--sp-lens) 40%, transparent); box-shadow: inset 1.5px 2px 1px -1px var(--sp-glass-hi), inset -1px -1px 1px var(--sp-glass-hi-2), 0 0 0 0.5px var(--sp-glass-rim), 0 6px 18px rgba(0, 0, 0, 0.14); }
+.sp-dock-drag a.sp-dock-on svg { transform: scale(1.16); }
+.sp-dock-find { flex: none; width: var(--sp-dock-h); height: var(--sp-dock-h); border-radius: 50%; display: grid; place-items: center; color: var(--sp-ink); -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.sp-dock-find svg { width: 25px; height: 25px; transition: transform 0.3s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.sp-dock-find:active svg { transform: scale(0.86); }
+@media (prefers-reduced-motion: reduce) {
+  .sp-dock-lens, .sp-dock-drag .sp-dock-lens { transition: none; }
+  .sp-dock-press .sp-dock-lens, .sp-dock-drag .sp-dock-lens, .sp-dock-drag a.sp-dock-on svg, .sp-dock-find:active svg { scale: none; transform: none; }
+}
+/* Anchored sections land under the header, not behind it. */
+.sp-main [id] { scroll-margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
+@media (min-width: 1024px) { .sp-main [id] { scroll-margin-top: 16px; } }
+
+/* Search: a sheet over everything on phones, a panel at the top of the screen on desktop. */
+.sp-find { position: fixed; inset: 0; z-index: 70; visibility: hidden; transition: visibility 0s 0.28s; }
+.sp-find-open { visibility: visible; transition: none; }
+.sp-find-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.38); opacity: 0; transition: opacity 0.25s; }
+.sp-find-open .sp-find-scrim { opacity: 1; }
+.sp-find-panel { position: absolute; left: 0; right: 0; bottom: 0; top: calc(10px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; background: var(--sp-page); border-radius: 14px 14px 0 0; transform: translateY(105%); transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.2, 1); overflow: hidden; }
+.sp-find-open .sp-find-panel { transform: none; }
+@media (min-width: 1024px) {
+  .sp-find-panel { left: 50%; right: auto; bottom: auto; top: 9vh; width: min(640px, 92vw); max-height: 78vh; border-radius: 12px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--sp-rule-2); transform: translate(-50%, -12px); opacity: 0; transition: transform 0.2s, opacity 0.2s; }
+  .sp-find-open .sp-find-panel { transform: translate(-50%, 0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .sp-find-panel, .sp-find-scrim { transition: none; } }
+.sp-find-top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--sp-rule); }
+.sp-find-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--sp-sunk); color: var(--sp-muted); }
+.sp-find-field svg { flex: none; width: 20px; height: 20px; }
+.sp-find-field input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; color: var(--sp-ink); font: inherit; font-size: 17px; font-weight: 550; -webkit-appearance: none; appearance: none; }
+.sp-find-field input::placeholder { color: var(--sp-muted); font-weight: 500; }
+/* The field is the only thing in the sheet that takes typing; the caret marks it, not a box. */
+.sp-root .sp-find-field input:focus-visible { outline: none; }
+.sp-find-field:focus-within { box-shadow: inset 0 0 0 1.5px var(--sp-rule-2); }
+.sp-find-field input::-webkit-search-cancel-button { display: none; }
+.sp-find-clear { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--sp-ink-2); }
+.sp-find-clear svg { width: 16px; height: 16px; }
+.sp-find-done { flex: none; font-size: 16px; font-weight: 750; height: 44px; }
+.sp-find-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0 calc(24px + env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling: touch; }
+.sp-find-group { padding: 12px 16px 4px; }
+.sp-find-group h2 { margin: 0 0 2px; font-size: 13px; font-weight: 800; color: var(--sp-muted); }
+.sp-find-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid var(--sp-rule); }
+.sp-find-row:last-child { border-bottom: 0; }
+.sp-find-row > span:last-child { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sp-find-row b { font-size: 15.5px; font-weight: 750; font-variation-settings: 'wdth' 92; }
+.sp-find-row small { font-size: 12.5px; color: var(--sp-muted); line-height: 1.35; }
+.sp-find-row:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.sp-find-pos { flex: none; width: 34px; font-size: 11px; font-weight: 850; color: var(--sp-ink-2); }
+.sp-find-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0 8px; }
+.sp-find-chips a { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 8px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--sp-rule-2); font-size: 14px; font-weight: 700; }
+.sp-find-note { margin: 14px 16px; font-size: 14px; color: var(--sp-muted); }
+/* The stand-in that holds the iPhone keyboard up while the sheet opens. */
+.sp-find-proxy { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; font-size: 16px; border: 0; padding: 0; pointer-events: none; }
+
+/* Desktop: search opens from the top of the sidebar. */
+.sp-side-find { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; margin: 0 0 18px; padding: 0 12px; border-radius: 999px; background: var(--sp-sunk); color: var(--sp-muted); font-size: 14.5px; font-weight: 600; text-align: left; }
+.sp-side-find svg { width: 18px; height: 18px; flex: none; }
+.sp-side-find kbd { margin-left: auto; font: inherit; font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--sp-rule-2); }
+.sp-side-find:hover { color: var(--sp-ink); }
+@media (hover: none) { .sp-side-find kbd { display: none; } }
 
 /* ---------- controls ---------- */
 .sp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--sp-rule-2); background: var(--sp-surface); font-size: 14px; font-weight: 700; white-space: nowrap; }
@@ -794,11 +907,30 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-wl { display: grid; grid-template-columns: 34px minmax(0, 1fr) 32px; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--sp-rule); }
 .sp-wl-gws { display: flex; gap: 10px; margin-top: 4px; }
 .sp-wl-gws > span { display: flex; flex-direction: column; align-items: center; min-width: 30px; }
-.sp-sets { display: grid; grid-template-columns: 62px repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; padding: 10px 16px; border-top: 1px solid var(--sp-rule); }
-@media (min-width: 1024px) { .sp-sets { padding: 10px 0; } }
-.sp-sets-club { display: flex; align-items: center; gap: 6px; }
-.sp-sets-club img { object-fit: contain; }
-.sp-sets-club b { font-weight: 900; font-variation-settings: 'wdth' 75; }
+/* Set pieces: a club per cell, hairlines between them, the players it aims for as bars in its colour. */
+.sp-spg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--sp-rule); border-top: 1px solid var(--sp-rule); border-bottom: 1px solid var(--sp-rule); }
+.sp-spc { min-width: 0; padding: 12px 12px 14px; background: var(--sp-page); }
+.sp-spc:nth-child(odd) { padding-left: 16px; }
+.sp-spc:nth-child(even) { padding-right: 16px; }
+@media (min-width: 1024px) {
+  .sp-spg { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sp-spc:nth-child(n) { padding: 12px 14px 14px; }
+  .sp-spc:nth-child(4n + 1) { padding-left: 0; }
+  .sp-spc:nth-child(4n) { padding-right: 0; }
+}
+.sp-spc-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sp-spc-head b { font-size: 15px; font-weight: 850; font-variation-settings: 'wdth' 80; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-spc-head:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.sp-spc-vol { margin: 3px 0 2px; font-size: 11.5px; color: var(--sp-muted); font-variant-numeric: tabular-nums; }
+.sp-spt { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 8px; margin-top: 8px; font-size: 13px; }
+.sp-spt-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-spt-n { font-weight: 850; font-variant-numeric: tabular-nums; }
+.sp-spt-n small { font-size: 11.5px; font-weight: 650; color: var(--sp-muted); }
+.sp-spt-bar { grid-column: 1 / -1; display: block; height: 5px; margin-top: 4px; background: var(--sp-sunk); }
+.sp-spt-bar i { display: block; height: 100%; }
+.sp-spt-mine .sp-spt-name::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border: 1.5px solid var(--sp-ink); border-radius: 50%; vertical-align: 1px; }
+.sp-spc-takers { margin: 10px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--sp-ink-2); }
+.sp-spc-takers span { color: var(--sp-muted); }
 .sp-news { display: grid; gap: 1px; padding: 8px 0; border-top: 1px solid var(--sp-rule); }
 .sp-news-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; padding: 6px 0; border-top: 1px solid var(--sp-rule); font-size: 13.5px; font-weight: 700; }
 .sp-news-out { color: var(--sp-loss); text-decoration: line-through; text-decoration-thickness: 1px; }
