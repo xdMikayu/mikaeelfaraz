@@ -11,8 +11,8 @@
 //   Queue:     a text body of JSON objects back to back (the Shortcuts queue file), e.g.
 //              {"source":"alert","received_at":"2026-10-17T12:28:31+04:00","title":"Tabby","body":"..."}
 //              {"source":"alert","received_at":"2026-10-17T13:02:10+04:00","title":"Tabby","body":"..."}
-//              Re-sending the same file is safe. The reply's "clear" is true once every
-//              event in it is stored, so the Shortcut can empty the file.
+//              Re-sending the same file is safe. The reply's "queue" is "clear" once every
+//              event in it is stored, so the Shortcut can empty the file, else "keep".
 import { createHash } from 'node:crypto';
 import { authenticate, getAdmin, ingestEvents, jsonError, HttpError } from '@/lib/finance/server.mjs';
 import { splitJsonObjects } from '@/lib/finance/parse.mjs';
@@ -42,7 +42,7 @@ export async function POST(request) {
     } else {
       const text = await request.text();
       const queued = splitJsonObjects(text);
-      if (queued && !queued.length) return Response.json({ ok: true, parsed: 0, clear: true, message: 'Nothing queued', results: [] });
+      if (queued && !queued.length) return Response.json({ ok: true, parsed: 0, queue: 'clear', message: 'Nothing queued', results: [] });
       body = queued
         ? { events: queued.map((e) => (e && typeof e === 'object' && !e.external_id && e.received_at ? { ...e, external_id: queueId(e) } : e)) }
         : { source: 'text', text };
@@ -63,8 +63,9 @@ export async function POST(request) {
       ignored: count('ignored'),
       unparsed: count('unparsed'),
       errors: count('error'),
-      // Safe to empty a Shortcuts queue: nothing failed and nothing is half-done.
-      clear: !results.some((r) => r.status === 'error' || r.inFlight),
+      // Text, not a boolean, so a Shortcuts "If … is clear" can test it.
+      // Safe to empty the queue only when nothing failed and nothing is half-done.
+      queue: results.some((r) => r.status === 'error' || r.inFlight) ? 'keep' : 'clear',
       // Handy for a Shortcuts "Show Notification" step.
       message: first ? `Logged ${first.currency} ${first.amount.toFixed(2)} at ${first.merchant}` : results[0]?.reason || results[0]?.status,
       results,
