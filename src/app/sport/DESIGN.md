@@ -141,6 +141,26 @@ outline for a play-off, red for the drop, and a line where one zone ends. No oth
   Substitutions recede.
 - A red card in a kit-colour block sits on a small white chip, so it reads on a red kit too.
 - The win-probability chart marks each goal with a ball above it and a faint rule in the scorers' colour.
+- Every goal names who set it up, never behind a tap: under each scorer in the scoreboard a smaller line with a
+  boot (`Boot` in `glyphs.jsx`) and the name, and in the key events "Assist **J. Doku**". In lineups a boot stands
+  beside a player for each assist, as a ball does for each goal.
+
+## Player ratings
+
+Our own, worked out in `src/lib/sport/ratings.mjs` from the free data (ESPN's lineups and numbers, Opta's commentary
+with our xG, and FPL's Opta numbers in the Premier League) and checked against FPL's bonus points by
+`scripts/sport/check-ratings.mjs`. Settings › About the data explains them in plain words; keep that page true when
+the weights or the scale change.
+
+- A plate in the scoreboard's type, one decimal, white on its band: dark green from 8 (#0a6b33), green from 7
+  (#188244), grey from 6 (#6b6b6b), red under 6. The best on the pitch gets a star in the plate. No other colours.
+- On the pitch the plate sits on the shirt's top-right corner with a white edge against the grass; a card sits top
+  left, goals and assists bottom left, the minute the player went off bottom right. A chip stays one shirt and a
+  name tall, so five lines a side fit a phone.
+- The overview has the best on the pitch and each side's top five, and the way to everyone's (Lineups). Substitutes'
+  lists carry the plate beside their minutes.
+- Nobody is rated before 10 minutes unless they scored, set one up or were sent off; while the match is on the
+  ratings say "so far".
 
 ## Cricket, live
 
@@ -176,6 +196,23 @@ built into `public/sport/data/pl/setpieces.json` by `scripts/sport/build-matchup
 - On the Premier League's table page and in Fantasy (Players › Set pieces), where FPL's takers sit under each
   club and the league's biggest threats are ranked above the grid, your own players ringed. A club's page has its
   own: who it aims for, who delivers, and how it does at both ends.
+
+## Effective ownership
+
+In Fantasy › Team (`_components/FantasyEo.jsx`): every manager's multiplier on a player added up, as a share of the
+managers, against your mini-league or the world's top 50 (the first page of FPL's overall league).
+
+- What matters is the stake, your multiplier minus the EO: it leads each row, green when the player's points lift
+  you against them and red when they drop you, on a bar that grows out from the middle.
+- One sentence over the list says where your gameweek stands against their average, before hits.
+- Each player card says it in words: "each point Haaland scores drops you 0.50 against them".
+
+## Fantasy stats
+
+Player stats lead with points, goals, assists, xG, xA, xGI, ± (goals and assists against their expected),
+defensive contributions and ownership. Under them, each with its own anchor: who's above and below their xGI, where
+the points come from (minutes, goals and assists, clean sheets, defensive contributions, bonus, saves and what was
+lost) and every club against its xG at both ends. Season numbers add up FPL's live data, gameweek by gameweek.
 
 ## Live, every sport
 

@@ -153,6 +153,36 @@ export function leagueLive(rows, ctx) {
   return { table, ownership, managers: n };
 }
 
+/**
+ * Adds one player's gameweek (FPL's explain: the stats and their points, per fixture) to the running
+ * totals: appearances, points by where they came from, and how often their defensive contributions paid.
+ */
+export function addSources(per, id, explain = []) {
+  for (const x of explain) {
+    if (!x.stats.some((s) => s.identifier === 'minutes' && s.value > 0)) continue;
+    const p = (per[id] ??= { apps: 0, pts: 0, src: {}, dcHits: 0 });
+    p.apps += 1;
+    for (const s of x.stats) {
+      p.pts += s.points;
+      p.src[s.identifier] = (p.src[s.identifier] ?? 0) + s.points;
+      if (s.identifier === 'defensive_contribution' && s.points > 0) p.dcHits += 1;
+    }
+  }
+  return per;
+}
+
+/** Where points come from, grouped as the stats tab shows them: [key, label, FPL's identifiers]. */
+export const SOURCES = [
+  ['play', 'Playing', ['minutes']],
+  ['ga', 'Goals and assists', ['goals_scored', 'assists']],
+  ['cs', 'Clean sheets', ['clean_sheets']],
+  ['dc', 'Defensive contributions', ['defensive_contribution']],
+  ['bonus', 'Bonus', ['bonus']],
+  ['saves', 'Saves', ['saves', 'penalties_saved']],
+  ['lost', 'Lost', ['goals_conceded', 'yellow_cards', 'red_cards', 'own_goals', 'penalties_missed']],
+];
+export const sourcePoints = (src, ids) => ids.reduce((t, k) => t + (src?.[k] ?? 0), 0);
+
 /** The difference a player makes to you against the league: (your multiplier - league EO) x points. */
 export function swing(element, myMult, ownership, points) {
   const eo = (ownership.find((o) => o.element === element)?.eo ?? 0) / 100;
