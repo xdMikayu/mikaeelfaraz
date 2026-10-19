@@ -55,15 +55,14 @@ export function fplFixtureFor(match, fplTeams, fixtures) {
 const fold = (s) => (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
 
 /**
- * Each player's FPL live numbers for one match, keyed by ESPN athlete id: through the matchup data's
- * FPL-to-ESPN map where it has the player, else by name within the club. Only for clubs with one fixture in
- * the gameweek, since FPL's live numbers are per gameweek.
+ * Which FPL player each player in a Premier League lineup is: { ESPN athlete id: FPL element id }.
+ * Sure matches first (the matchup data's FPL-to-ESPN map, the full name, FPL's short name), then a
+ * surname only one of the matchday squad has, for anyone still unmatched whom `played` vouches for
+ * (without it, only when no one else at the club shares the surname either).
  */
-export function fplPlayersFor(lineups, fplStatic, fplLive, fx, espnOfFpl = {}) {
-  const once = (t) => fplLive.fixtures.filter((f) => f.home === t || f.away === t).length === 1;
+export function fplElementsFor(lineups, fplStatic, fx, espnOfFpl = {}, played = null) {
   const out = {};
   for (const [side, team] of [['home', fx.home], ['away', fx.away]]) {
-    if (!once(team)) continue;
     const espn = [...(lineups?.[side]?.starters ?? []), ...(lineups?.[side]?.bench ?? [])];
     const byName = new Map(espn.map((p) => [fold(p.name), p.id]));
     const byLast = new Map();
@@ -72,21 +71,33 @@ export function fplPlayersFor(lineups, fplStatic, fplLive, fx, espnOfFpl = {}) {
       byLast.set(k, byLast.has(k) ? null : p.id); // a surname two of them share can't pick one
     }
     const ids = new Set(espn.map((p) => p.id));
-    const pool = fplStatic.elements.filter((x) => x.team === team && fplLive.elements[x.id]);
-    // Sure matches first (the matchup data's map, the full name, FPL's short name), then a surname
-    // for anyone who played and is still unmatched.
+    const pool = fplStatic.elements.filter((x) => x.team === team);
+    const shared = new Map();
+    for (const e of pool) shared.set(fold(e.second), (shared.get(fold(e.second)) ?? 0) + 1);
     const left = [];
     for (const e of pool) {
       const mapped = espnOfFpl[e.id];
       const id = (mapped && ids.has(mapped) ? mapped : null) ?? byName.get(fold(`${e.first} ${e.second}`)) ?? byName.get(fold(e.name));
-      if (id && !out[id]) out[id] = fplLive.elements[e.id];
+      if (id && !out[id]) out[id] = e.id;
       else if (!id) left.push(e);
     }
     for (const e of left) {
-      if (!(fplLive.elements[e.id].minutes > 0)) continue;
+      if (played ? !played(e.id) : shared.get(fold(e.second)) > 1) continue;
       const id = byLast.get(fold(e.second)) ?? byLast.get(fold(e.name));
-      if (id && !out[id]) out[id] = fplLive.elements[e.id];
+      if (id && !out[id]) out[id] = e.id;
     }
   }
   return out;
+}
+
+/**
+ * Each player's FPL live numbers for one match, keyed by ESPN athlete id (fplElementsFor, a surname
+ * match only for someone who played). Only for clubs with one fixture in the gameweek, since FPL's live
+ * numbers are per gameweek.
+ */
+export function fplPlayersFor(lineups, fplStatic, fplLive, fx, espnOfFpl = {}) {
+  const once = (t) => fplLive.fixtures.filter((f) => f.home === t || f.away === t).length === 1;
+  const elements = fplStatic.elements.filter((x) => once(x.team) && fplLive.elements[x.id]);
+  const ids = fplElementsFor(lineups, { ...fplStatic, elements }, fx, espnOfFpl, (id) => fplLive.elements[id].minutes > 0);
+  return Object.fromEntries(Object.entries(ids).map(([espn, id]) => [espn, fplLive.elements[id]]));
 }
