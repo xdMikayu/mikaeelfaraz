@@ -400,6 +400,14 @@ function lineupFrom(roster, events) {
       yellow: stat(p, 'yellowCards'),
       red: stat(p, 'redCards'),
       og: stat(p, 'ownGoals'),
+      // The rest of ESPN's per-player numbers, for the ratings.
+      shots: stat(p, 'totalShots'),
+      onTarget: stat(p, 'shotsOnTarget'),
+      fouls: stat(p, 'foulsCommitted'),
+      fouled: stat(p, 'foulsSuffered'),
+      offsides: stat(p, 'offsides'),
+      saves: stat(p, 'saves'),
+      conceded: stat(p, 'goalsConceded'),
     };
   });
   const starters = players.filter((p) => p.starter).sort((a, b) => a.place - b.place);

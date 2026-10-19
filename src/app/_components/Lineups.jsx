@@ -1,19 +1,20 @@
 'use client';
-import { Ball, Card, In, Out } from './glyphs';
+import { Ball, Boot, Card, In, Out } from './glyphs';
 import { inkOn } from './colors';
+import { RatingPlate } from './Ratings';
 
 /** Both XIs on one pitch: home attacking up from the bottom, away attacking down from the top. */
-export default function Lineups({ lineups, colors, names }) {
+export default function Lineups({ lineups, colors, names, ratings }) {
   const { home, away } = lineups;
   if (!home?.starters?.length && !away?.starters?.length) return null;
   const drawable = home?.lines && away?.lines;
   return (
     <div>
       {drawable ? (
-        <div className="sp-pitch-wrap" style={{ position: 'relative', aspectRatio: '68 / 105', maxWidth: 520, margin: '0 auto' }}>
+        <div className="sp-pitch-wrap" style={{ position: 'relative', aspectRatio: '68 / 105', minHeight: 540, maxWidth: 520, margin: '0 auto' }}>
           <PitchLines />
-          <Half lines={away.lines} color={colors.away} top />
-          <Half lines={home.lines} color={colors.home} />
+          <Half lines={away.lines} color={colors.away} top ratings={ratings} />
+          <Half lines={home.lines} color={colors.home} ratings={ratings} />
           <span className="sp-pill" style={{ position: 'absolute', left: 10, top: 10, background: 'rgba(5,10,20,0.55)', color: '#fff' }}>{names.away} · {away.formation}</span>
           <span className="sp-pill" style={{ position: 'absolute', left: 10, bottom: 10, background: 'rgba(5,10,20,0.55)', color: '#fff' }}>{names.home} · {home.formation}</span>
         </div>
@@ -22,7 +23,7 @@ export default function Lineups({ lineups, colors, names }) {
           {[['home', home], ['away', away]].map(([k, l]) => l && (
             <div key={k}>
               <h3 className="sp-h3" style={{ marginBottom: 6 }}>{names[k]} {l.formation}</h3>
-              <PlayerList players={l.starters} color={colors[k]} />
+              <PlayerList players={l.starters} color={colors[k]} ratings={ratings} />
             </div>
           ))}
         </div>
@@ -31,7 +32,7 @@ export default function Lineups({ lineups, colors, names }) {
         {[['home', home], ['away', away]].map(([k, l]) => l && (
           <div key={k}>
             <h3 className="sp-h3" style={{ marginBottom: 4 }}>{names[k]} substitutes</h3>
-            <PlayerList players={l.bench} bench color={colors[k]} />
+            <PlayerList players={l.bench} bench color={colors[k]} ratings={ratings} />
           </div>
         ))}
       </div>
@@ -54,42 +55,60 @@ function PitchLines() {
   );
 }
 
-function Half({ lines, color, top }) {
+function Half({ lines, color, top, ratings }) {
   const n = lines.length;
   return lines.map((line, j) => {
-    // Rows from the goal line (4% / 96%) to just short of halfway.
-    const yPct = top ? 5 + (j * 39) / (n - 1) : 95 - (j * 39) / (n - 1);
+    // Rows from just off the goal line to just short of halfway.
+    const yPct = top ? 5.5 + (j * 38.5) / (n - 1) : 94.5 - (j * 38.5) / (n - 1);
     // Facing down the page, the away team's left is the viewer's right.
     const row = top ? [...line].reverse() : line;
     return row.map((p, i) => (
       <div key={p.id} style={{ position: 'absolute', left: `${((i + 1) / (row.length + 1)) * 100}%`, top: `${yPct}%`, transform: 'translate(-50%, -50%)' }}>
-        <Player p={p} color={color} />
+        <Player p={p} color={color} r={ratings?.players[p.id]} best={ratings?.best === p.id} />
       </div>
     ));
   });
 }
 
-function Player({ p, color }) {
+// Everything about a player sits on the corners of the shirt, as the rating apps do it: the rating top
+// right, a card top left, goals and assists bottom left, the minute they went off bottom right. The
+// chip stays one shirt and a name tall, so five lines a side fit a phone's pitch without touching.
+function Player({ p, color, r, best }) {
+  const marks = p.goals + p.assists + (p.og > 0 ? 1 : 0);
   return (
     <div className="sp-player">
-      <span className="sp-shirt" style={{ background: color, color: inkOn(color) }}>{p.jersey}</span>
-      <span className="sp-pname" title={p.name}>{p.last}</span>
-      <span className="sp-pmeta">
-        {Array.from({ length: p.goals }, (_, i) => <Ball key={`g${i}`} size={11} />)}
-        {p.og > 0 && <Ball size={11} own />}
-        {p.red > 0 ? <Card red size={10} /> : p.yellow > 0 ? <Card size={10} /> : null}
+      <span className="sp-pchip">
+        <span className="sp-shirt" style={{ background: color, color: inkOn(color) }}>{p.jersey}</span>
+        {r && (
+          <span className="sp-pb sp-pb-tr">
+            <RatingPlate r={r} best={best} size="xs" />
+          </span>
+        )}
+        {(p.red > 0 || p.yellow > 0) && <span className="sp-pb sp-pb-tl">{p.red > 0 ? <Card red size={11} /> : <Card size={11} />}</span>}
+        {marks > 0 && (
+          <span className="sp-pb sp-pb-bl">
+            {p.goals + p.og > 0 && (
+              <span className="sp-pb-balls">
+                {Array.from({ length: p.goals }, (_, i) => <Ball key={`g${i}`} size={12} />)}
+                {p.og > 0 && <Ball size={12} own />}
+              </span>
+            )}
+            {p.assists > 0 && <span>{Array.from({ length: p.assists }, (_, i) => <Boot key={`a${i}`} size={12} />)}</span>}
+          </span>
+        )}
         {p.off != null && (
-          <>
+          <span className="sp-pb sp-pb-br">
             <Out />
             <span className="sp-num">{p.off}</span>
-          </>
+          </span>
         )}
       </span>
+      <span className="sp-pname" title={p.name}>{p.last}</span>
     </div>
   );
 }
 
-function PlayerList({ players, bench, color }) {
+function PlayerList({ players, bench, color, ratings }) {
   if (!players.length) return <p className="sp-note">None listed.</p>;
   return (
     <ul className="sp-bench">
@@ -100,7 +119,9 @@ function PlayerList({ players, bench, color }) {
             {p.name} <span className="sp-muted sp-tiny">{p.posName && p.posName !== 'Substitute' ? p.posName : ''}</span>
           </span>
           <span className="sp-num sp-tiny" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-            {Array.from({ length: p.goals }, (_, i) => <Ball key={i} size={12} />)}
+            {ratings?.players[p.id] && <RatingPlate r={ratings.players[p.id]} best={ratings.best === p.id} size="sm" />}
+            {Array.from({ length: p.goals }, (_, i) => <Ball key={`g${i}`} size={12} />)}
+            {Array.from({ length: p.assists }, (_, i) => <Boot key={`a${i}`} size={12} />)}
             {p.red > 0 ? <Card red /> : p.yellow > 0 ? <Card /> : null}
             {p.on != null && <><In /> {p.on}</>}
             {p.off != null && <><Out /> {p.off}</>}

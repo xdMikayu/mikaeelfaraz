@@ -13,6 +13,7 @@ import Players, { WatchStar } from './FantasyPlayers';
 import MatchupPanel from './FantasyMatchup';
 import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
 import { useParam, useTabInView } from './useParam';
+import { useEo, EoPanel, eoWords, OVERALL } from './FantasyEo';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
@@ -126,6 +127,10 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, exampl
   const [teamView, setTeamView] = useParam('view', 'pitch', ['pitch', 'list']);
   const row = useRef(null);
   useTabInView(row, tab);
+  // Effective ownership against your mini-league and the world's top 50, for the team tab.
+  const eoLeague = useEo(team ? leagueId : null, live.event, ctx);
+  const eoTop = useEo(team ? OVERALL : null, live.event, ctx);
+  const eo = eoLeague?.eo ? { ...eoLeague, label: `in ${eoLeague.name}` } : eoTop?.eo ? { ...eoTop, label: 'among the top 50 managers' } : null;
   const allDone = live.fixtures.length > 0 && live.fixtures.every((f) => f.finished);
   const isLive = liveGw(live);
   // Overall rank now against last gameweek's, for the arrow.
@@ -234,7 +239,8 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, exampl
               ))}
             </div>
           </div>
-          {teamView === 'pitch' ? <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} /> : <TeamList team={team} ctx={ctx} teams={teams} />}
+          {teamView === 'pitch' ? <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} eo={eo} /> : <TeamList team={team} ctx={ctx} teams={teams} eo={eo} />}
+          <EoPanel team={team} ctx={ctx} teams={teams} league={eoLeague} top={eoTop} />
         </>
       )}
       {tab === 'plan' && picks && (fixtures ? <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} entry={entry} leagueId={leagueId} /> : <div className="sp-skel" style={{ height: 460, margin: '14px 0 0' }} />)}
@@ -308,7 +314,7 @@ function breakdown(state) {
 }
 
 /** The squad on a pitch: the scoring eleven (after projected autosubs) in their lines, bench below. */
-function Pitch({ team, ctx, teams, forecast, fixtures }) {
+function Pitch({ team, ctx, teams, forecast, fixtures, eo }) {
   const [sel, setSel] = useState(null);
   const subIn = new Set(team.subs.map((s) => s.in));
   const subOut = new Set(team.subs.map((s) => s.out));
@@ -365,7 +371,7 @@ function Pitch({ team, ctx, teams, forecast, fixtures }) {
           <div className="sp-fplrow" style={{ padding: 0 }}>{bench.map((l) => kit(l, true))}</div>
         </div>
       </div>
-      {cur ? <PlayerCard l={cur} ctx={ctx} teams={teams} kit={forecast} fixtures={fixtures} /> : (
+      {cur ? <PlayerCard l={cur} ctx={ctx} teams={teams} kit={forecast} fixtures={fixtures} eo={eo} /> : (
         <p className="sp-note sp-pad" style={{ margin: '8px 0 0' }}>
           Tap a player for his points. Arrows mark projected autosubs.
         </p>
@@ -374,7 +380,7 @@ function Pitch({ team, ctx, teams, forecast, fixtures }) {
   );
 }
 
-function PlayerCard({ l, ctx, teams, kit, fixtures }) {
+function PlayerCard({ l, ctx, teams, kit, fixtures, eo }) {
   const el = ctx.elements[l.element];
   const parts = breakdown(l.state);
   const fx = fixturesOf(el.team, ctx);
@@ -406,6 +412,7 @@ function PlayerCard({ l, ctx, teams, kit, fixtures }) {
           )) : <span className="sp-small sp-muted">No points yet</span>}
           {l.mult > 1 && <span className="sp-small" style={{ fontWeight: 800 }}>×{l.mult} {l.mult === 3 ? 'triple captain' : 'captain'}</span>}
         </div>
+        {eo && <p className="sp-tiny sp-ink2" style={{ margin: '8px 0 0' }}>{eoWords(el, l, eo)}</p>}
       </div>
       <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
         <MatchupPanel el={el} ctx={ctx} teams={teams} kit={kit} fixtures={fixtures} nextFx={nextFx} />
@@ -414,7 +421,7 @@ function PlayerCard({ l, ctx, teams, kit, fixtures }) {
   );
 }
 
-function TeamList({ team, ctx, teams }) {
+function TeamList({ team, ctx, teams, eo }) {
   const xi = team.lines.filter((l) => l.position <= 11);
   const bench = team.lines.filter((l) => l.position > 11);
   const subIn = Object.fromEntries(team.subs.map((s) => [s.in, s.out]));
@@ -439,7 +446,10 @@ function TeamList({ team, ctx, teams }) {
             {l.captain && <span className="sp-badge" title="Captain">{l.mult === 3 ? 'TC' : 'C'}</span>}
             {l.vice && <span className={`sp-badge${team.viceUsed ? '' : ' sp-badge-quiet'}`} title="Vice-captain">V</span>}
           </b>
-          <small>{fx.map((f) => fxLong(f, el.team, teams)).join(' · ') || teams[el.team]?.short}</small>
+          <small>
+            {fx.map((f) => fxLong(f, el.team, teams)).join(' · ') || teams[el.team]?.short}
+            {eo ? ` · EO ${Math.round(eo.eo[el.id]?.eo ?? 0)}%` : ''}
+          </small>
           {(note || parts.length > 0) && <small>{[note, ...parts].filter(Boolean).join(' · ')}</small>}
         </span>
         <span className="sp-pick-when">{ph.kind === 'done' || ph.kind === 'out' ? 'Played' : ph.kind === 'blank' ? '' : ph.when}</span>
