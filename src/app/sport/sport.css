@@ -24,6 +24,18 @@
   --sp-red-card: #d6001c;
   --sp-pitch: #2f8d4e;
   --sp-pitch-line: rgba(255, 255, 255, 0.55);
+  --sp-lu-bg: #0a8452; /* the lineups pitch: FotMob green, a shade deeper so white names pass 4.5:1 */
+  --sp-lu-band: #18905f;
+  --sp-lu-line: rgba(255, 255, 255, 0.13);
+  --sp-lu-disc: #f2f2f2;
+  --sp-lu-name: #ffffff;
+  --sp-lu-num: rgba(255, 255, 255, 0.74);
+  --sp-disc-bg: #ececee;
+  --sp-rt-top: #14a0ff; /* rating pills, black figures on all: 9+, 7+, 6+, under 6, the best on the pitch */
+  --sp-rt-good: #33c771;
+  --sp-rt-fair: #f08022;
+  --sp-rt-poor: #e5484d;
+  --sp-rt-best: #14a0ff;
   --sp-bench: #e9f3ec;
   --sp-bench-ink: #3b6b4a;
   --sp-flash: #ffe58a;
@@ -73,6 +85,18 @@ html[data-sport-theme='dark'] .sp-root {
   --sp-red-card: #ff4d5a;
   --sp-pitch: #246b3c;
   --sp-pitch-line: rgba(255, 255, 255, 0.35);
+  --sp-lu-bg: #1c1c1e;
+  --sp-lu-band: #262628;
+  --sp-lu-line: rgba(255, 255, 255, 0.07);
+  --sp-lu-disc: #404042;
+  --sp-lu-name: #f5f5f7;
+  --sp-lu-num: #9a9aa0;
+  --sp-disc-bg: #2c2c2e;
+  --sp-rt-top: #14a0ff;
+  --sp-rt-good: #33c771;
+  --sp-rt-fair: #ff963f;
+  --sp-rt-poor: #ff5a52;
+  --sp-rt-best: #14a0ff;
   --sp-bench: #18241c;
   --sp-bench-ink: #9fc8ab;
   --sp-flash: #4d3f0a;
@@ -106,6 +130,18 @@ html[data-sport-theme='dark'] .sp-root {
     --sp-red-card: #ff4d5a;
     --sp-pitch: #246b3c;
     --sp-pitch-line: rgba(255, 255, 255, 0.35);
+    --sp-lu-bg: #1c1c1e;
+    --sp-lu-band: #262628;
+    --sp-lu-line: rgba(255, 255, 255, 0.07);
+    --sp-lu-disc: #404042;
+    --sp-lu-name: #f5f5f7;
+    --sp-lu-num: #9a9aa0;
+    --sp-disc-bg: #2c2c2e;
+    --sp-rt-top: #14a0ff;
+    --sp-rt-good: #33c771;
+    --sp-rt-fair: #ff963f;
+    --sp-rt-poor: #ff5a52;
+    --sp-rt-best: #14a0ff;
     --sp-bench: #18241c;
     --sp-bench-ink: #9fc8ab;
     --sp-flash: #4d3f0a;
@@ -425,6 +461,12 @@ html.sp-typing .sp-dock { display: none; }
 .sp-scorers ul:first-child { text-align: right; }
 .sp-scorers li { display: flex; align-items: center; gap: 6px; }
 .sp-scorers ul:first-child li { justify-content: flex-end; }
+/* Each goal with who made it under the scorer, a boot before the name. */
+.sp-scorer { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.sp-scorer small { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--sp-ink-2); }
+.sp-scorers ul:first-child .sp-scorer small { justify-content: flex-end; }
+.sp-scorers li:has(.sp-scorer small) { align-items: flex-start; }
+.sp-scorers li:has(.sp-scorer small) > svg { margin-top: 3px; }
 /* Under the match header, in ink: what the score means for the table. */
 .sp-band { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; padding: 10px 16px 11px; background: var(--sp-ink); color: var(--sp-page); }
 @media (min-width: 640px) { .sp-band { margin: 0 16px; border-radius: 0 0 10px 10px; } .sp-hero:has(+ .sp-band) { border-radius: 10px 10px 0 0; } }
@@ -465,6 +507,9 @@ html.sp-typing .sp-dock { display: none; }
 .sp-tl-who { line-height: 1.25; min-width: 0; }
 .sp-tl-who b { font-weight: 750; }
 .sp-tl-who small { display: block; color: var(--sp-muted); font-size: 12.5px; }
+.sp-tl-who small.sp-tl-assist { display: flex; align-items: center; gap: 5px; color: var(--sp-ink-2); font-weight: 600; }
+.sp-tl-home .sp-tl-who small.sp-tl-assist { justify-content: flex-end; }
+.sp-tl li .sp-tl-who small.sp-tl-assist b { color: var(--sp-ink); font-size: inherit; font-weight: 750; }
 /* Goals lead: the scorer heavier and the score it made in the scoreboard's type; substitutions recede. */
 .sp-tl-line { display: inline-flex; align-items: baseline; gap: 8px; }
 .sp-tl li.sp-tl-goal { min-height: 52px; }
@@ -487,12 +532,81 @@ html.sp-typing .sp-dock { display: none; }
 .sp-poss span:last-child { justify-content: flex-end; }
 
 /* Pitches: flat grass, white lines */
-.sp-pitch, .sp-pitch-wrap, .sp-pitch-h { background: var(--sp-pitch); }
-.sp-pitch-wrap, .sp-pitch-h { border-radius: 6px; overflow: hidden; }
-.sp-player { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 76px; text-align: center; font-size: 12px; line-height: 1.15; font-variation-settings: 'wdth' 85; }
-.sp-player .sp-shirt { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 13px; font-variant-numeric: tabular-nums; border: 2px solid #fff; }
-.sp-player .sp-pname { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 750; background: #fff; color: #111; padding: 1px 5px; border-radius: 3px; }
-.sp-player .sp-pmeta { display: flex; gap: 3px; align-items: center; min-height: 14px; font-size: 11px; font-weight: 800; color: #fff; }
+.sp-pitch, .sp-pitch-h { background: var(--sp-pitch); }
+.sp-pitch-h { border-radius: 6px; overflow: hidden; }
+/* Lineups, as FotMob draws them: one flat pitch (its green in light mode, charcoal in dark) with faint
+   markings, a band at each end, players as faces on plain discs with a pill and chips around them. */
+.sp-lu { --sp-disc-bg: var(--sp-lu-disc); max-width: 560px; margin: 0 auto; border-radius: 16px; overflow: hidden; background: var(--sp-lu-bg); color: var(--sp-lu-name); }
+/* On a phone the card runs edge to edge, as the apps do, for the width five across needs. */
+@media (max-width: 599px) { .sp-lu { margin: 0 -16px; border-radius: 0; } }
+.sp-lu-head { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px; background: var(--sp-lu-band); }
+.sp-lu-team { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 450; }
+.sp-lu-form { flex: none; font-size: 15px; font-weight: 650; }
+.sp-lu-pitch { position: relative; }
+.sp-lu-field { position: absolute; inset: 12px; border: 1px solid var(--sp-lu-line); border-radius: 2px; }
+.sp-lu-halfway { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--sp-lu-line); }
+.sp-lu-field svg { position: absolute; left: 0; display: block; width: 100%; height: auto; overflow: visible; fill: none; stroke: var(--sp-lu-line); stroke-width: 1; }
+.sp-lu-field svg * { vector-effect: non-scaling-stroke; }
+.sp-lu-field svg .sp-lu-spot { fill: var(--sp-lu-line); stroke: none; }
+.sp-lu-centre { top: 50%; transform: translateY(-50%); }
+.sp-lu-end { top: 0; }
+.sp-lu-end-bottom { top: auto; bottom: 0; transform: scaleY(-1); }
+.sp-lu-player { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.sp-lu-chip { position: relative; display: block; }
+.sp-lu-name { max-width: 100%; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 500; line-height: 15px; color: var(--sp-lu-name); }
+.sp-lu-no { color: var(--sp-lu-num); font-weight: 400; }
+.sp-lu-tight .sp-lu-name { font-size: 12px; font-variation-settings: 'wdth' 88; }
+/* Around the disc, against its radius (--r, set per line): the pill centred on its top edge to the
+   right, a substitution's minute over a coral arrow top left, a card on the left, assists bottom left,
+   goals bottom right. Each is ringed in the pitch's colour, so it stands clear of the photo. */
+.sp-lu-rate, .sp-lu-tl, .sp-lu-card, .sp-lu-bl, .sp-lu-br { position: absolute; z-index: 1; display: flex; }
+.sp-lu-rate { left: calc(50% + var(--r) - 15px); top: -9px; }
+.sp-lu-rate .sp-rating, .sp-lu-head .sp-rating { box-shadow: 0 0 0 2px var(--sp-lu-bg); }
+.sp-lu-tl { right: calc(50% + var(--r) - 13px); top: -17px; }
+.sp-lu-card { right: calc(50% + var(--r) - 5px); top: 50%; transform: translateY(-50%); }
+.sp-lu-card svg { display: block; border-radius: 2px; box-shadow: 0 0 0 2px var(--sp-lu-bg); }
+.sp-lu-bl { right: calc(50% + var(--r) - 13px); bottom: -2px; }
+.sp-lu-br { left: calc(50% + var(--r) - 13px); bottom: -2px; }
+.sp-lu-bl > span + span, .sp-lu-br > span + span { margin-left: -6px; }
+.sp-lu-ev { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #fff; color: #111; --sp-surface: #fff; box-shadow: 0 0 0 2px var(--sp-lu-bg); }
+.sp-lu-ev svg { display: block; }
+.sp-lu-og { background: #ff453a; color: #fff; --sp-surface: #fff; }
+.sp-lu-sub { flex-direction: column; align-items: center; gap: 1px; }
+.sp-lu-sub i { font-style: normal; font-size: 11px; font-weight: 500; line-height: 13px; color: var(--sp-lu-name); }
+.sp-lu-sub b { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #e55e5b; box-shadow: 0 0 0 2px var(--sp-lu-bg); }
+/* A player's disc: the face cut out on plain grey, or the shirt with the number. */
+.sp-disc { position: relative; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--sp-disc-bg); }
+.sp-disc img { position: absolute; left: 50%; top: 9%; width: 128%; max-width: none; height: auto; transform: translateX(-50%); }
+.sp-disc svg { display: block; }
+/* Ratings: a pill, dark figures on the band's colour; the best on the pitch blue with a star. */
+.sp-rating { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: none; min-width: 30px; height: 18px; padding: 0 6px; border-radius: 9px; color: #000; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.sp-rating-sm { min-width: 28px; height: 18px; padding: 0 6px; font-size: 11.5px; }
+.sp-rating-lg { min-width: 52px; height: 30px; padding: 0 11px; border-radius: 15px; font-size: 17px; }
+.sp-rating-top { background: var(--sp-rt-top); }
+.sp-rating-good { background: var(--sp-rt-good); }
+.sp-rating-fair { background: var(--sp-rt-fair); }
+.sp-rating-poor { background: var(--sp-rt-poor); }
+.sp-rating-motm { background: var(--sp-rt-best); }
+.sp-rating svg { flex: none; }
+.sp-rating-best { display: flex; align-items: center; gap: 12px; padding: 4px 0 14px; border-bottom: 1px solid var(--sp-rule); }
+.sp-rating-best b { display: block; font-size: 16px; font-weight: 700; }
+.sp-rating-best small { display: block; font-size: 12.5px; }
+.sp-rating-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 6px; }
+.sp-rating-cols ol { list-style: none; margin: 0; padding: 0; }
+.sp-rating-cols li { display: flex; align-items: center; gap: 9px; min-height: 40px; font-size: 13.5px; }
+.sp-rating-cols li.sp-rating-head { min-height: 24px; font-size: 12px; font-weight: 700; color: var(--sp-muted); }
+.sp-rating-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sp-rating-marks { display: inline-flex; align-items: center; gap: 2px; }
+.sp-rating-marks svg + svg { margin-left: -5px; }
+/* The benches under the pitch: face, name over number and position, then minutes, events and the rating. */
+.sp-lu-benchhead { display: flex; align-items: center; gap: 8px; margin: 0 0 2px; font-size: 15px; font-weight: 700; }
+.sp-lu-benchhead .sp-muted { font-weight: 500; }
+.sp-lu-bench li { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; min-height: 54px; }
+.sp-bench-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; }
+.sp-bench-who .sp-lu-no { margin-right: 2px; font-weight: 500; color: var(--sp-muted); }
+.sp-bench-what { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; }
+.sp-bench-min { display: inline-flex; align-items: center; gap: 2px; color: var(--sp-ink-2); }
+.sp-bench-unused { opacity: 0.5; }
 .sp-bench { list-style: none; margin: 0; padding: 0; }
 .sp-bench li { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; min-height: 42px; border-top: 1px solid var(--sp-rule); font-size: 14.5px; }
 .sp-bench li:first-child { border-top: 0; }
@@ -818,6 +932,14 @@ button.sp-lrow:hover { background: var(--sp-sunk); }
 .sp-club-stat img { object-fit: contain; }
 .sp-club-stat b { font-weight: 900; font-variation-settings: 'wdth' 75; }
 .sp-club-stat span:nth-last-child(-n + 2) { text-align: right; }
+/* With a third number: goals against xG. */
+.sp-club-stat-3 { grid-template-columns: 20px 40px minmax(0, 1fr) 22px 36px 40px; }
+.sp-club-stat-3 span:nth-last-child(-n + 3) { text-align: right; }
+/* Above and below their xGI: who, goals and assists from how much xGI, and the gap. */
+.sp-luck { display: grid; grid-template-columns: minmax(0, 1fr) auto 42px; gap: 10px; align-items: center; min-height: 46px; border-top: 1px solid var(--sp-rule); font-size: 13.5px; }
+.sp-luck > b { text-align: right; }
+.sp-luck .sp-heat-name { max-width: none; min-width: 0; }
+.sp-luck .sp-heat-name small { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-club-bar { display: block; height: 8px; background: var(--sp-sunk); }
 .sp-club-bar i { display: block; height: 100%; background: var(--sp-ink); }
 .sp-lb tbody th { font-weight: 600; }

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { fetchMatch, fetchStandings, fetchScoreboard } from '@/lib/sport/espn.mjs';
 import { standingsNow, inTable, groupOf, ifTheyWin, moveWords } from '@/lib/sport/as-it-stands.mjs';
-import { optaXg } from '@/lib/sport/fplmap.mjs';
+import { optaXg, fplFixtureFor, fplPlayersFor, fplElementsFor } from '@/lib/sport/fplmap.mjs';
 import { LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
 import { useLive, Freshness } from './useLive';
 import { useSpoiler, useFollow } from './prefs';
@@ -13,10 +13,13 @@ import Crest from './Crest';
 import XgChart, { axisMinute } from './XgChart';
 import ShotMap from './ShotMap';
 import Lineups from './Lineups';
-import { Ball, Card, SecondYellow, SubArrows, Missed, Screen, Star } from './glyphs';
+import { Ball, Boot, Card, SecondYellow, SubArrows, Missed, Screen, Star } from './glyphs';
 import { kickoff, longDate, until } from './time';
 import { useMatchRates, ForecastPanel, BookmakersPanel, WinPathChart, Deserved, MatchupsToWatch } from './MatchForecast';
 import { useScrolledPast, StickyBar, StickyTeam } from './Sticky';
+import { useMatchupIndex } from './matchupData';
+import { RatingsPanel } from './Ratings';
+import { matchRatings } from '@/lib/sport/ratings.mjs';
 
 const hot = (d) => {
   if (!d) return false;
@@ -29,7 +32,10 @@ const hot = (d) => {
 export default function MatchView() {
   const id = useSearchParams().get('id');
   const { data, error, at } = useLive((signal) => (id ? fetchMatch('all', id, { signal }) : Promise.resolve(null)), [id], { every: 20000, live: hot });
-  const opta = useOpta(data);
+  const fpl = useFplMatch(data);
+  const opta = fpl.opta;
+  // Ratings once there's play to rate: FPL's defending numbers join in for Premier League matches.
+  const ratings = useMemo(() => (data && data.match.status.state !== 'pre' ? matchRatings(data, fpl.players) : null), [data, fpl.players]);
   const rates = useMatchRates(data);
   const table = useTableNow(data?.match);
   const dark = useDark();
@@ -113,6 +119,7 @@ export default function MatchView() {
                 <Timeline events={data.events} live={live} names={names} />
               </section>
             )}
+            {!pre && showStuff && ratings?.best && <RatingsPanel ratings={ratings} lineups={data.lineups} names={names} colors={colors} faces={fpl.faces} live={live} onAll={() => setTab('lineups')} />}
             {!pre && showStuff && data.stats.length > 0 && (
               <section className="sp-panel">
                 <div className="sp-section-head">
@@ -130,7 +137,7 @@ export default function MatchView() {
       {current === 'lineups' && (
         <section className="sp-panel" style={{ marginTop: 14 }}>
           {lineupsOut ? (
-            showStuff || pre ? <Lineups lineups={data.lineups} colors={colors} names={names} /> : <p className="sp-note">Lineups show goals and cards, so they stay hidden with the score.</p>
+            showStuff || pre ? <Lineups lineups={data.lineups} colors={colors} names={names} logos={{ home: m.home.logo, away: m.away.logo }} ratings={showStuff ? ratings : null} faces={fpl.faces} /> : <p className="sp-note">Lineups show goals and cards, so they stay hidden with the score.</p>
           ) : (
             <p className="sp-ink2" style={{ margin: 0 }}>
               Not announced yet. Clubs name their teams about an hour before kick-off, and this page checks for them every 20 seconds from 90 minutes before.
@@ -157,26 +164,64 @@ export default function MatchView() {
 }
 
 /** FPL's live data, for the Opta xG line on Premier League matches. */
-function useOpta(data) {
-  const isPl = data?.match.league === 'eng.1' && data.match.status.state !== 'pre';
-  const [fpl, setFpl] = useState(null);
-  const at = data ? Math.floor(Date.now() / 60000) : 0; // at most once a minute
+/**
+ * A Premier League match's FPL side, from the gameweek it's in: Opta's xG for both clubs, and each
+ * player's numbers (tackles, clearances, saves...) for the ratings, keyed by ESPN athlete id.
+ * Checked once a minute while the match is on.
+ */
+// The Premier League's own photos: this season's, else last season's (a few players haven't had new ones taken).
+const plPhotos = (opta) => {
+  const code = String(opta ?? '').replace(/^p/, '');
+  return code ? [`https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`, `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`] : null;
+};
+
+/**
+ * What FPL adds to a Premier League match: Opta's xG and each player's live numbers once it has
+ * started, and from the moment the lineups are out, every player's photo ({ ESPN id: [urls] }).
+ */
+function useFplMatch(data) {
+  const isPl = data?.match.league === 'eng.1';
+  const started = isPl && data.match.status.state !== 'pre';
+  const on = data?.match.status.state === 'in';
+  const ix = useMatchupIndex();
+  const [base, setBase] = useState(null);
   useEffect(() => {
-    if (!isPl) return;
+    if (!isPl) return undefined;
     let off = false;
-    (async () => {
-      try {
-        const st = await fetch('/api/sport/fpl/static').then((r) => (r.ok ? r.json() : null));
-        if (!st) return;
-        const live = await fetch(`/api/sport/fpl/live/${st.current}`).then((r) => (r.ok ? r.json() : null));
-        if (!off && live) setFpl({ st, live });
-      } catch {}
-    })();
+    const get = (p) => fetch(`/api/sport/fpl/${p}`).then((r) => (r.ok ? r.json() : null));
+    Promise.all([get('static'), get('fixtures')]).then(
+      ([st, fixtures]) => !off && st && fixtures && setBase({ st, fixtures }),
+      () => {}
+    );
     return () => {
       off = true;
     };
-  }, [isPl, at]);
-  return useMemo(() => (isPl && fpl ? optaXg(data.match, fpl.st, fpl.live) : null), [isPl, fpl, data]);
+  }, [isPl]);
+  const fx = useMemo(() => (base && data ? fplFixtureFor(data.match, base.st.teams, base.fixtures) : null), [base, data]);
+  const event = started ? (fx?.event ?? null) : null;
+  const at = on ? Math.floor(Date.now() / 60000) : 0;
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    if (!event) return undefined;
+    let off = false;
+    fetch(`/api/sport/fpl/live/${event}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => !off && d && setLive(d), () => {});
+    return () => {
+      off = true;
+    };
+  }, [event, at]);
+  const lineups = data?.lineups;
+  const faces = useMemo(() => {
+    if (!fx || !lineups) return null;
+    const opta = Object.fromEntries(base.st.elements.map((e) => [e.id, e.opta]));
+    const ids = fplElementsFor(lineups, base.st, fx, ix.data?.fpl);
+    return Object.fromEntries(Object.entries(ids).map(([espn, id]) => [espn, plPhotos(opta[id])]).filter(([, urls]) => urls));
+  }, [fx, lineups, base, ix.data]);
+  return useMemo(() => {
+    if (!fx || !live || live.event !== event) return { opta: null, players: null, faces };
+    return { opta: optaXg(data.match, base.st, live), players: fplPlayersFor(data.lineups, base.st, live, fx, ix.data?.fpl), faces };
+  }, [fx, live, event, data, base, ix.data, faces]);
 }
 
 /** True for one render cycle after `v` first becomes true (not if it was true on arrival). */
@@ -397,7 +442,14 @@ function Header({ m, data, hidden, reveal, at, error, band }) {
                   {g.pending ? (
                     <span className="sp-muted">Scorer to follow</span>
                   ) : (
-                    <span>{initialled(g.players[0])} <span className="sp-num sp-muted">{g.minute}{g.kind === 'pen' ? ' pen' : g.kind === 'og' ? ' og' : ''}</span></span>
+                    <span className="sp-scorer">
+                      <span>{initialled(g.players[0])} <span className="sp-num sp-muted">{g.minute}{g.kind === 'pen' ? ' pen' : g.kind === 'og' ? ' og' : ''}</span></span>
+                      {g.kind === 'goal' && g.players[1] && (
+                        <small aria-label={`assisted by ${g.players[1]}`}>
+                          <Boot size={11} /> {initialled(g.players[1])}
+                        </small>
+                      )}
+                    </span>
                   )}
                   {s === 'home' && <Ball size={12} own={g.kind === 'og'} />}
                 </li>
@@ -454,7 +506,8 @@ function Timeline({ events, live, names }) {
         const goal = ['goal', 'pen', 'og'].includes(e.kind);
         // A goal carries the score it made, in the scoreboard's type, on the outer side of the name.
         const score = goal && e.score ? <span className="sp-tl-score">{e.score[0]}–{e.score[1]}</span> : null;
-        const how = [e.kind === 'pen' && 'penalty', e.kind === 'og' && 'own goal', goal && e.kind !== 'og' && e.players[1] && `assist ${initialled(e.players[1])}`].filter(Boolean).join(', ');
+        const how = [e.kind === 'pen' && 'penalty', e.kind === 'og' && 'own goal'].filter(Boolean).join(', ');
+        const assist = e.kind === 'goal' && e.players[1] ? initialled(e.players[1]) : null;
         const who = (
           <span className="sp-tl-who">
             <span className="sp-tl-line">
@@ -464,6 +517,11 @@ function Timeline({ events, live, names }) {
             </span>
             {e.pending && <small>details to follow</small>}
             {e.kind === 'sub' && e.players[1] && <small>for {initialled(e.players[1])}</small>}
+            {assist && (
+              <small className="sp-tl-assist">
+                <Boot size={12} /> Assist <b>{assist}</b>
+              </small>
+            )}
             {how && <small>{how}</small>}
             {e.kind === 'var' && <small>{e.text}</small>}
             {e.kind === 'pen-miss' && <small>Penalty {/saved/i.test(e.text) ? 'saved' : 'missed'}</small>}

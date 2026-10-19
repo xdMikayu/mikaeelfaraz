@@ -8,9 +8,11 @@ import { useDark } from './colors';
  * variant, which most clubs have (navy crests vanish on charcoal otherwise); if it's missing,
  * the normal one; if that fails too, a plain disc.
  */
-export default function Crest({ src, size = 20, alt = '', light = false }) {
+export default function Crest({ src, size = 20, alt = '', light = false, onDark = false }) {
   // `light`: the crest sits on a white disc, so the normal (light-mode) version reads best.
-  const dark = useDark() && !light;
+  // `onDark`: it sits on a dark card whatever the page's scheme, so the dark version does.
+  const pageDark = useDark();
+  const dark = (pageDark || onDark) && !light;
   const [step, setStep] = useState(0); // 0 preferred, 1 normal, 2 failed
   useEffect(() => setStep(0), [src, dark]);
   if (!src || step === 2) return <span className="sp-crest-ph" style={{ width: size, height: size }} aria-hidden />;
