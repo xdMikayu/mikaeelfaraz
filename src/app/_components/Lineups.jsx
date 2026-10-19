@@ -1,21 +1,22 @@
 'use client';
 import { Ball, Boot, Card, In, Out } from './glyphs';
-import { inkOn } from './colors';
 import Crest from './Crest';
 import { RatingPlate } from './Ratings';
 import Disc from './PlayerDisc';
 
-// The lineups: both XIs on one pitch, each team's end under a bar in its kit colour, and the benches
-// below. A player is a disc in the kit colour with the face in it where we have one (the Premier
-// League's photos), else the shirt number; the rating on the disc's top-right corner, a card top left,
-// goals and assists bottom left, the minute they went off bottom right, the name underneath.
+// The lineups, the way the best apps draw them: both XIs on one dark pitch with faint markings, each
+// team named at its end, and the benches below. A player is a face on a grey disc (or a shirt with the
+// number), the rating as a pill on its top right, a substitution's minute and arrow top left, assists
+// bottom left and goals bottom right as white chips, and "47 Foden" underneath.
 
-// Spacing, in px from a disc's centre. A chip reaches 27 above it (the rating) and 41 below (the
-// name), so the bottom keeper sits further from the goal line than the top one, and the top team's
-// front line further from halfway than the bottom team's.
-const GAP = 70; // between two lines, the least that keeps a chip clear of the next line
-const ENDS = { top: [44, 48], bottom: [60, 34] }; // [from the goal line to the keeper, from the front line to halfway]
-const HALF = (rows) => 94 + (rows - 1) * GAP; // the larger of the two halves' needs
+// Spacing in px from a disc's centre. The largest chip reaches 30 above it (the rating pill) and 46
+// below (the name), so lines sit 84 apart, the keepers clear of the goal lines and the two front lines
+// clear of each other across halfway.
+const GAP = 84;
+const ENDS = { top: [50, 50], bottom: [64, 40] }; // [from the goal line to the keeper, from the front line to halfway]
+const HALF = (rows) => 104 + (rows - 1) * GAP;
+// Discs shrink as a line fills, so four or five across still leave room for names and pills.
+const DISC_FOR = (n) => (n >= 5 ? 42 : n === 4 ? 46 : 50);
 
 /** "90'+1'" as people write it: 90+1'. */
 const minute = (m) => String(m).replace(/'\+/, '+');
@@ -28,9 +29,9 @@ export default function Lineups({ lineups, colors, names, logos = {}, ratings, f
     <div>
       {drawable ? (
         <div className="sp-lu">
-          <TeamBar side="away" lu={away} name={names.away} logo={logos.away} color={colors.away} ratings={ratings} />
+          <TeamHead side="away" lu={away} name={names.away} logo={logos.away} ratings={ratings} />
           <Pitch home={home} away={away} colors={colors} ratings={ratings} faces={faces} />
-          <TeamBar side="home" lu={home} name={names.home} logo={logos.home} color={colors.home} ratings={ratings} />
+          <TeamHead side="home" lu={home} name={names.home} logo={logos.home} ratings={ratings} />
         </div>
       ) : (
         <div className="sp-two">
@@ -42,10 +43,12 @@ export default function Lineups({ lineups, colors, names, logos = {}, ratings, f
           ))}
         </div>
       )}
-      <div className="sp-two" style={{ marginTop: 22 }}>
+      <div className="sp-two" style={{ marginTop: 24 }}>
         {[['home', home], ['away', away]].map(([k, l]) => l && (
           <div key={k}>
-            <h3 className="sp-h3" style={{ marginBottom: 4 }}>{names[k]} substitutes</h3>
+            <h3 className="sp-lu-benchhead">
+              <Crest src={logos[k]} size={20} /> {names[k]} <span className="sp-muted">substitutes</span>
+            </h3>
             <PlayerList players={l.bench} bench color={colors[k]} ratings={ratings} faces={faces} />
           </div>
         ))}
@@ -54,20 +57,18 @@ export default function Lineups({ lineups, colors, names, logos = {}, ratings, f
   );
 }
 
-/** A team's end of the pitch: its crest, name and formation in its kit colour, and its average rating. */
-function TeamBar({ side, lu, name, logo, color, ratings }) {
+/** A team's end of the pitch: crest, name, formation, and the average of its players' ratings. */
+function TeamHead({ side, lu, name, logo, ratings }) {
   const rated = ratings ? Object.values(ratings.players).filter((r) => r.side === side) : [];
   const avg = rated.length ? rated.reduce((t, r) => t + r.rating, 0) / rated.length : null;
   return (
-    <div className={`sp-lu-bar sp-lu-bar-${side}`} style={{ background: color, color: inkOn(color) }}>
-      <span className="sp-lu-crest">
-        <Crest src={logo} size={20} light />
-      </span>
+    <div className={`sp-lu-head sp-lu-head-${side}`}>
+      <Crest src={logo} size={24} onDark />
       <b className="sp-lu-team">{name}</b>
       <span className="sp-lu-form sp-num">{lu.formation}</span>
       {avg != null && (
         <span className="sp-lu-avg">
-          Rating <b className="sp-num">{avg.toFixed(1)}</b>
+          <RatingPlate r={{ rating: Math.round(avg * 10) / 10 }} />
         </span>
       )}
     </div>
@@ -79,11 +80,6 @@ function Pitch({ home, away, colors, ratings, faces }) {
   const half = HALF(Math.max(home.lines.length, away.lines.length));
   return (
     <div className="sp-lu-pitch" style={{ height: 2 * half }}>
-      <span className="sp-lu-mow" aria-hidden>
-        {Array.from({ length: 14 }, (_, i) => (
-          <i key={i} />
-        ))}
-      </span>
       <Markings />
       <Half lines={away.lines} color={colors.away} top half={half} ratings={ratings} faces={faces} />
       <Half lines={home.lines} color={colors.home} half={half} ratings={ratings} faces={faces} />
@@ -129,55 +125,73 @@ function Half({ lines, color, top, half, ratings, faces }) {
     const row = top ? [...line].reverse() : line;
     // Each chip as wide as its share of the row (for the name), centred on its spot without a
     // transform, so the badges on one player can sit over the next one's disc.
-    const w = `min(96px, calc(${100 / (row.length + 1)}% - 4px))`;
+    const w = `min(108px, calc(${100 / (row.length + 1)}% - 6px))`;
+    const size = DISC_FOR(row.length);
+    const tight = row.length >= 4;
     return row.map((p, i) => (
-      <div key={p.id} className="sp-lu-player" style={{ left: `calc(${((i + 1) / (row.length + 1)) * 100}% - ${w} / 2)`, top: top ? y : 2 * half - y, width: w }}>
-        <Player p={p} color={color} srcs={faces?.[p.id]} r={ratings?.players[p.id]} best={ratings?.best === p.id} />
+      <div
+        key={p.id}
+        className={`sp-lu-player${tight ? ' sp-lu-tight' : ''}`}
+        style={{ left: `calc(${((i + 1) / (row.length + 1)) * 100}% - ${w} / 2)`, top: top ? y : 2 * half - y, width: w, marginTop: -size / 2, '--r': `${size / 2}px` }}
+      >
+        <Player p={p} color={color} srcs={faces?.[p.id]} r={ratings?.players[p.id]} best={ratings?.best === p.id} size={size} pill={tight ? 'sm' : 'md'} />
       </div>
     ));
   });
 }
 
-function Player({ p, color, srcs, r, best }) {
-  const marks = p.goals + p.assists + (p.og > 0 ? 1 : 0);
+function Player({ p, color, srcs, r, best, size, pill }) {
+  const card = p.red > 0 ? <Card red size={12} /> : p.yellow > 0 ? <Card size={12} /> : null;
   return (
     <>
-      <span className="sp-lu-chip">
-        <Disc srcs={srcs} number={p.jersey} color={color} />
+      <span className="sp-lu-chip" style={{ width: size, height: size }}>
+        <Disc srcs={srcs} number={p.jersey} color={color} size={size} />
         {r && (
           <span className="sp-lu-rate">
-            <RatingPlate r={r} best={best} size="sm" />
+            <RatingPlate r={r} best={best} size={pill} />
           </span>
         )}
-        {(p.red > 0 || p.yellow > 0) && <span className="sp-lu-card">{p.red > 0 ? <Card red size={11} /> : <Card size={11} />}</span>}
-        {marks > 0 && (
-          <span className="sp-lu-marks">
+        {(card || p.off != null) && (
+          <span className="sp-lu-tl">
+            {card && <span className="sp-lu-card">{card}</span>}
+            {p.off != null && (
+              <span className="sp-lu-sub" aria-label={`off ${minute(p.off)}`}>
+                <i className="sp-num">{minute(p.off)}</i>
+                <b aria-hidden>
+                  <svg width="10" height="10" viewBox="0 0 10 10">
+                    <path d="M8.5 5H1.8M4.6 2 1.6 5l3 3" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </b>
+              </span>
+            )}
+          </span>
+        )}
+        {p.assists > 0 && (
+          <span className="sp-lu-bl">
+            {Array.from({ length: p.assists }, (_, i) => (
+              <span key={i} className="sp-lu-ev">
+                <Boot size={12} />
+              </span>
+            ))}
+          </span>
+        )}
+        {p.goals + p.og > 0 && (
+          <span className="sp-lu-br">
             {Array.from({ length: p.goals }, (_, i) => (
-              <span key={`g${i}`} className="sp-lu-ball">
-                <Ball size={15} />
+              <span key={`g${i}`} className="sp-lu-ev sp-lu-goal">
+                <Ball size={16} />
               </span>
             ))}
             {p.og > 0 && (
-              <span className="sp-lu-ball">
-                <Ball size={15} own />
+              <span className="sp-lu-ev sp-lu-og">
+                <Ball size={16} own />
               </span>
             )}
-            {Array.from({ length: p.assists }, (_, i) => (
-              <span key={`a${i}`} className="sp-lu-boot">
-                <Boot size={11} />
-              </span>
-            ))}
-          </span>
-        )}
-        {p.off != null && (
-          <span className="sp-lu-off sp-num">
-            <Out />
-            {minute(p.off)}
           </span>
         )}
       </span>
       <span className="sp-lu-name" title={p.name}>
-        {p.last}
+        <span className="sp-lu-no sp-num">{p.jersey}</span> {p.last}
       </span>
     </>
   );
@@ -186,20 +200,28 @@ function Player({ p, color, srcs, r, best }) {
 function PlayerList({ players, bench, color, ratings, faces }) {
   if (!players.length) return <p className="sp-note">None listed.</p>;
   return (
-    <ul className="sp-bench">
+    <ul className="sp-bench sp-lu-bench">
       {players.map((p) => (
-        <li key={p.id} style={bench && p.on == null ? { color: 'var(--sp-ink-2)' } : undefined}>
-          <Disc srcs={faces?.[p.id]} number={p.jersey} color={color} size={30} />
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {p.name} <span className="sp-muted sp-tiny">{p.posName && p.posName !== 'Substitute' ? p.posName : ''}</span>
+        <li key={p.id} className={bench && p.on == null ? 'sp-bench-unused' : undefined}>
+          <Disc srcs={faces?.[p.id]} number={p.jersey} color={color} size={36} />
+          <span className="sp-bench-who" title={p.posName && p.posName !== 'Substitute' ? p.posName : undefined}>
+            <span className="sp-lu-no sp-num">{p.jersey}</span> {p.name}
           </span>
-          <span className="sp-num sp-tiny" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-            {ratings?.players[p.id] && <RatingPlate r={ratings.players[p.id]} best={ratings.best === p.id} size="sm" />}
-            {Array.from({ length: p.goals }, (_, i) => <Ball key={`g${i}`} size={12} />)}
-            {Array.from({ length: p.assists }, (_, i) => <Boot key={`a${i}`} size={12} />)}
+          <span className="sp-bench-what sp-num">
+            {Array.from({ length: p.goals }, (_, i) => <Ball key={`g${i}`} size={14} />)}
+            {Array.from({ length: p.assists }, (_, i) => <Boot key={`a${i}`} size={14} />)}
             {p.red > 0 ? <Card red /> : p.yellow > 0 ? <Card /> : null}
-            {p.on != null && <><In /> {minute(p.on)}</>}
-            {p.off != null && <><Out /> {minute(p.off)}</>}
+            {p.on != null && (
+              <span className="sp-bench-min">
+                <In /> {minute(p.on)}
+              </span>
+            )}
+            {p.off != null && (
+              <span className="sp-bench-min">
+                <Out /> {minute(p.off)}
+              </span>
+            )}
+            {ratings?.players[p.id] && <RatingPlate r={ratings.players[p.id]} best={ratings.best === p.id} />}
           </span>
         </li>
       ))}

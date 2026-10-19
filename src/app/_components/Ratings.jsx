@@ -4,16 +4,16 @@ import { band } from '@/lib/sport/ratings.mjs';
 import { Ball, Boot, Card, Star } from './glyphs';
 import Disc from './PlayerDisc';
 
-// Player ratings on the match page (src/lib/sport/ratings.mjs): a small plate in the scoreboard's
-// type, coloured by band as the apps people know do it (green from 7, deeper from 8, grey for an
-// ordinary game, red under 6), and the best on the pitch starred. Lists put each player's face (or
-// shirt number) first and line the plates up on the right.
+// Player ratings on the match page (src/lib/sport/ratings.mjs): a pill coloured by band as the apps
+// people know do it (bright green from 8, lighter green from 7, amber for an ordinary game, red under
+// 6), and the best on the pitch blue with a star. Lists put each player's face (or shirt) first and
+// line the pills up on the right.
 
 export function RatingPlate({ r, best, size = 'md' }) {
   if (!r) return null;
   return (
-    <span className={`sp-rating sp-rating-${band(r.rating)} sp-rating-${size}`} title={`Rating ${r.rating.toFixed(1)}${best ? ', best on the pitch' : ''}`}>
-      {best && <Star on size={size === 'xs' ? 8 : size === 'sm' ? 9 : 10} />}
+    <span className={`sp-rating sp-rating-${band(r.rating)} sp-rating-${size}${best ? ' sp-rating-motm' : ''}`} title={`Rating ${r.rating.toFixed(1)}${best ? ', best on the pitch' : ''}`}>
+      {best && <Star on size={size === 'lg' ? 13 : size === 'sm' ? 9 : 10} />}
       {r.rating.toFixed(1)}
     </span>
   );
