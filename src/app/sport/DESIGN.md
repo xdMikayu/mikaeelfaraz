@@ -152,9 +152,10 @@ with our xG, and FPL's Opta numbers in the Premier League) and checked against F
 `scripts/sport/check-ratings.mjs`. Settings › About the data explains them in plain words; keep that page true when
 the weights or the scale change.
 
-- A plate in the scoreboard's type, one decimal, white on its band: dark green from 8 (#0a6b33), green from 7
-  (#188244), grey from 6 (#6b6b6b), red under 6. The best on the pitch gets a star in the plate. No other colours.
-- On the pitch the plate sits on the disc's top-right corner with a white edge against the grass (see Lineups).
+- A pill, one decimal, dark figures on its band (`--sp-rt-*`): bright green from 8, light green from 7, amber from 6,
+  red under 6 (white figures). The best on the pitch is blue with a star. Pills are the convention every rating app
+  uses, so they are the exception to "no pills".
+- On the pitch the pill sits on the disc's top-right corner (see Lineups).
 - The overview has the best on the pitch, with a big face, and each side's top five, faces first and plates lined up
   on the right; then the way to everyone's (Lineups). Substitutes' lists carry the plate beside their minutes.
 - Nobody is rated before 10 minutes unless they scored, set one up or were sent off; while the match is on the
@@ -197,22 +198,24 @@ built into `public/sport/data/pl/setpieces.json` by `scripts/sport/build-matchup
 
 ## Lineups
 
-Both XIs on one pitch (`_components/Lineups.jsx`), the away side attacking down from the top:
+Both XIs on one dark card (`_components/Lineups.jsx`), drawn the way the rating apps people use draw them.
+FotMob's is the reference; the version before this one, with striped grass, kit-colour bars, white-ringed discs
+and boxed labels, read as a 2005 management game.
 
-- Each team's end of the pitch sits under a bar in its kit colour: the crest on a white disc, the name, the formation,
-  and the average of its players' ratings.
-- Grass in two flat greens, mown in bands, dark enough that white names pass 4.5:1. The markings are true to a 68m
-  pitch however tall it's drawn (the boxes, spots, arcs and centre circle scale with the width), in white at half
-  strength.
-- A player is a disc (`PlayerDisc.jsx`): the Premier League's own photo cut out on the kit colour (this season's,
-  else last season's), or the shirt number on it, ringed in white against the grass. The name sits under it in
-  white, never on a label.
-- Around the disc: the rating top right, a card top left on a white chip, goals (white balls) and assists (boots on
-  white discs) bottom left, and the minute the player went off bottom right on a dark tab. Those sit above the
-  neighbouring discs where a row is tight.
-- Lines are spaced in pixels, not percentages: the pitch grows with the number of lines a side plays, so no chip
-  touches the next line on a phone.
-- Substitutes and the ratings panel use the same disc, smaller, with a hairline edge instead of the ring.
+- The card is charcoal (`--sp-lu-bg`, #1c1c1e) in either scheme, edge to edge on a phone. The pitch is only its
+  markings: hairlines at 10% white, true to a 68m pitch at any height. No grass, no stripes, no colour fields.
+- Each team's end has a plain header: the crest, the name, the formation in grey, and the team's average rating as a
+  pill.
+- A player is a face cut out on a plain grey disc (`PlayerDisc.jsx`): the Premier League's photo, this season's or
+  last season's; without one, a shirt in the kit colour with the number on it. No rings.
+- Around the disc: the rating pill top right; the minute a player went off above a coral arrow chip top left, with a
+  card beside it; assists bottom left and goals bottom right as white chips with dark glyphs, overlapping when there
+  are several. Chips sit above the neighbouring discs in a tight line.
+- Under the disc, "47 Foden": the number in grey, the name in white at regular weight.
+- Discs are 50px, 46px four across and 42px five across, where names condense slightly. Lines are 84px apart, so the
+  pitch grows with the number of lines a side plays and nothing collides.
+- The benches below are one line each: the face, "28 Gerónimo Rulli", then the minute on, events and the rating pill.
+  Unused substitutes are dimmed.
 
 ## Effective ownership
 
