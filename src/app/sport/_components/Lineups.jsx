@@ -4,19 +4,21 @@ import Crest from './Crest';
 import { RatingPlate } from './Ratings';
 import Disc from './PlayerDisc';
 
-// The lineups, the way the best apps draw them: both XIs on one dark pitch with faint markings, each
-// team named at its end, and the benches below. A player is a face on a grey disc (or a shirt with the
-// number), the rating as a pill on its top right, a substitution's minute and arrow top left, assists
-// bottom left and goals bottom right as white chips, and "47 Foden" underneath.
+// The lineups as FotMob draws them, the app people hold up as the standard: both XIs on one flat pitch
+// (FotMob green in light mode, charcoal in dark) with faint markings, the home side at the top, each
+// team named in a band at its end, and the benches below. A player is a face on a plain disc (or a
+// shirt with the number), the rating as a pill on the disc's top edge, a substitution's minute over a
+// coral arrow top left, a card on the left, assists bottom left and goals bottom right as white chips,
+// and "47 Foden" underneath.
 
-// Spacing in px from a disc's centre. The largest chip reaches 30 above it (the rating pill) and 46
-// below (the name), so lines sit 84 apart, the keepers clear of the goal lines and the two front lines
-// clear of each other across halfway.
-const GAP = 84;
-const ENDS = { top: [50, 50], bottom: [64, 40] }; // [from the goal line to the keeper, from the front line to halfway]
-const HALF = (rows) => 104 + (rows - 1) * GAP;
+// Spacing in px from a disc's centre. The largest chip reaches 39 above it (a substitution's minute)
+// and 44 below (the name), so lines sit 96 apart, the keepers clear of the goal lines and the two front
+// lines clear of each other across halfway.
+const GAP = 96;
+const ENDS = { top: [58, 50], bottom: [62, 46] }; // [from the goal line to the keeper, from the front line to halfway]
+const HALF = (rows) => 108 + (rows - 1) * GAP;
 // Discs shrink as a line fills, so four or five across still leave room for names and pills.
-const DISC_FOR = (n) => (n >= 5 ? 42 : n === 4 ? 46 : 50);
+const DISC_FOR = (n) => (n >= 5 ? 40 : n === 4 ? 44 : 46);
 
 /** "90'+1'" as people write it: 90+1'. */
 const minute = (m) => String(m).replace(/'\+/, '+');
@@ -29,9 +31,9 @@ export default function Lineups({ lineups, colors, names, logos = {}, ratings, f
     <div>
       {drawable ? (
         <div className="sp-lu">
-          <TeamHead side="away" lu={away} name={names.away} logo={logos.away} ratings={ratings} />
-          <Pitch home={home} away={away} colors={colors} ratings={ratings} faces={faces} />
           <TeamHead side="home" lu={home} name={names.home} logo={logos.home} ratings={ratings} />
+          <Pitch home={home} away={away} colors={colors} ratings={ratings} faces={faces} />
+          <TeamHead side="away" lu={away} name={names.away} logo={logos.away} ratings={ratings} />
         </div>
       ) : (
         <div className="sp-two">
@@ -57,20 +59,16 @@ export default function Lineups({ lineups, colors, names, logos = {}, ratings, f
   );
 }
 
-/** A team's end of the pitch: crest, name, formation, and the average of its players' ratings. */
+/** A team's band at its end of the pitch: the average of its players' ratings, crest, name, formation. */
 function TeamHead({ side, lu, name, logo, ratings }) {
   const rated = ratings ? Object.values(ratings.players).filter((r) => r.side === side) : [];
   const avg = rated.length ? rated.reduce((t, r) => t + r.rating, 0) / rated.length : null;
   return (
-    <div className={`sp-lu-head sp-lu-head-${side}`}>
-      <Crest src={logo} size={24} onDark />
-      <b className="sp-lu-team">{name}</b>
-      <span className="sp-lu-form sp-num">{lu.formation}</span>
-      {avg != null && (
-        <span className="sp-lu-avg">
-          <RatingPlate r={{ rating: Math.round(avg * 10) / 10 }} />
-        </span>
-      )}
+    <div className="sp-lu-head">
+      {avg != null && <RatingPlate r={{ rating: Math.round(avg * 10) / 10 }} size="sm" />}
+      <Crest src={logo} size={20} onDark />
+      <span className="sp-lu-team">{name}</span>
+      <b className="sp-lu-form sp-num">{lu.formation}</b>
     </div>
   );
 }
@@ -81,8 +79,8 @@ function Pitch({ home, away, colors, ratings, faces }) {
   return (
     <div className="sp-lu-pitch" style={{ height: 2 * half }}>
       <Markings />
-      <Half lines={away.lines} color={colors.away} top half={half} ratings={ratings} faces={faces} />
-      <Half lines={home.lines} color={colors.home} half={half} ratings={ratings} faces={faces} />
+      <Half lines={home.lines} color={colors.home} top half={half} ratings={ratings} faces={faces} />
+      <Half lines={away.lines} color={colors.away} half={half} ratings={ratings} faces={faces} />
     </div>
   );
 }
@@ -121,7 +119,7 @@ function Half({ lines, color, top, half, ratings, faces }) {
   const step = (half - goal - mid) / Math.max(1, n - 1);
   return lines.map((line, j) => {
     const y = goal + j * step;
-    // Facing down the page, the away team's left is the viewer's right.
+    // Facing down the page, the top team's left is the viewer's right.
     const row = top ? [...line].reverse() : line;
     // Each chip as wide as its share of the row (for the name), centred on its spot without a
     // transform, so the badges on one player can sit over the next one's disc.
@@ -141,7 +139,7 @@ function Half({ lines, color, top, half, ratings, faces }) {
 }
 
 function Player({ p, color, srcs, r, best, size, pill }) {
-  const card = p.red > 0 ? <Card red size={12} /> : p.yellow > 0 ? <Card size={12} /> : null;
+  const card = p.red > 0 ? <Card red size={11} /> : p.yellow > 0 ? <Card size={11} /> : null;
   return (
     <>
       <span className="sp-lu-chip" style={{ width: size, height: size }}>
@@ -151,26 +149,22 @@ function Player({ p, color, srcs, r, best, size, pill }) {
             <RatingPlate r={r} best={best} size={pill} />
           </span>
         )}
-        {(card || p.off != null) && (
-          <span className="sp-lu-tl">
-            {card && <span className="sp-lu-card">{card}</span>}
-            {p.off != null && (
-              <span className="sp-lu-sub" aria-label={`off ${minute(p.off)}`}>
-                <i className="sp-num">{minute(p.off)}</i>
-                <b aria-hidden>
-                  <svg width="10" height="10" viewBox="0 0 10 10">
-                    <path d="M8.5 5H1.8M4.6 2 1.6 5l3 3" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </b>
-              </span>
-            )}
+        {p.off != null && (
+          <span className="sp-lu-tl sp-lu-sub" aria-label={`off ${minute(p.off)}`}>
+            <i className="sp-num">{minute(p.off)}</i>
+            <b aria-hidden>
+              <svg width="9" height="9" viewBox="0 0 10 10">
+                <path d="M8.5 5H1.8M4.6 2 1.6 5l3 3" fill="none" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </b>
           </span>
         )}
+        {card && <span className="sp-lu-card">{card}</span>}
         {p.assists > 0 && (
           <span className="sp-lu-bl">
             {Array.from({ length: p.assists }, (_, i) => (
               <span key={i} className="sp-lu-ev">
-                <Boot size={12} />
+                <Boot size={11} />
               </span>
             ))}
           </span>
@@ -179,12 +173,12 @@ function Player({ p, color, srcs, r, best, size, pill }) {
           <span className="sp-lu-br">
             {Array.from({ length: p.goals }, (_, i) => (
               <span key={`g${i}`} className="sp-lu-ev sp-lu-goal">
-                <Ball size={16} />
+                <Ball size={15} />
               </span>
             ))}
             {p.og > 0 && (
               <span className="sp-lu-ev sp-lu-og">
-                <Ball size={16} own />
+                <Ball size={15} own />
               </span>
             )}
           </span>

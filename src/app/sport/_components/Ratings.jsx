@@ -4,10 +4,10 @@ import { band } from '@/lib/sport/ratings.mjs';
 import { Ball, Boot, Card, Star } from './glyphs';
 import Disc from './PlayerDisc';
 
-// Player ratings on the match page (src/lib/sport/ratings.mjs): a pill coloured by band as the apps
-// people know do it (bright green from 8, lighter green from 7, amber for an ordinary game, red under
-// 6), and the best on the pitch blue with a star. Lists put each player's face (or shirt) first and
-// line the pills up on the right.
+// Player ratings on the match page (src/lib/sport/ratings.mjs): a pill coloured by band as FotMob does
+// it (green from 7, orange for an ordinary game, red under 6, blue from 9), black figures on every band,
+// and the best on the pitch blue with a star. Lists put each player's face (or shirt) first and line the
+// pills up on the right.
 
 export function RatingPlate({ r, best, size = 'md' }) {
   if (!r) return null;

@@ -24,15 +24,18 @@
   --sp-red-card: #d6001c;
   --sp-pitch: #2f8d4e;
   --sp-pitch-line: rgba(255, 255, 255, 0.55);
-  --sp-lu-bg: #1c1c1e; /* the lineups card, dark in either scheme */
-  --sp-lu-line: rgba(255, 255, 255, 0.1);
-  --sp-lu-rule: rgba(255, 255, 255, 0.08);
+  --sp-lu-bg: #0a8452; /* the lineups pitch: FotMob green, a shade deeper so white names pass 4.5:1 */
+  --sp-lu-band: #18905f;
+  --sp-lu-line: rgba(255, 255, 255, 0.13);
+  --sp-lu-disc: #f2f2f2;
+  --sp-lu-name: #ffffff;
+  --sp-lu-num: rgba(255, 255, 255, 0.74);
   --sp-disc-bg: #ececee;
-  --sp-rt-top: #1fc76a; /* rating pills: 8+, 7+, 6+, under 6, the best on the pitch */
-  --sp-rt-good: #8fd94a;
-  --sp-rt-fair: #f5b83d;
-  --sp-rt-poor: #f0503f;
-  --sp-rt-best: #2f7cf6;
+  --sp-rt-top: #14a0ff; /* rating pills, black figures on all: 9+, 7+, 6+, under 6, the best on the pitch */
+  --sp-rt-good: #33c771;
+  --sp-rt-fair: #f08022;
+  --sp-rt-poor: #e5484d;
+  --sp-rt-best: #14a0ff;
   --sp-bench: #e9f3ec;
   --sp-bench-ink: #3b6b4a;
   --sp-flash: #ffe58a;
@@ -83,14 +86,17 @@ html[data-sport-theme='dark'] .sp-root {
   --sp-pitch: #246b3c;
   --sp-pitch-line: rgba(255, 255, 255, 0.35);
   --sp-lu-bg: #1c1c1e;
-  --sp-lu-line: rgba(255, 255, 255, 0.1);
-  --sp-lu-rule: rgba(255, 255, 255, 0.08);
+  --sp-lu-band: #262628;
+  --sp-lu-line: rgba(255, 255, 255, 0.07);
+  --sp-lu-disc: #404042;
+  --sp-lu-name: #f5f5f7;
+  --sp-lu-num: #9a9aa0;
   --sp-disc-bg: #2c2c2e;
-  --sp-rt-top: #1fc76a;
-  --sp-rt-good: #8fd94a;
-  --sp-rt-fair: #f5b83d;
-  --sp-rt-poor: #f0503f;
-  --sp-rt-best: #2f7cf6;
+  --sp-rt-top: #14a0ff;
+  --sp-rt-good: #33c771;
+  --sp-rt-fair: #ff963f;
+  --sp-rt-poor: #ff5a52;
+  --sp-rt-best: #14a0ff;
   --sp-bench: #18241c;
   --sp-bench-ink: #9fc8ab;
   --sp-flash: #4d3f0a;
@@ -125,14 +131,17 @@ html[data-sport-theme='dark'] .sp-root {
     --sp-pitch: #246b3c;
     --sp-pitch-line: rgba(255, 255, 255, 0.35);
     --sp-lu-bg: #1c1c1e;
-    --sp-lu-line: rgba(255, 255, 255, 0.1);
-    --sp-lu-rule: rgba(255, 255, 255, 0.08);
+    --sp-lu-band: #262628;
+    --sp-lu-line: rgba(255, 255, 255, 0.07);
+    --sp-lu-disc: #404042;
+    --sp-lu-name: #f5f5f7;
+    --sp-lu-num: #9a9aa0;
     --sp-disc-bg: #2c2c2e;
-    --sp-rt-top: #1fc76a;
-    --sp-rt-good: #8fd94a;
-    --sp-rt-fair: #f5b83d;
-    --sp-rt-poor: #f0503f;
-    --sp-rt-best: #2f7cf6;
+    --sp-rt-top: #14a0ff;
+    --sp-rt-good: #33c771;
+    --sp-rt-fair: #ff963f;
+    --sp-rt-poor: #ff5a52;
+    --sp-rt-best: #14a0ff;
     --sp-bench: #18241c;
     --sp-bench-ink: #9fc8ab;
     --sp-flash: #4d3f0a;
@@ -525,21 +534,18 @@ html.sp-typing .sp-dock { display: none; }
 /* Pitches: flat grass, white lines */
 .sp-pitch, .sp-pitch-h { background: var(--sp-pitch); }
 .sp-pitch-h { border-radius: 6px; overflow: hidden; }
-/* Lineups: one dark card, as the rating apps draw it. Faint markings true to a 68m pitch, each team
-   named at its end, players as faces on grey discs with a rating pill and white event chips. */
-.sp-lu { --sp-disc-bg: #3a3a3c; max-width: 560px; margin: 0 auto; border-radius: 14px; overflow: hidden; background: var(--sp-lu-bg); color: #f5f5f7; }
+/* Lineups, as FotMob draws them: one flat pitch (its green in light mode, charcoal in dark) with faint
+   markings, a band at each end, players as faces on plain discs with a pill and chips around them. */
+.sp-lu { --sp-disc-bg: var(--sp-lu-disc); max-width: 560px; margin: 0 auto; border-radius: 16px; overflow: hidden; background: var(--sp-lu-bg); color: var(--sp-lu-name); }
 /* On a phone the card runs edge to edge, as the apps do, for the width five across needs. */
 @media (max-width: 599px) { .sp-lu { margin: 0 -16px; border-radius: 0; } }
-.sp-lu-head { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; }
-.sp-lu-head-away { border-bottom: 1px solid var(--sp-lu-rule); }
-.sp-lu-head-home { border-top: 1px solid var(--sp-lu-rule); }
-.sp-lu-team { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 650; }
-.sp-lu-form { flex: none; font-size: 13px; font-weight: 500; color: #8e8e93; }
-.sp-lu-avg { flex: none; margin-left: auto; display: flex; }
+.sp-lu-head { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px; background: var(--sp-lu-band); }
+.sp-lu-team { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 450; }
+.sp-lu-form { flex: none; font-size: 15px; font-weight: 650; }
 .sp-lu-pitch { position: relative; }
-.sp-lu-field { position: absolute; inset: 12px; border: 1.5px solid var(--sp-lu-line); border-radius: 3px; }
-.sp-lu-halfway { position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px solid var(--sp-lu-line); }
-.sp-lu-field svg { position: absolute; left: 0; display: block; width: 100%; height: auto; overflow: visible; fill: none; stroke: var(--sp-lu-line); stroke-width: 1.5; }
+.sp-lu-field { position: absolute; inset: 12px; border: 1px solid var(--sp-lu-line); border-radius: 2px; }
+.sp-lu-halfway { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--sp-lu-line); }
+.sp-lu-field svg { position: absolute; left: 0; display: block; width: 100%; height: auto; overflow: visible; fill: none; stroke: var(--sp-lu-line); stroke-width: 1; }
 .sp-lu-field svg * { vector-effect: non-scaling-stroke; }
 .sp-lu-field svg .sp-lu-spot { fill: var(--sp-lu-line); stroke: none; }
 .sp-lu-centre { top: 50%; transform: translateY(-50%); }
@@ -547,39 +553,40 @@ html.sp-typing .sp-dock { display: none; }
 .sp-lu-end-bottom { top: auto; bottom: 0; transform: scaleY(-1); }
 .sp-lu-player { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .sp-lu-chip { position: relative; display: block; }
-.sp-lu-name { max-width: 100%; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 500; line-height: 15px; color: #f5f5f7; }
-.sp-lu-no { color: #8e8e93; }
+.sp-lu-name { max-width: 100%; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 500; line-height: 15px; color: var(--sp-lu-name); }
+.sp-lu-no { color: var(--sp-lu-num); font-weight: 400; }
 .sp-lu-tight .sp-lu-name { font-size: 12px; font-variation-settings: 'wdth' 88; }
-/* Around the disc: rating top right, substitution and card top left, assists bottom left, goals bottom right. */
-.sp-lu-rate, .sp-lu-tl, .sp-lu-bl, .sp-lu-br { position: absolute; z-index: 1; display: flex; align-items: flex-end; }
-/* Placed against the disc's radius (--r, set per line), so they hug the disc at every size. */
-.sp-lu-rate { left: calc(50% + var(--r) - 15px); top: -5px; }
-.sp-lu-tl { right: calc(50% + var(--r) - 13px); top: -3px; gap: 4px; }
-.sp-lu-bl { right: calc(50% + var(--r) - 13px); bottom: -3px; }
-.sp-lu-br { left: calc(50% + var(--r) - 13px); bottom: -3px; }
-.sp-lu-bl > span + span, .sp-lu-br > span + span { margin-left: -7px; }
-/* A white chip with a dark glyph; the card's own colour rings it, so overlapping chips stay apart. */
-.sp-lu-ev { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: #111; --sp-surface: #fff; box-shadow: 0 0 0 1.5px var(--sp-lu-bg); }
+/* Around the disc, against its radius (--r, set per line): the pill centred on its top edge to the
+   right, a substitution's minute over a coral arrow top left, a card on the left, assists bottom left,
+   goals bottom right. Each is ringed in the pitch's colour, so it stands clear of the photo. */
+.sp-lu-rate, .sp-lu-tl, .sp-lu-card, .sp-lu-bl, .sp-lu-br { position: absolute; z-index: 1; display: flex; }
+.sp-lu-rate { left: calc(50% + var(--r) - 15px); top: -9px; }
+.sp-lu-rate .sp-rating, .sp-lu-head .sp-rating { box-shadow: 0 0 0 2px var(--sp-lu-bg); }
+.sp-lu-tl { right: calc(50% + var(--r) - 13px); top: -17px; }
+.sp-lu-card { right: calc(50% + var(--r) - 5px); top: 50%; transform: translateY(-50%); }
+.sp-lu-card svg { display: block; border-radius: 2px; box-shadow: 0 0 0 2px var(--sp-lu-bg); }
+.sp-lu-bl { right: calc(50% + var(--r) - 13px); bottom: -2px; }
+.sp-lu-br { left: calc(50% + var(--r) - 13px); bottom: -2px; }
+.sp-lu-bl > span + span, .sp-lu-br > span + span { margin-left: -6px; }
+.sp-lu-ev { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #fff; color: #111; --sp-surface: #fff; box-shadow: 0 0 0 2px var(--sp-lu-bg); }
 .sp-lu-ev svg { display: block; }
 .sp-lu-og { background: #ff453a; color: #fff; --sp-surface: #fff; }
-.sp-lu-card { display: grid; padding-bottom: 3px; }
-.sp-lu-card svg { display: block; }
-.sp-lu-sub { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.sp-lu-sub i { font-style: normal; font-size: 11px; font-weight: 600; line-height: 1; color: #f5f5f7; }
-.sp-lu-sub b { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #ff5a4f; box-shadow: 0 0 0 1.5px var(--sp-lu-bg); }
+.sp-lu-sub { flex-direction: column; align-items: center; gap: 1px; }
+.sp-lu-sub i { font-style: normal; font-size: 11px; font-weight: 500; line-height: 13px; color: var(--sp-lu-name); }
+.sp-lu-sub b { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #e55e5b; box-shadow: 0 0 0 2px var(--sp-lu-bg); }
 /* A player's disc: the face cut out on plain grey, or the shirt with the number. */
 .sp-disc { position: relative; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--sp-disc-bg); }
 .sp-disc img { position: absolute; left: 50%; top: 9%; width: 128%; max-width: none; height: auto; transform: translateX(-50%); }
 .sp-disc svg { display: block; }
 /* Ratings: a pill, dark figures on the band's colour; the best on the pitch blue with a star. */
-.sp-rating { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: none; min-width: 34px; height: 20px; padding: 0 7px; border-radius: 999px; color: #0b0b0b; font-size: 12.5px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; }
-.sp-rating-sm { min-width: 30px; height: 18px; padding: 0 6px; font-size: 11.5px; }
-.sp-rating-lg { min-width: 54px; height: 30px; padding: 0 11px; font-size: 17px; }
+.sp-rating { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex: none; min-width: 30px; height: 18px; padding: 0 6px; border-radius: 9px; color: #000; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.sp-rating-sm { min-width: 28px; height: 18px; padding: 0 6px; font-size: 11.5px; }
+.sp-rating-lg { min-width: 52px; height: 30px; padding: 0 11px; border-radius: 15px; font-size: 17px; }
 .sp-rating-top { background: var(--sp-rt-top); }
 .sp-rating-good { background: var(--sp-rt-good); }
 .sp-rating-fair { background: var(--sp-rt-fair); }
-.sp-rating-poor { background: var(--sp-rt-poor); color: #fff; }
-.sp-rating-motm { background: var(--sp-rt-best); color: #fff; }
+.sp-rating-poor { background: var(--sp-rt-poor); }
+.sp-rating-motm { background: var(--sp-rt-best); }
 .sp-rating svg { flex: none; }
 .sp-rating-best { display: flex; align-items: center; gap: 12px; padding: 4px 0 14px; border-bottom: 1px solid var(--sp-rule); }
 .sp-rating-best b { display: block; font-size: 16px; font-weight: 700; }
@@ -596,7 +603,7 @@ html.sp-typing .sp-dock { display: none; }
 .sp-lu-benchhead .sp-muted { font-weight: 500; }
 .sp-lu-bench li { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; min-height: 54px; }
 .sp-bench-who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 600; }
-.sp-bench-who .sp-lu-no { margin-right: 2px; font-weight: 500; }
+.sp-bench-who .sp-lu-no { margin-right: 2px; font-weight: 500; color: var(--sp-muted); }
 .sp-bench-what { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; }
 .sp-bench-min { display: inline-flex; align-items: center; gap: 2px; color: var(--sp-ink-2); }
 .sp-bench-unused { opacity: 0.5; }
