@@ -1,6 +1,8 @@
 // Server side of FPL: the game's API has no CORS headers, so the browser can't call it directly.
 // Each function returns a trimmed shape (bootstrap-static is 1.7 MB raw, about 140 KB here);
 // the route sets CDN cache headers so every viewer shares one upstream call per window.
+import { addSources } from './fpl.mjs';
+
 const BASE = 'https://fantasy.premierleague.com/api';
 const UA = 'Mozilla/5.0 (personal FPL viewer; mikaeelfaraz.com)';
 
@@ -83,6 +85,8 @@ export async function getStatic() {
       saves: e.saves,
       bonus: e.bonus,
       dc90: num(e.defensive_contribution_per_90),
+      dc: e.defensive_contribution ?? 0,
+      ppg: num(e.points_per_game),
       yc: e.yellow_cards,
       playing: e.chance_of_playing_this_round,
     })),
@@ -112,6 +116,28 @@ export async function getLive(event) {
             assists: e.stats.assists,
             xg: num(e.stats.expected_goals),
             xa: num(e.stats.expected_assists),
+            // The rest of Opta's numbers FPL keeps per player, for ratings and the stats tab: defensive
+            // contributions (tackles, clearances-blocks-interceptions, recoveries), saves, goals and xG
+            // conceded while on, cards, and influence, creativity and threat.
+            st: {
+              dc: e.stats.defensive_contribution ?? 0,
+              tk: e.stats.tackles ?? 0,
+              cbi: e.stats.clearances_blocks_interceptions ?? 0,
+              rec: e.stats.recoveries ?? 0,
+              sv: e.stats.saves ?? 0,
+              gc: e.stats.goals_conceded ?? 0,
+              xgc: num(e.stats.expected_goals_conceded) ?? 0,
+              cs: e.stats.clean_sheets ?? 0,
+              yc: e.stats.yellow_cards ?? 0,
+              rc: e.stats.red_cards ?? 0,
+              og: e.stats.own_goals ?? 0,
+              ps: e.stats.penalties_saved ?? 0,
+              pm: e.stats.penalties_missed ?? 0,
+              inf: num(e.stats.influence) ?? 0,
+              cre: num(e.stats.creativity) ?? 0,
+              thr: num(e.stats.threat) ?? 0,
+              starts: e.stats.starts ?? 0,
+            },
             explain: e.explain.map((x) => ({ fixture: x.fixture, stats: x.stats.map((s) => ({ identifier: s.identifier, points: s.points, value: s.value })) })),
           },
         ])
@@ -136,8 +162,22 @@ export async function getLive(event) {
   };
 }
 
+/**
+ * The season so far for every player, gameweek by gameweek from FPL's live data: where their points
+ * came from and how often their defensive contributions paid (fpl.mjs pointSources). Finished
+ * gameweeks are kept for six hours, the current one for a minute.
+ */
+export async function getSeason() {
+  const b = await fpl('/bootstrap-static/', 60e3);
+  const gws = b.events.filter((e) => e.finished || e.is_current).map((e) => ({ id: e.id, done: e.finished && e.data_checked }));
+  const lives = await Promise.all(gws.map((g) => fpl(`/event/${g.id}/live/`, g.done ? 6 * 3600e3 : 60e3)));
+  const per = {};
+  for (const live of lives) for (const e of live?.elements ?? []) addSources(per, e.id, e.explain);
+  return { through: Math.max(0, ...gws.map((g) => g.id)), players: per, at: new Date().toISOString() };
+}
+
 const num10 = (v) => (/^\d{1,10}$/.test(v ?? '') ? Number(v) : null);
-const KINDS = { static: 0, fixtures: 0, top: 0, live: 1, entry: 2, league: 2 };
+const KINDS = { static: 0, fixtures: 0, top: 0, season: 0, live: 1, entry: 2, league: 2 };
 
 /**
  * What /api/sport/fpl/... asks for: { kind, id, event, legacy } or { error, status }.

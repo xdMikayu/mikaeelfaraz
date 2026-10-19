@@ -161,6 +161,14 @@ export const Ball = ({ size = 14, own }) => (
   </svg>
 );
 
+/** An assist: a football boot, side on, toe to the right, studs under it. */
+export const Boot = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden fill="currentColor">
+    <path d="M3.4 3.2h4.4l.5 3.1 4.9 1.5c1.2.4 1.8 1 1.8 1.9 0 1-.9 1.8-2.3 1.8H2.2c-.5 0-.8-.4-.7-.9l.6-3.4c.1-.6.5-1 1-1.2Z" />
+    <path d="M3.2 12.2h1.4v1.6H3.2zM6.4 12.2h1.4v1.6H6.4zM9.6 12.2H11v1.6H9.6zM12.6 12.2H14v1.4h-1.4z" />
+  </svg>
+);
+
 export const SubArrows = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 13V3M2 6l3-3 3 3" stroke="var(--sp-win)" />

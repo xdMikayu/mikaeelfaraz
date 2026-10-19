@@ -141,6 +141,26 @@ outline for a play-off, red for the drop, and a line where one zone ends. No oth
   Substitutions recede.
 - A red card in a kit-colour block sits on a small white chip, so it reads on a red kit too.
 - The win-probability chart marks each goal with a ball above it and a faint rule in the scorers' colour.
+- Every goal names who set it up, never behind a tap: under each scorer in the scoreboard a smaller line with a
+  boot (`Boot` in `glyphs.jsx`) and the name, and in the key events "Assist **J. Doku**". In lineups a boot stands
+  beside a player for each assist, as a ball does for each goal.
+
+## Player ratings
+
+Our own, worked out in `src/lib/sport/ratings.mjs` from the free data (ESPN's lineups and numbers, Opta's commentary
+with our xG, and FPL's Opta numbers in the Premier League) and checked against FPL's bonus points by
+`scripts/sport/check-ratings.mjs`. Settings › About the data explains them in plain words; keep that page true when
+the weights or the scale change.
+
+- A pill, one decimal, black figures on every band (`--sp-rt-*`), FotMob's scale: green (#33c771) from 7, orange from 6,
+  red under 6, blue (#14a0ff) from 9, and the best on the pitch blue with a star. Black figures read at 5–10:1 where
+  the apps' white ones manage 2–3:1. Pills are the convention every rating app uses, so they are the exception to
+  "no pills".
+- On the pitch the pill sits on the disc's top-right corner (see Lineups).
+- The overview has the best on the pitch, with a big face, and each side's top five, faces first and plates lined up
+  on the right; then the way to everyone's (Lineups). Substitutes' lists carry the plate beside their minutes.
+- Nobody is rated before 10 minutes unless they scored, set one up or were sent off; while the match is on the
+  ratings say "so far".
 
 ## Cricket, live
 
@@ -176,6 +196,51 @@ built into `public/sport/data/pl/setpieces.json` by `scripts/sport/build-matchup
 - On the Premier League's table page and in Fantasy (Players › Set pieces), where FPL's takers sit under each
   club and the league's biggest threats are ranked above the grid, your own players ringed. A club's page has its
   own: who it aims for, who delivers, and how it does at both ends.
+
+## Lineups
+
+Both XIs on one flat pitch card (`_components/Lineups.jsx`), drawn as FotMob draws them: the app people hold up as
+the standard, and the reference the owner of this site gave. The version before, with striped grass, kit-colour bars,
+white-ringed discs and boxed labels, read as a 2005 management game. Research behind it (FotMob, SofaScore, Forza,
+Flashscore, LiveScore, 365Scores, the Premier League's site, user reviews and forum threads) found these rules:
+
+- One flat surface, no stripes, texture or gradient: FotMob green (`--sp-lu-bg`, #0a8452, a shade deeper than
+  FotMob's #00985f so white names pass 4.5:1) in light mode, charcoal (#1c1c1e) in dark. Edge to edge on a phone.
+- The markings are the faintest thing on it: 1px lines at 7–13% white, true to a 68m pitch at any height.
+- The home side is at the top. Each team has a band one step lighter at its end, holding the team's average rating
+  pill, the crest, the name in regular weight and the formation in semibold. No kit-colour fields: reviewers called
+  team-coloured backgrounds "terrible".
+- A player is a face cut out on a plain disc, near-white on the green and dark grey on the charcoal, with no ring
+  (`PlayerDisc.jsx`). Photos are the Premier League's own, this season's or last season's. Without one, the disc
+  holds a shirt in the kit colour with the number on it, so leagues without photos still show the teams.
+- Around the disc, each piece ringed in the pitch colour so it stands clear of the photo:
+  - the rating pill centred on the disc's top edge, to the right;
+  - the minute a player went off over a coral (#e55e5b) arrow chip, top left;
+  - a card on the left, halfway down;
+  - assists bottom left and goals bottom right as white chips with dark glyphs, overlapping when there are several.
+- Under the disc, "47 Foden": the number regular in a softer white or grey, the name medium white, 12.5px. No
+  capitals, outlines or label plates.
+- Discs are 46px, 44px four across and 40px five across, where names condense slightly. Lines are 96px apart, so the
+  pitch grows with the lines a side plays and nothing collides.
+- The benches below are one line each: the face, "28 Gerónimo Rulli", then the minute on, events and the rating
+  pill. Unused substitutes are dimmed.
+
+## Effective ownership
+
+In Fantasy › Team (`_components/FantasyEo.jsx`): every manager's multiplier on a player added up, as a share of the
+managers, against your mini-league or the world's top 50 (the first page of FPL's overall league).
+
+- What matters is the stake, your multiplier minus the EO: it leads each row, green when the player's points lift
+  you against them and red when they drop you, on a bar that grows out from the middle.
+- One sentence over the list says where your gameweek stands against their average, before hits.
+- Each player card says it in words: "each point Haaland scores drops you 0.50 against them".
+
+## Fantasy stats
+
+Player stats lead with points, goals, assists, xG, xA, xGI, ± (goals and assists against their expected),
+defensive contributions and ownership. Under them, each with its own anchor: who's above and below their xGI, where
+the points come from (minutes, goals and assists, clean sheets, defensive contributions, bonus, saves and what was
+lost) and every club against its xG at both ends. Season numbers add up FPL's live data, gameweek by gameweek.
 
 ## Live, every sport
 

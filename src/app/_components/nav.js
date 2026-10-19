@@ -65,6 +65,8 @@ export const sportIcons = (key) => ({
 export const FEATURES = [
   { sport: 'football', where: 'Scores', title: 'Today’s scores', href: '/sport', blurb: 'Every match today, your teams first, live as it happens.', words: 'live results fixtures matches today yesterday tomorrow' },
   { sport: 'football', where: 'Scores', title: 'Match pages', href: '/sport', blurb: 'Shot map, expected goals, win chances, lineups, stats and commentary. Open any match.', words: 'xg shot map lineups commentary stats win probability momentum preview odds' },
+  { sport: 'football', where: 'Scores', title: 'Player ratings', href: '/sport', blurb: 'Every player rated out of 10 on each match page, live, with the best on the pitch starred. Open any match.', words: 'ratings player rating fotmob sofascore whoscored man of the match motm best player out of 10 lineups' },
+  { sport: 'football', where: 'Scores', title: 'Who set up each goal', href: '/sport', blurb: 'Every goal on a match page names the player who made it, under the score and in the key events.', words: 'assist assists assisted assister scorers goalscorers set up created' },
   { sport: 'football', where: 'Tables', title: 'League tables', href: '/sport/table/eng.1', blurb: 'Every competition’s table and what each place leads to.', words: 'standings positions premier league laliga bundesliga serie a ligue 1 champions league' },
   { sport: 'football', where: 'Tables', title: 'How the season could end', href: '/sport/table/eng.1#forecast', blurb: 'The Premier League’s matches left, played 4,000 times: title, top four and the drop.', words: 'forecast prediction simulation title relegation top four chances' },
   { sport: 'football', where: 'Tables', title: 'Set pieces: who each club aims for', href: '/sport/table/eng.1#set-pieces', blurb: 'Every Premier League club’s set-piece targets, attempts and goals.', words: 'set piece corners free kicks headers targets magnets delivery' },
@@ -74,6 +76,7 @@ export const FEATURES = [
   { sport: 'football', where: 'Following', title: 'Goal alerts', href: '/sport/following#alerts', blurb: 'Kick-off, goals, red cards and full time for the teams you follow.', words: 'notifications alerts push goal' },
 
   { sport: 'fantasy', where: 'Team', title: 'Your FPL team, live', href: '/sport/fantasy?tab=team', blurb: 'Points as they happen, bonus as it stands, projected autosubs.', words: 'fpl fantasy premier league points live bonus autosubs pitch' },
+  { sport: 'fantasy', where: 'Team', title: 'Effective ownership', href: '/sport/fantasy?tab=team#eo', blurb: 'Who moves your rank: each player’s EO in your league and among the top 50, against your multiplier.', words: 'eo effective ownership captain triple captain rank rivals threats' },
   { sport: 'fantasy', where: 'Planner', title: 'Captain and projections', href: '/sport/fantasy?tab=plan', blurb: 'Your players projected for the weeks ahead, and who to captain.', words: 'captain projections expected points xp planner' },
   { sport: 'fantasy', where: 'Planner', title: 'Matchday AI', href: '/sport/fantasy?tab=plan', blurb: 'Advice for the gameweek from the latest team news and press conferences.', words: 'ai advice assistant news press conference recommendation' },
   { sport: 'fantasy', where: 'Planner', title: 'Our track record', href: '/sport/fantasy?tab=plan', blurb: 'Projections saved before each deadline, graded against what happened.', words: 'accuracy record grade history' },
@@ -88,7 +91,10 @@ export const FEATURES = [
   { sport: 'fantasy', where: 'Players', title: 'Watchlist', href: '/sport/fantasy?tab=players&view=watch', blurb: 'The players you’ve starred.', words: 'watchlist star saved shortlist' },
   { sport: 'fantasy', where: 'Players', title: 'Set-piece threats and takers', href: '/sport/fantasy?tab=players&view=sets', blurb: 'Who gets on the end of corners and free kicks, and who takes them.', words: 'set pieces corners free kicks penalties takers targets headers magnets' },
   { sport: 'fantasy', where: 'Players', title: 'Team news', href: '/sport/fantasy?tab=players&view=news', blurb: 'Injuries and the last or confirmed eleven for every club.', words: 'injuries injured doubtful lineups predicted team news suspended' },
-  { sport: 'fantasy', where: 'Stats', title: 'Player stats', href: '/sport/fantasy?tab=stats', blurb: 'xG, xA and points by period and position.', words: 'stats statistics xg xa points form' },
+  { sport: 'fantasy', where: 'Stats', title: 'Player stats', href: '/sport/fantasy?tab=stats', blurb: 'Points, goals, assists, xG, xA, defensive contributions and ownership, by period and position.', words: 'stats statistics xg xa xgi points form ownership gameweek stars' },
+  { sport: 'fantasy', where: 'Stats', title: 'Above and below their xGI', href: '/sport/fantasy?tab=stats#stats-luck', blurb: 'Who’s running hot and who’s due: goals and assists against expected.', words: 'overperformers underperformers due luck xgi expected regression' },
+  { sport: 'fantasy', where: 'Stats', title: 'Where the points come from', href: '/sport/fantasy?tab=stats#stats-points', blurb: 'Playing time, goals, clean sheets, defensive contributions and bonus, and how often DEFCON pays.', words: 'point sources defcon defensive contributions hit rate bonus clean sheets ppg points per game' },
+  { sport: 'fantasy', where: 'Stats', title: 'Clubs against their xG', href: '/sport/fantasy?tab=stats#stats-clubs', blurb: 'Every club’s goals for and against, next to the expected numbers.', words: 'team attack defence xg xga finishing luck' },
 
   { sport: 'cricket', where: 'Scores', title: 'Cricket on now', href: '/sport/cricket', blurb: 'International and league matches live, with each side’s chance.', words: 'live scores cricket test odi t20 ipl' },
   { sport: 'cricket', where: 'Scores', title: 'Cricket match pages', href: '/sport/cricket', blurb: 'The scorecard, this over ball by ball, partnerships and win chances. Open any match.', words: 'scorecard batting bowling partnership wickets over' },
@@ -110,6 +116,7 @@ export const FEATURES = [
   { sport: 'settings', where: 'Settings', title: 'Your sports', href: '/sport/settings#sports', blurb: 'Their order in the menu, and the one Matchday opens on.', words: 'order sports start open' },
   { sport: 'settings', where: 'Settings', title: 'About the data', href: '/sport/settings#about', blurb: 'Where every number comes from and how old it is.', words: 'data sources espn fpl opta about' },
   { sport: 'settings', where: 'Settings', title: 'How the xG model works', href: '/sport/settings#xg', blurb: 'Fitted on 25,513 shots from StatsBomb’s open data.', words: 'xg expected goals model statsbomb' },
+  { sport: 'settings', where: 'Settings', title: 'How the player ratings work', href: '/sport/settings#ratings', blurb: 'What moves a rating, and how they compare with FPL’s bonus points.', words: 'ratings player rating model bps bonus points how worked out' },
 ];
 
 export const FEATURE_GROUPS = [

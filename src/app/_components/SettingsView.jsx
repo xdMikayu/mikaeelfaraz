@@ -124,6 +124,30 @@ function About() {
         are rougher than the totals. Penalties count as 0.75.
       </p>
       <p>On Premier League matches the page also shows Opta’s xG, summed from FPL’s live player data, so you can compare the two.</p>
+      <h3 className="sp-h3" id="ratings" style={{ margin: '18px 0 6px', color: 'var(--sp-ink)' }}>How the player ratings work</h3>
+      <p>
+        FotMob, SofaScore and WhoScored rate players from Opta’s full event data, every pass and duel, which costs money. Matchday works its own ratings out
+        from what’s free, the way they do: everyone starts from a base and each thing a player does moves the rating, by how much it tends to matter.
+      </p>
+      <p>
+        Goals count most, then assists, then the quality of the chances a player got and set up, measured with the xG estimate above, whether they went in
+        or not; wasting a big chance costs a little. Shots on target and fouls won add a little, winning a penalty more; fouls, offsides, cards, own goals,
+        and missing or giving away a penalty take some off. Keepers and defenders, and midfielders a little, lose some for each goal conceded and for the
+        chances the other side had while they were on, and gain for a clean sheet over 60 minutes or more. Keepers gain for each save, more for the better
+        chances kept out, and a lot for a penalty saved. Everyone gets a little for the result and for the goal difference while they were on.
+      </p>
+      <p>
+        In the Premier League, FPL’s Opta numbers add tackles, clearances, blocks, interceptions and recoveries; elsewhere each player gets the usual amount
+        for the position and the minutes played. A substitute starts a little lower, and nobody is rated before 10 minutes on the pitch unless they scored,
+        set one up or were sent off. During a match the ratings move as things stand.
+      </p>
+      <p>
+        The scale was set on this season’s first 69 Premier League matches, so that starters average 6.8 in every position and four in five land between
+        6.0 and 7.7: 8 is a fine game and 9 is rare. Against FPL’s bonus point scores, Opta’s own per-player measure, the ratings correlate 0.83, and the
+        best-rated player is among the match’s top three for bonus points in 57 of the 69. They can’t see passing, dribbling or positioning, which the paid
+        ratings can, so a quiet playmaker can come out lower than the apps have them. The colours are FotMob’s: green from 7, orange from 6, red under 6,
+        blue from 9, and the best on the pitch blue with a star.
+      </p>
       <p className="sp-tiny sp-muted">
         Club crests and data belong to their owners. This is a personal, non-commercial project with no ads and no tracking.
       </p>
