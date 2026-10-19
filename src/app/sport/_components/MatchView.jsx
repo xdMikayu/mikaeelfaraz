@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { fetchMatch, fetchStandings, fetchScoreboard } from '@/lib/sport/espn.mjs';
 import { standingsNow, inTable, groupOf, ifTheyWin, moveWords } from '@/lib/sport/as-it-stands.mjs';
-import { optaXg, fplFixtureFor, fplPlayersFor } from '@/lib/sport/fplmap.mjs';
+import { optaXg, fplFixtureFor, fplPlayersFor, fplElementsFor } from '@/lib/sport/fplmap.mjs';
 import { LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
 import { useLive, Freshness } from './useLive';
 import { useSpoiler, useFollow } from './prefs';
@@ -119,7 +119,7 @@ export default function MatchView() {
                 <Timeline events={data.events} live={live} names={names} />
               </section>
             )}
-            {!pre && showStuff && ratings?.best && <RatingsPanel ratings={ratings} lineups={data.lineups} names={names} live={live} onAll={() => setTab('lineups')} />}
+            {!pre && showStuff && ratings?.best && <RatingsPanel ratings={ratings} lineups={data.lineups} names={names} colors={colors} faces={fpl.faces} live={live} onAll={() => setTab('lineups')} />}
             {!pre && showStuff && data.stats.length > 0 && (
               <section className="sp-panel">
                 <div className="sp-section-head">
@@ -137,7 +137,7 @@ export default function MatchView() {
       {current === 'lineups' && (
         <section className="sp-panel" style={{ marginTop: 14 }}>
           {lineupsOut ? (
-            showStuff || pre ? <Lineups lineups={data.lineups} colors={colors} names={names} ratings={showStuff ? ratings : null} /> : <p className="sp-note">Lineups show goals and cards, so they stay hidden with the score.</p>
+            showStuff || pre ? <Lineups lineups={data.lineups} colors={colors} names={names} logos={{ home: m.home.logo, away: m.away.logo }} ratings={showStuff ? ratings : null} faces={fpl.faces} /> : <p className="sp-note">Lineups show goals and cards, so they stay hidden with the score.</p>
           ) : (
             <p className="sp-ink2" style={{ margin: 0 }}>
               Not announced yet. Clubs name their teams about an hour before kick-off, and this page checks for them every 20 seconds from 90 minutes before.
@@ -169,8 +169,19 @@ export default function MatchView() {
  * player's numbers (tackles, clearances, saves...) for the ratings, keyed by ESPN athlete id.
  * Checked once a minute while the match is on.
  */
+// The Premier League's own photos: this season's, else last season's (a few players haven't had new ones taken).
+const plPhotos = (opta) => {
+  const code = String(opta ?? '').replace(/^p/, '');
+  return code ? [`https://resources.premierleague.com/premierleague25/photos/players/110x140/${code}.png`, `https://resources.premierleague.com/premierleague/photos/players/110x140/p${code}.png`] : null;
+};
+
+/**
+ * What FPL adds to a Premier League match: Opta's xG and each player's live numbers once it has
+ * started, and from the moment the lineups are out, every player's photo ({ ESPN id: [urls] }).
+ */
 function useFplMatch(data) {
-  const isPl = data?.match.league === 'eng.1' && data.match.status.state !== 'pre';
+  const isPl = data?.match.league === 'eng.1';
+  const started = isPl && data.match.status.state !== 'pre';
   const on = data?.match.status.state === 'in';
   const ix = useMatchupIndex();
   const [base, setBase] = useState(null);
@@ -187,7 +198,7 @@ function useFplMatch(data) {
     };
   }, [isPl]);
   const fx = useMemo(() => (base && data ? fplFixtureFor(data.match, base.st.teams, base.fixtures) : null), [base, data]);
-  const event = fx?.event ?? null;
+  const event = started ? (fx?.event ?? null) : null;
   const at = on ? Math.floor(Date.now() / 60000) : 0;
   const [live, setLive] = useState(null);
   useEffect(() => {
@@ -200,10 +211,17 @@ function useFplMatch(data) {
       off = true;
     };
   }, [event, at]);
+  const lineups = data?.lineups;
+  const faces = useMemo(() => {
+    if (!fx || !lineups) return null;
+    const opta = Object.fromEntries(base.st.elements.map((e) => [e.id, e.opta]));
+    const ids = fplElementsFor(lineups, base.st, fx, ix.data?.fpl);
+    return Object.fromEntries(Object.entries(ids).map(([espn, id]) => [espn, plPhotos(opta[id])]).filter(([, urls]) => urls));
+  }, [fx, lineups, base, ix.data]);
   return useMemo(() => {
-    if (!fx || !live || live.event !== event) return { opta: null, players: null };
-    return { opta: optaXg(data.match, base.st, live), players: fplPlayersFor(data.lineups, base.st, live, fx, ix.data?.fpl) };
-  }, [fx, live, event, data, base, ix.data]);
+    if (!fx || !live || live.event !== event) return { opta: null, players: null, faces };
+    return { opta: optaXg(data.match, base.st, live), players: fplPlayersFor(data.lineups, base.st, live, fx, ix.data?.fpl), faces };
+  }, [fx, live, event, data, base, ix.data, faces]);
 }
 
 /** True for one render cycle after `v` first becomes true (not if it was true on arrival). */

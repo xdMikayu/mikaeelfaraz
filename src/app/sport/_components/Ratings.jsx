@@ -2,10 +2,12 @@
 import Link from 'next/link';
 import { band } from '@/lib/sport/ratings.mjs';
 import { Ball, Boot, Card, Star } from './glyphs';
+import Disc from './PlayerDisc';
 
 // Player ratings on the match page (src/lib/sport/ratings.mjs): a small plate in the scoreboard's
 // type, coloured by band as the apps people know do it (green from 7, deeper from 8, grey for an
-// ordinary game, red under 6), and the best on the pitch starred.
+// ordinary game, red under 6), and the best on the pitch starred. Lists put each player's face (or
+// shirt number) first and line the plates up on the right.
 
 export function RatingPlate({ r, best, size = 'md' }) {
   if (!r) return null;
@@ -21,7 +23,7 @@ const what = (p) =>
   [p.goals ? `${p.goals > 1 ? `${p.goals} goals` : 'goal'}` : null, p.assists ? `${p.assists > 1 ? `${p.assists} assists` : 'assist'}` : null, p.red ? 'sent off' : null].filter(Boolean).join(', ');
 
 /** Overview: the best on the pitch, then each side's top five, and the way to everyone's. */
-export function RatingsPanel({ ratings, lineups, names, onAll, live }) {
+export function RatingsPanel({ ratings, lineups, names, colors, faces, onAll, live }) {
   const people = Object.fromEntries(['home', 'away'].flatMap((s) => [...(lineups[s]?.starters ?? []), ...(lineups[s]?.bench ?? [])].map((p) => [p.id, { ...p, side: s }])));
   const list = (side) =>
     Object.entries(ratings.players)
@@ -38,14 +40,15 @@ export function RatingsPanel({ ratings, lineups, names, onAll, live }) {
         <button className="sp-tiny sp-link sp-ink2" onClick={onAll}>Everyone’s</button>
       </div>
       <div className="sp-rating-best">
-        <RatingPlate r={bestR} best size="lg" />
-        <span style={{ minWidth: 0 }}>
+        <Disc srcs={faces?.[best.id]} number={best.jersey} color={colors[best.side]} size={52} />
+        <span style={{ minWidth: 0, flex: 1 }}>
           <b>{best.name}</b>
           <small className="sp-muted">
             {live ? 'Best on the pitch so far' : 'Best on the pitch'} · {names[best.side]}
             {what(best) ? ` · ${what(best)}` : ''}
           </small>
         </span>
+        <RatingPlate r={bestR} best size="lg" />
       </div>
       <div className="sp-rating-cols">
         {['home', 'away'].map((side) => (
@@ -55,13 +58,14 @@ export function RatingsPanel({ ratings, lineups, names, onAll, live }) {
               const p = people[id];
               return (
                 <li key={id}>
-                  <RatingPlate r={r} best={id === ratings.best} size="sm" />
+                  <Disc srcs={faces?.[id]} number={p.jersey} color={colors[side]} size={28} />
                   <span className="sp-rating-name">{p.last || p.name}</span>
                   <span className="sp-rating-marks" aria-hidden>
                     {Array.from({ length: p.goals ?? 0 }, (_, i) => <Ball key={`g${i}`} size={11} />)}
                     {Array.from({ length: p.assists ?? 0 }, (_, i) => <Boot key={`a${i}`} size={11} />)}
                     {p.red ? <Card red size={10} /> : null}
                   </span>
+                  <RatingPlate r={r} best={id === ratings.best} size="sm" />
                 </li>
               );
             })}

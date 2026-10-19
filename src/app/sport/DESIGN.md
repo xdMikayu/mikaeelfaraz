@@ -154,11 +154,9 @@ the weights or the scale change.
 
 - A plate in the scoreboard's type, one decimal, white on its band: dark green from 8 (#0a6b33), green from 7
   (#188244), grey from 6 (#6b6b6b), red under 6. The best on the pitch gets a star in the plate. No other colours.
-- On the pitch the plate sits on the shirt's top-right corner with a white edge against the grass; a card sits top
-  left, goals and assists bottom left, the minute the player went off bottom right. A chip stays one shirt and a
-  name tall, so five lines a side fit a phone.
-- The overview has the best on the pitch and each side's top five, and the way to everyone's (Lineups). Substitutes'
-  lists carry the plate beside their minutes.
+- On the pitch the plate sits on the disc's top-right corner with a white edge against the grass (see Lineups).
+- The overview has the best on the pitch, with a big face, and each side's top five, faces first and plates lined up
+  on the right; then the way to everyone's (Lineups). Substitutes' lists carry the plate beside their minutes.
 - Nobody is rated before 10 minutes unless they scored, set one up or were sent off; while the match is on the
   ratings say "so far".
 
@@ -196,6 +194,25 @@ built into `public/sport/data/pl/setpieces.json` by `scripts/sport/build-matchup
 - On the Premier League's table page and in Fantasy (Players › Set pieces), where FPL's takers sit under each
   club and the league's biggest threats are ranked above the grid, your own players ringed. A club's page has its
   own: who it aims for, who delivers, and how it does at both ends.
+
+## Lineups
+
+Both XIs on one pitch (`_components/Lineups.jsx`), the away side attacking down from the top:
+
+- Each team's end of the pitch sits under a bar in its kit colour: the crest on a white disc, the name, the formation,
+  and the average of its players' ratings.
+- Grass in two flat greens, mown in bands, dark enough that white names pass 4.5:1. The markings are true to a 68m
+  pitch however tall it's drawn (the boxes, spots, arcs and centre circle scale with the width), in white at half
+  strength.
+- A player is a disc (`PlayerDisc.jsx`): the Premier League's own photo cut out on the kit colour (this season's,
+  else last season's), or the shirt number on it, ringed in white against the grass. The name sits under it in
+  white, never on a label.
+- Around the disc: the rating top right, a card top left on a white chip, goals (white balls) and assists (boots on
+  white discs) bottom left, and the minute the player went off bottom right on a dark tab. Those sit above the
+  neighbouring discs where a row is tight.
+- Lines are spaced in pixels, not percentages: the pitch grows with the number of lines a side plays, so no chip
+  touches the next line on a phone.
+- Substitutes and the ratings panel use the same disc, smaller, with a hairline edge instead of the ring.
 
 ## Effective ownership
 
