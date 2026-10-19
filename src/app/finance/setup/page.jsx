@@ -280,7 +280,7 @@ const STATUS_STYLE = {
   ignored: { label: 'Skipped', cls: 'fin-pill-neutral' },
   dismissed: { label: 'Dismissed', cls: 'fin-pill-neutral' },
   unparsed: { label: 'Unreadable', cls: 'fin-pill-bad' },
-  pending: { label: 'Error', cls: 'fin-pill-bad' },
+  pending: { label: 'Finishing', cls: 'fin-pill-neutral' }, // cut off part-way; the schedule finishes it
 };
 
 /** The last messages the endpoint received, so you can see a Shortcut actually delivered. */
