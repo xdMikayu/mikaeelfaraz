@@ -145,8 +145,8 @@ function About() {
         The scale was set on this season’s first 69 Premier League matches, so that starters average 6.8 in every position and four in five land between
         6.0 and 7.7: 8 is a fine game and 9 is rare. Against FPL’s bonus point scores, Opta’s own per-player measure, the ratings correlate 0.83, and the
         best-rated player is among the match’s top three for bonus points in 57 of the 69. They can’t see passing, dribbling or positioning, which the paid
-        ratings can, so a quiet playmaker can come out lower than the apps have them. From 8 the plate is dark green, from 7 green, from 6 grey and under 6
-        red; the best on the pitch gets a star.
+        ratings can, so a quiet playmaker can come out lower than the apps have them. The colours are FotMob’s: green from 7, orange from 6, red under 6,
+        blue from 9, and the best on the pitch blue with a star.
       </p>
       <p className="sp-tiny sp-muted">
         Club crests and data belong to their owners. This is a personal, non-commercial project with no ads and no tracking.

@@ -130,5 +130,5 @@ test('ratings: minutes on the match clock and the colour bands', () => {
   assert.equal(clockMinute("45'+2'"), 45.02);
   assert.equal(clockMinute("90'+4'"), 94);
   assert.equal(clockMinute(''), null);
-  assert.deepEqual([8, 7.9, 7, 6.9, 6, 5.9].map(band), ['top', 'good', 'good', 'fair', 'fair', 'poor']);
+  assert.deepEqual([9, 8.9, 7, 6.9, 6, 5.9].map(band), ['top', 'good', 'good', 'fair', 'fair', 'poor']);
 });

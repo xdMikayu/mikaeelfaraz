@@ -197,5 +197,5 @@ export function matchRatings(detail, fpl = null, now = null) {
   return { players: out, best: ranked[0]?.[0] ?? null };
 }
 
-/** The colour band a rating falls in, as the apps people know use them: 8 and up, 7 to 8, 6 to 7, under 6. */
-export const band = (r) => (r >= 8 ? 'top' : r >= 7 ? 'good' : r >= 6 ? 'fair' : 'poor');
+/** The colour band a rating falls in, as FotMob's: 9 and up, 7 to 9, 6 to 7, under 6. */
+export const band = (r) => (r >= 9 ? 'top' : r >= 7 ? 'good' : r >= 6 ? 'fair' : 'poor');
