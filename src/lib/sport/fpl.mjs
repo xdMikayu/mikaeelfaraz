@@ -217,9 +217,9 @@ export function pointChanges(prev, next, elementIds) {
 //    defensive contributions, bonus and cards from Poisson rates.
 // Matches in play only add what the minutes left can still bring.
 
-const GOAL_PTS = { 1: 10, 2: 6, 3: 5, 4: 4 };
+export const GOAL_PTS = { 1: 10, 2: 6, 3: 5, 4: 4 };
 const CS_PTS = { 1: 4, 2: 4, 3: 1, 4: 0 };
-const DC_NEED = { 2: 10, 3: 12, 4: 12 }; // defensive contributions for 2 points
+export const DC_NEED = { 2: 10, 3: 12, 4: 12 }; // defensive contributions for 2 points
 const HOME = 1.1; // home sides create about 20% more xG than away sides in the Premier League
 const PRIOR_MATCHES = 4; // league-average matches mixed into each team's rating
 const PRIOR_MINUTES = 540; // league-average minutes mixed into each player's per-90 rates
@@ -233,6 +233,16 @@ const pmf = (l, max = 20) => {
 export const poissonTail = (l, t) => (t <= 0 ? 1 : 1 - pmf(l, t - 1).reduce((a, b) => a + b, 0));
 /** E[floor((X + offset) / d)] for X ~ Poisson(l). */
 export const poissonFloor = (l, d, offset = 0) => pmf(l, 25).reduce((t, p, k) => t + p * Math.floor((k + offset) / d), 0);
+
+/**
+ * Expected points from defensive contributions in a full match, for a player averaging `dc90` of them
+ * per 90: 2 points times the chance of reaching FPL's line, by the same Poisson model as the projections.
+ * Checked on 2026/27's first seven gameweeks: for each band of DC per 90 it lands within about six
+ * percentage points of how often the defenders and midfielders in it actually got there.
+ */
+export const defconPoints90 = (type, dc90) => (DC_NEED[type] ? 2 * poissonTail(Math.max(0, dc90), DC_NEED[type]) : 0);
+/** Expected points from goals and assists in a full match, from xG and xA per 90. */
+export const attackPoints90 = (type, xg90, xa90) => (GOAL_PTS[type] ?? 0) * xg90 + 3 * xa90;
 
 /** Season ratings for every team and per-position rates, from bootstrap elements. */
 export function buildModel(elements) {

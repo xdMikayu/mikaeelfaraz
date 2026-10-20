@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-function useWidth() {
+export function useWidth() {
   const ref = useRef(null);
   const [w, setW] = useState(0);
   useEffect(() => {
