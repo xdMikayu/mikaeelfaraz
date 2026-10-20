@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { addSources, SOURCES, sourcePoints, POS } from '@/lib/sport/fpl.mjs';
 import { shirt, heat } from './fplbits';
+import { ChancesChart, DefconChart } from './FantasyCharts';
 
 const loads = {};
 /** A past gameweek's live data never changes, so each is fetched once per visit. */
@@ -38,7 +39,7 @@ const POSITIONS = [[0, 'All'], [1, 'GKP'], [2, 'DEF'], [3, 'MID'], [4, 'FWD']];
 const signed = (v, d = 1) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}`;
 
 /** Goals, assists, their expected numbers, points and where they came from, over a gameweek, four or the season. */
-export default function Stats({ st, live, fixtures, ctx, teams }) {
+export default function Stats({ st, live, fixtures, ctx, teams, squad }) {
   const cur = live.event;
   const [range, setRange] = useState('gw');
   const [sortBy, setSortBy] = useState('xgi');
@@ -143,8 +144,9 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
           ))}
         </div>
         <p className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>
-          On this page: <a className="sp-link" href="#stats-players">players</a> · <a className="sp-link" href="#stats-luck">above and below their xGI</a> ·{' '}
-          <a className="sp-link" href="#stats-points">where the points come from</a> · <a className="sp-link" href="#stats-clubs">clubs</a>
+          On this page: <a className="sp-link" href="#stats-players">players</a> · <a className="sp-link" href="#stats-defcon">DEFCON and goal threat</a> ·{' '}
+          <a className="sp-link" href="#stats-luck">above and below their xGI</a> · <a className="sp-link" href="#stats-points">where the points come from</a> ·{' '}
+          <a className="sp-link" href="#stats-chances">club chances</a> · <a className="sp-link" href="#stats-clubs">clubs</a>
         </p>
       </div>
 
@@ -202,8 +204,10 @@ export default function Stats({ st, live, fixtures, ctx, teams }) {
         </p>
       </section>
 
+      <DefconChart players={data.players} sources={data.sources} teams={teams} squad={squad} range={range} label={rangeLabel} />
       <Luck players={data.players} teams={teams} pos={pos} label={rangeLabel} range={range} />
       <Sources sources={data.sources} players={data.players} ctx={ctx} teams={teams} label={rangeLabel} />
+      <ChancesChart teams={teams} gws={gws} />
       <Clubs clubs={data.clubs} teams={teams} label={rangeLabel} season={range === 'season'} />
     </div>
   );

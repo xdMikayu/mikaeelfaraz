@@ -258,6 +258,20 @@ defensive contributions and ownership. Under them, each with its own anchor: who
 the points come from (minutes, goals and assists, clean sheets, defensive contributions, bonus, saves and what was
 lost) and every club against its xG at both ends. Season numbers add up FPL's live data, gameweek by gameweek.
 
+Two charts sit among them, scatters drawn at their real width (`_components/Scatter.jsx`): labels go where they
+fit, never over a shirt, a point that matters or another label; every point has a hover or tap card; a table
+stands behind each; one sentence under each says what it shows.
+
+- **DEFCON and goal threat** (`_components/FantasyCharts.jsx`, `src/lib/sport/defcon.mjs`): defensive
+  contributions per 90 against xGI per 90, for defenders or midfielders. FPL's line for 2 points is drawn, and
+  curves join the players worth the same per 90 from the two together, by FPL's scoring and the projections'
+  own model for reaching the line. The manager's players are in ink and named; everyone else is grey, the best
+  six named.
+- **Club chances**: every club's non-penalty xG and big chances a match, conceded or created, in Opta's numbers
+  (`public/sport/data/pl/chances.json`, built twice a week by `scripts/sport/build-chances.mjs`). Shirts are
+  the markers and the league's averages the lines; "Better" and "Worse" name the corners in words, never a
+  red-to-green wash behind them.
+
 ## Live, every sport
 
 What following cricket live taught, applied to football and F1 too:

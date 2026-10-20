@@ -247,7 +247,7 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, exampl
       {tab === 'league' && leagueId && <League id={leagueId} event={live.event} entry={entry} ctx={ctx} myTeam={team} teams={teams} live={isLive} onPick={(id) => update({ fplLeague: id })} />}
       {tab === 'gameweek' && <Gameweek st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} kit={kit} oddsAt={oddsAt} />}
       {tab === 'players' && <Players st={st} ctx={ctx} teams={teams} squad={picks?.picks.map((p) => p.element) ?? []} fixtures={fixtures} kit={kit} />}
-      {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} />}
+      {tab === 'stats' && <Stats st={st} live={live} fixtures={fixtures} ctx={ctx} teams={teams} squad={picks?.picks.map((p) => p.element) ?? []} />}
     </div>
   );
 }
