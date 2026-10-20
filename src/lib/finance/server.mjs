@@ -126,6 +126,43 @@ export async function ingestEvents(db, userId, events, { now = new Date() } = {}
 }
 
 /**
+ * Finish messages whose request was cut off part-way (the site's functions stop after
+ * ~10 s), which leaves them 'pending' for good: a sender that re-sends within a minute
+ * is told "already received" and moves on. Run on the schedule. A message that still
+ * fails is marked unreadable with the reason, so it shows up in "needs a look".
+ */
+export async function finishStalled(db, userId, { now = new Date(), limit = 10, olderThanMs = 2 * 60 * 1000 } = {}) {
+  const { data, error } = await db
+    .from('fin_raw_events')
+    .select('id, source, payload, received_at')
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .lt('received_at', new Date(now.getTime() - olderThanMs).toISOString())
+    .gt('received_at', new Date(now.getTime() - 14 * 24 * 3600 * 1000).toISOString())
+    .order('received_at')
+    .limit(limit);
+  if (error) throw error;
+  if (!data.length) return { finished: 0 };
+  const accounts = await ensureAccounts(db, userId);
+  const rules = await loadRules(db, userId);
+  const counts = {};
+  for (const r of data) {
+    // Alerts sent without a time of their own are dated by when they arrived, not now.
+    const event = { received_at: r.received_at, ...r.payload, source: r.source };
+    let status;
+    try {
+      ({ status } = await ingestOne(db, userId, event, { accounts, rules, now, rawId: r.id }));
+    } catch (err) {
+      status = 'unparsed';
+      await db.from('fin_raw_events').update({ status, reason: `Couldn't finish saving (${err.message || err}). Try again.` }).eq('id', r.id);
+    }
+    counts[status] = (counts[status] || 0) + 1;
+  }
+  if (counts.parsed) await reconcileTabby(db, userId, accounts);
+  return { finished: data.length, ...counts };
+}
+
+/**
  * Hide the bank-card Tabby charges that paid off the Tabby card and count the rest
  * as instalments. Runs after each ingest batch and on the schedule, so it doesn't
  * matter whether the bank charge or the Tabby repayment arrives first. Rows whose
@@ -182,7 +219,7 @@ async function syncCardBalance(db, userId, parsed) {
   }
 }
 
-async function ingestOne(db, userId, event, { accounts, rules, now }) {
+async function ingestOne(db, userId, event, { accounts, rules, now, rawId = null }) {
   const source = String(event.source || (event.text ? 'text' : 'wallet')).slice(0, 20);
   const externalId = event.external_id ? String(event.external_id).slice(0, 200) : null;
 
@@ -190,11 +227,14 @@ async function ingestOne(db, userId, event, { accounts, rules, now }) {
   //    re-sent Gmail message is recognised and skipped — unless its first attempt was
   //    cut off before finishing (still 'pending' a minute later), in which case this
   //    attempt takes it over, so a timed-out batch loses nothing when it is re-sent.
-  let { data: raw, error: rawErr } = await db
-    .from('fin_raw_events')
-    .insert({ user_id: userId, source, external_id: externalId, payload: event, status: 'pending' })
-    .select('id')
-    .single();
+  //    finishStalled passes rawId to finish a stored event whose request was cut off.
+  let { data: raw, error: rawErr } = rawId
+    ? { data: { id: rawId }, error: null }
+    : await db
+      .from('fin_raw_events')
+      .insert({ user_id: userId, source, external_id: externalId, payload: event, status: 'pending' })
+      .select('id')
+      .single();
   if (rawErr) {
     if (rawErr.code !== '23505') throw rawErr;
     const { data: prior, error: priorErr } = await db
