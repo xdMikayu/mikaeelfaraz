@@ -225,6 +225,22 @@ Flashscore, LiveScore, 365Scores, the Premier League's site, user reviews and fo
 - The benches below are one line each: the face, "28 Gerónimo Rulli", then the minute on, events and the rating
   pill. Unused substitutes are dimmed.
 
+## DEFCON, live
+
+In Fantasy › Team (`_components/FantasyDefcon.jsx`, `src/lib/sport/fpl.mjs` `defconFixture`): every outfield
+player who counts this gameweek against FPL's defensive-contribution line, 10 for a defender and 12 for a
+midfielder or forward.
+
+- A small box per contribution the line takes, filled in ink as they come and green once it's reached; the
+  count (or, before kick-off, the chance) on the right.
+- Under each, in words: what's still needed and the chance in the minutes left, or how it ended; the fixture;
+  tackles, CBI and recoveries. A live row has the red edge every live row has.
+- The one being chased hardest leads; then those reached, those still to play, near misses. Anyone with no
+  real chance shares a single "Not close" line, so the list stays about the players who might get there.
+- One sentence over it: the points banked and the closest chase, or before kick-off what's expected.
+- Counts are FPL's live numbers. FPL's explain only lists them once they pay, so below the line the count
+  comes from its live stats; the projections use the same count and the same chance.
+
 ## Effective ownership
 
 In Fantasy › Team (`_components/FantasyEo.jsx`): every manager's multiplier on a player added up, as a share of the
