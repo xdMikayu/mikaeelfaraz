@@ -5,6 +5,7 @@ import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
 import Record from './FantasyRecord';
 import Advice from './FantasyAdvice';
+import TransferChat from './FantasyChat';
 import { TransferPlan, Chips, Rotations } from './FantasyOptimiser';
 import { useParam, useTabInView } from './useParam';
 
@@ -217,6 +218,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
               );
             })}
           </section>
+          <TransferChat entry={entry} horizon={horizon} league={leagueId} suggestions={transfers.map((t) => ({ out: ctx.elements[t.out]?.name, in: ctx.elements[t.in]?.name }))} />
         </>
       )}
 
