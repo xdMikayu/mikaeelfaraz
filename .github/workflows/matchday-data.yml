@@ -1,7 +1,7 @@
 name: Matchday data
 
 # Adds newly finished Premier League matches to the matchup data (xG by role, team ratings,
-# player match logs), refits the Net xG weights, saves and grades the weekly projections, and
+# player match logs) and the clubs' chances, refits the Net xG weights, saves and grades the weekly projections, and
 # commits it, which redeploys the site. Mondays catch the weekend round, Thursdays the midweek one,
 # Fridays save the weekend's projections before the deadline. A run takes about a minute.
 on:
@@ -30,6 +30,9 @@ jobs:
           node-version: 22
       # The script uses only Node's built-ins and the app's own modules, so no npm install.
       - run: node scripts/sport/build-matchups.mjs
+      # Every club's chances at both ends in Opta's numbers: xG from FPL's players, big chances from the
+      # Premier League's match stats. Either can turn cloud machines away; the chart then waits a run.
+      - run: node scripts/sport/build-chances.mjs || echo "FPL or the Premier League unavailable; chances not updated this run"
       # Relearn the Net xG weights with the new matches and re-test them (a few seconds).
       - run: node scripts/sport/fit-netxg.mjs
       # Save this gameweek's projections before the deadline, and grade finished gameweeks.
