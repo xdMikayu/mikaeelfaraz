@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bonusFromBps, teamLive, leagueLive, projectedBonus, buildModel, fixtureRates, poissonTail, poissonFloor, projectPlayer, headToHead, returnDate, laterAvailability, availability, sellingPrices } from './fpl.mjs';
+import { bonusFromBps, teamLive, leagueLive, projectedBonus, buildModel, fixtureRates, poissonTail, poissonFloor, projectPlayer, headToHead, returnDate, laterAvailability, availability, sellingPrices, defconFixture } from './fpl.mjs';
 import { xgFor, shotGeometry, shotTraits, PENALTY_XG } from './xg.mjs';
 import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, simulateSeason, ratesFromTable } from './forecast.mjs';
 import { rolesFromLines, versus, roleFactor } from './matchups.mjs';
@@ -150,6 +150,66 @@ test('projections: a regular starter expects more than appearance points; a fini
   const done = projectPlayer(110, ctx);
   assert.equal(done.rest, 0);
   assert.equal(done.final, 8);
+});
+
+// A defender averaging 11 defensive contributions per 90, on from the start of a live match.
+function defconCtx(live, clock = 70) {
+  const ctx = modelCtx();
+  ctx.elements[101] = { ...ctx.elements[101], dc90: 11 };
+  ctx.fixtures[0] = { ...ctx.fixtures[0], started: true, minutes: clock, hs: 0, as: 0 };
+  ctx.live[101] = { minutes: clock, points: clock >= 60 ? 2 : 1, bonus: 0, bps: 0, explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: clock >= 60 ? 2 : 1, value: clock }] }], st: { dc: 0, starts: 1 }, ...live };
+  return ctx;
+}
+const dcPaid = (value) => ({ identifier: 'defensive_contribution', points: 2, value });
+
+test('defcon: below the line the count comes from the live stats, since FPL only explains it once it pays', () => {
+  const ctx = defconCtx({ st: { dc: 8, starts: 1 } });
+  const d = defconFixture(101, ctx.fixtures[0], ctx);
+  assert.equal(d.have, 8);
+  assert.equal(d.need, 10);
+  assert.equal(d.paid, false);
+  // Two more in the last 20 minutes at 11 per 90.
+  assert.ok(Math.abs(d.chance - poissonTail((11 * 20) / 90, 2)) < 1e-9, `chance ${d.chance}`);
+  assert.ok(d.chance > 0.6 && d.chance < 0.8);
+  // The projection counts them too (at half an hour, before a clean sheet it holds can only shrink his
+  // expected points): two short of the line is worth well over a point more than none.
+  const early = (dc) => projectPlayer(101, defconCtx({ st: { dc, starts: 1 } }, 30)).rest;
+  assert.ok(early(8) - early(0) > 1.2, `${early(8)} against ${early(0)}`);
+  assert.equal(defconFixture(100, ctx.fixtures[0], ctx), null, 'goalkeepers have no line');
+});
+
+test('defcon: paid, reached and waiting for FPL, taken off, and finished short', () => {
+  const paid = defconCtx({ st: { dc: 11, starts: 1 }, explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: 2, value: 70 }, dcPaid(11)] }] });
+  const p = defconFixture(101, paid.fixtures[0], paid);
+  assert.deepEqual([p.have, p.paid, p.reached, p.chance], [11, true, true, 1]);
+  // Reached but not yet paid, the projection adds the 2 points; paid, they're in his live total already.
+  const reached = defconCtx({ st: { dc: 10, starts: 1 } });
+  const r = defconFixture(101, reached.fixtures[0], reached);
+  assert.deepEqual([r.paid, r.reached, r.chance], [false, true, 1]);
+  const at30 = (dc, explained) => defconCtx({ st: { dc, starts: 1 }, explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: 1, value: 30 }, ...(explained ? [dcPaid(dc)] : [])] }] }, 30);
+  assert.ok(Math.abs(projectPlayer(101, at30(10, false)).rest - projectPlayer(101, at30(10, true)).rest - 2) < 1e-9);
+  // A starter on 55 minutes with the clock at 70 has gone off.
+  const off = defconCtx({ minutes: 55, st: { dc: 8, starts: 1 }, explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: 1, value: 55 }] }] });
+  const o = defconFixture(101, off.fixtures[0], off);
+  assert.deepEqual([o.off, o.chance], [true, 0]);
+  // A substitute who came on doesn't count as off for having fewer minutes.
+  const sub = defconCtx({ minutes: 20, st: { dc: 3, starts: 0 }, explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: 1, value: 20 }] }] });
+  assert.equal(defconFixture(101, sub.fixtures[0], sub).off, false);
+  const ft = defconCtx({ minutes: 90, st: { dc: 7, starts: 1 } });
+  ft.fixtures[0] = { ...ft.fixtures[0], minutes: 90, finished: true, finishedProvisional: true };
+  const f = defconFixture(101, ft.fixtures[0], ft);
+  assert.deepEqual([f.have, f.done, f.chance], [7, true, 0]);
+});
+
+test('defcon: in a double gameweek the count still to place is shared by minutes', () => {
+  const ctx = defconCtx({});
+  ctx.fixtures = [{ ...ctx.fixtures[0], id: 1, minutes: 90, finished: true, finishedProvisional: true }, { ...ctx.fixtures[0], id: 2, minutes: 45 }];
+  ctx.live[101] = { minutes: 135, points: 4, bonus: 0, bps: 0, st: { dc: 12, starts: 2 }, explain: [{ fixture: 1, stats: [{ identifier: 'minutes', points: 2, value: 90 }] }, { fixture: 2, stats: [{ identifier: 'minutes', points: 1, value: 45 }] }] };
+  assert.equal(defconFixture(101, ctx.fixtures[1], ctx).have, 4);
+  assert.equal(defconFixture(101, ctx.fixtures[0], ctx).have, 8);
+  // Once the first one has paid, the rest is all the second's.
+  ctx.live[101].explain[0].stats.push(dcPaid(10));
+  assert.equal(defconFixture(101, ctx.fixtures[1], ctx).have, 2);
 });
 
 test('head to head: identical teams are a coin flip; a settled week is certain', () => {

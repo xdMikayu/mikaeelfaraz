@@ -14,6 +14,7 @@ import MatchupPanel from './FantasyMatchup';
 import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
 import { useParam, useTabInView } from './useParam';
 import { useEo, EoPanel, eoWords, OVERALL } from './FantasyEo';
+import { DefconTracker, DefconBar, defconNow, defconWords } from './FantasyDefcon';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
@@ -240,6 +241,7 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, exampl
             </div>
           </div>
           {teamView === 'pitch' ? <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} eo={eo} /> : <TeamList team={team} ctx={ctx} teams={teams} eo={eo} />}
+          <DefconTracker team={team} ctx={ctx} teams={teams} />
           <EoPanel team={team} ctx={ctx} teams={teams} league={eoLeague} top={eoTop} />
         </>
       )}
@@ -383,6 +385,7 @@ function Pitch({ team, ctx, teams, forecast, fixtures, eo }) {
 function PlayerCard({ l, ctx, teams, kit, fixtures, eo }) {
   const el = ctx.elements[l.element];
   const parts = breakdown(l.state);
+  const dc = defconNow(el.id, ctx);
   const fx = fixturesOf(el.team, ctx);
   // The matchup to read about: his match in progress or next up.
   const nextFx = (fixtures ?? ctx.fixtures).filter((f) => (f.home === el.team || f.away === el.team) && !f.finished && !f.finishedProvisional).sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))[0] ?? null;
@@ -412,6 +415,14 @@ function PlayerCard({ l, ctx, teams, kit, fixtures, eo }) {
           )) : <span className="sp-small sp-muted">No points yet</span>}
           {l.mult > 1 && <span className="sp-small" style={{ fontWeight: 800 }}>×{l.mult} {l.mult === 3 ? 'triple captain' : 'captain'}</span>}
         </div>
+        {dc && (
+          <p className="sp-tiny sp-ink2" style={{ margin: '8px 0 0', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 8px' }}>
+            <DefconBar d={dc} />
+            <span>
+              <b style={{ color: 'var(--sp-ink)' }}>DEFCON {dc.reached ? '+2' : `${dc.have}/${dc.need}`}</b> · {defconWords(dc, el).text}
+            </span>
+          </p>
+        )}
         {eo && <p className="sp-tiny sp-ink2" style={{ margin: '8px 0 0' }}>{eoWords(el, l, eo)}</p>}
       </div>
       <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>

@@ -219,7 +219,7 @@ export function pointChanges(prev, next, elementIds) {
 
 const GOAL_PTS = { 1: 10, 2: 6, 3: 5, 4: 4 };
 const CS_PTS = { 1: 4, 2: 4, 3: 1, 4: 0 };
-const DC_NEED = { 2: 10, 3: 12, 4: 12 }; // defensive contributions for 2 points
+export const DC_NEED = { 2: 10, 3: 12, 4: 12 }; // defensive contributions for 2 points
 const HOME = 1.1; // home sides create about 20% more xG than away sides in the Premier League
 const PRIOR_MATCHES = 4; // league-average matches mixed into each team's rating
 const PRIOR_MINUTES = 540; // league-average minutes mixed into each player's per-90 rates
@@ -353,6 +353,67 @@ export function fixtureRates(f, model) {
 const statOf = (live, fixtureId, key) => live?.explain?.find((x) => x.fixture === fixtureId)?.stats.find((s) => s.identifier === key) ?? null;
 
 /**
+ * His minutes in one fixture as the projections see them: { left (the share of the match still to play),
+ * alreadyMins, mins (still to come), pApp (the chance he plays), p60 }. On the pitch in a live match he's
+ * assumed to stay on; on its bench, a one-in-three chance he comes on; before kick-off, from his starts.
+ */
+function minutesOutlook(el, f, ctx) {
+  const left = f.started ? Math.max(0.03, Math.min(1, (90 - (f.minutes ?? 0)) / 90)) : 1;
+  if (f.started) {
+    const alreadyMins = statOf(ctx.live[el.id], f.id, 'minutes')?.value ?? 0;
+    const on = alreadyMins > 0;
+    return {
+      left,
+      alreadyMins,
+      mins: on ? 90 * left : 0.35 * Math.min(25, 90 * left),
+      pApp: on ? 1 : 0.35,
+      p60: on ? (alreadyMins >= 60 ? 1 : alreadyMins + 90 * left >= 60 ? 0.85 : 0) : 0,
+    };
+  }
+  const min = el.minutes ?? 0;
+  const n = Math.max(1, Math.round(ctx.model?.teams[el.team]?.n ?? 0));
+  const avail = availability(el, f, ctx);
+  const starts = el.starts ?? 0;
+  const pStart = Math.min(1, starts / n) * avail;
+  const perStart = starts > 0 ? Math.min(90, min / starts) : 0;
+  const pSub = min > 0 ? (1 - Math.min(1, starts / n)) * 0.3 * avail : 0;
+  return { left, alreadyMins: 0, mins: pStart * perStart + pSub * 20, pApp: pStart + pSub, p60: pStart * (perStart >= 75 ? 0.9 : perStart >= 60 ? 0.7 : 0.3) };
+}
+
+/**
+ * Where a player stands against FPL's defensive-contribution line in one fixture: { need, have, paid
+ * (FPL has added the 2 points), reached, done, on, off, mins (still to come), chance (of the 2 points) }.
+ * FPL's explain only lists defensive contributions once they've paid, so below the line `have` is the
+ * gameweek's count from the live stats (in a double gameweek, what the other fixture didn't account
+ * for, shared by minutes). A starter whose minutes have fallen ten behind the match clock has been
+ * taken off and adds no more. The chance is the projections' Poisson model on his defensive
+ * contributions per 90 over the minutes still to come. Null for goalkeepers, who don't score them.
+ */
+export function defconFixture(id, f, ctx) {
+  const el = ctx.elements[id];
+  const need = DC_NEED[el?.type];
+  if (!need) return null;
+  const live = ctx.live[id];
+  const entry = statOf(live, f.id, 'defensive_contribution');
+  const here = statOf(live, f.id, 'minutes')?.value ?? 0;
+  let have = entry?.value ?? 0;
+  if (!entry && here > 0) {
+    const others = (live?.explain ?? []).filter((x) => x.fixture !== f.id);
+    const val = (x, key) => x.stats.find((s) => s.identifier === key)?.value ?? 0;
+    const counted = others.reduce((t, x) => t + val(x, 'defensive_contribution'), 0);
+    const otherMins = others.filter((x) => !x.stats.some((s) => s.identifier === 'defensive_contribution')).reduce((t, x) => t + val(x, 'minutes'), 0);
+    have = Math.round(Math.max(0, (live?.st?.dc ?? 0) - counted) * (here / (here + otherMins)));
+  }
+  const paid = Boolean(entry?.points);
+  const reached = paid || have >= need;
+  const done = Boolean(f.finished || f.finishedProvisional);
+  const off = Boolean(f.started && !done && here > 0 && (live?.st?.starts ?? 0) > 0 && (f.minutes ?? 0) - here >= 10);
+  const mins = reached || done || off ? 0 : minutesOutlook(el, f, ctx).mins;
+  const chance = reached ? 1 : done || off ? 0 : poissonTail(((el.dc90 ?? 0) * mins) / 90, need - have);
+  return { need, have, paid, reached, done, on: here > 0, off, mins, chance };
+}
+
+/**
  * What one player can still add in one fixture: { xp, v (variance), xg, xa, cs, mins, lamFor, lamAgainst }.
  * Finished fixtures add nothing; their points are already in his live total.
  */
@@ -377,30 +438,7 @@ export function projectFixture(id, f, ctx) {
   const per90 = (v) => (min >= 90 ? (v / min) * 90 : 0);
   const type = el.type;
   const live = ctx.live[id];
-  const left = f.started ? Math.max(0.03, Math.min(1, (90 - (f.minutes ?? 0)) / 90)) : 1;
-
-  let mins;
-  let pApp;
-  let p60;
-  let alreadyMins = 0;
-  if (f.started) {
-    alreadyMins = statOf(live, f.id, 'minutes')?.value ?? 0;
-    const on = alreadyMins > 0;
-    // On the pitch: assume he stays on. On the bench of a live match: a one-in-three chance he comes on.
-    mins = on ? 90 * left : 0.35 * Math.min(25, 90 * left);
-    pApp = on ? 1 : 0.35;
-    p60 = on ? (alreadyMins >= 60 ? 1 : alreadyMins + 90 * left >= 60 ? 0.85 : 0) : 0;
-  } else {
-    const n = Math.max(1, Math.round(team.n));
-    const avail = availability(el, f, ctx);
-    const starts = el.starts ?? 0;
-    const pStart = Math.min(1, starts / n) * avail;
-    const perStart = starts > 0 ? Math.min(90, min / starts) : 0;
-    const pSub = min > 0 ? (1 - Math.min(1, starts / n)) * 0.3 * avail : 0;
-    mins = pStart * perStart + pSub * 20;
-    pApp = pStart + pSub;
-    p60 = pStart * (perStart >= 75 ? 0.9 : perStart >= 60 ? 0.7 : 0.3);
-  }
+  const { left, alreadyMins, mins, pApp, p60 } = minutesOutlook(el, f, ctx);
   const frac = mins / 90;
   // How much more or less than usual this opponent gives up to his role (1 without matchup data).
   const roleF = model.roleFactor?.(id, home ? f.away : f.home) ?? 1;
@@ -442,11 +480,10 @@ export function projectFixture(id, f, ctx) {
     xp += poissonFloor(saves90 * frac, 3, before) - Math.floor(before / 3);
   }
   if (DC_NEED[type] && el.dc90) {
-    const have = f.started ? statOf(live, f.id, 'defensive_contribution') : null;
-    if (!have?.points) {
-      const p = poissonTail(el.dc90 * frac, DC_NEED[type] - (have?.value ?? 0));
-      xp += 2 * p;
-      v += 4 * p * (1 - p);
+    const dc = defconFixture(id, f, ctx);
+    if (!dc.paid) {
+      xp += 2 * dc.chance;
+      v += 4 * dc.chance * (1 - dc.chance);
     }
   }
   if (!f.started) xp += per90(el.bonus ?? 0) * frac;
