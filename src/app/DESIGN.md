@@ -235,6 +235,22 @@ managers, against your mini-league or the world's top 50 (the first page of FPL'
 - One sentence over the list says where your gameweek stands against their average, before hits.
 - Each player card says it in words: "each point Haaland scores drops you 0.50 against them".
 
+## Ask Matchday AI
+
+A chat under Planner › Transfers (`_components/FantasyChat.jsx`, `src/lib/sport/chat.mjs`) for the question the
+planner can't answer on its own: why this player and not the one I want?
+
+- The server does the arithmetic, the model the explaining. Its tools give a player's full report (minutes, threat,
+  set pieces, defensive contributions, bonus, fixtures and role matchups, price, ownership in the manager's league,
+  recent matches) and what a move does to the manager's own team over the planner's weeks, by the planner's own
+  measure, with the budget and club rules checked.
+- Players named in a question are looked up before the model starts, which saves it a round trip.
+- The manager's questions sit in a quiet bubble on the right; the answers are plain text, verdict first, bold for
+  the key numbers, bullets for the reasons. While it looks things up the page says what it's checking, in plain
+  text with no spinner or dots.
+- Three suggested questions start an empty chat, built from the planner's best swap. The conversation lasts for the
+  browser tab, per team.
+
 ## Fantasy stats
 
 Player stats lead with points, goals, assists, xG, xA, xGI, ± (goals and assists against their expected),
