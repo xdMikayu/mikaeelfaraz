@@ -65,10 +65,17 @@ const corr = (a, b) => {
 const topBy = (list, k, n) => [...list].sort((a, b) => b[k] - a[k]).slice(0, n);
 
 const weeks = [];
+const saved = [];
+const awaiting = [];
 for (const file of (await readdir(SNAP)).filter((f) => /^gw\d+\.json$/.test(f))) {
   const snap = await readJson(join(SNAP, file));
+  saved.push(snap.gw);
   const ev = st.events.find((e) => e.id === snap.gw);
-  if (!ev?.finished) continue;
+  if (!ev?.finished) {
+    // Frozen at its deadline, but FPL hasn't finished the gameweek yet: it's graded by the first run after.
+    if (new Date(snap.deadline).getTime() <= now) awaiting.push({ gw: snap.gw, deadline: snap.deadline, savedAt: snap.at });
+    continue;
+  }
   const live = await getLive(snap.gw);
   const rows = Object.entries(snap.players).map(([id, [xp, xg, xa, nxg, nxa, ep]]) => {
     const a = live.elements[id] ?? { points: 0, minutes: 0, xg: 0, xa: 0 };
@@ -118,5 +125,8 @@ const season = weeks.length
       beatFplWeeks: weeks.filter((w) => w.points.maeOurs < w.points.maeFpl).length,
     }
   : null;
-await writeFile(join(DATA, 'accuracy.json'), JSON.stringify({ built: new Date().toISOString(), firstWeek: weeks[0]?.gw ?? pending?.gw ?? null, pending, season, weeks }, null, 1));
-console.log(`Graded ${weeks.length} gameweek(s); next to grade: ${pending ? `GW${pending.gw}` : 'none'}`);
+awaiting.sort((a, b) => a.gw - b.gw);
+// The record starts with the first gameweek saved, graded or not: a week still being played is part of it.
+const firstWeek = saved.length ? Math.min(...saved) : pending?.gw ?? null;
+await writeFile(join(DATA, 'accuracy.json'), JSON.stringify({ built: new Date().toISOString(), firstWeek, pending, awaiting, season, weeks }, null, 1));
+console.log(`Graded ${weeks.length} gameweek(s)${awaiting.length ? `; waiting for FPL to finish GW${awaiting.map((a) => a.gw).join(', GW')}` : ''}; saving: ${pending ? `GW${pending.gw}` : 'none'}`);

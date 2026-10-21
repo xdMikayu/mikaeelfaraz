@@ -61,6 +61,11 @@ export default function Record() {
           The record starts with gameweek {data.firstWeek}. Projections for every player are saved before each deadline next to FPL’s own expected points, then graded here once the gameweek is over: how close each was, whose top 10 scored more, and how the captain picks did.
         </p>
       )}
+      {(data.awaiting ?? []).map((a) => (
+        <p key={a.gw} className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>
+          Gameweek {a.gw}: projections frozen at its deadline, {when(a.deadline)}. They’re graded at the next update once FPL has finished the gameweek.
+        </p>
+      ))}
       {pending && (
         <p className="sp-tiny sp-muted" style={{ margin: '8px 0 0' }}>
           Gameweek {pending.gw}: projections saved {when(data.built)}, deadline {when(pending.deadline)}. They’re re-saved with the latest team news until the deadline, then frozen.

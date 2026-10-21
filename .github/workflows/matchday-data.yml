@@ -7,6 +7,8 @@ name: Matchday data
 on:
   schedule:
     - cron: '23 5 * * 1'
+    # Tuesday morning: a gameweek that ends on Monday night is graded the next day, not on Thursday.
+    - cron: '23 5 * * 2'
     - cron: '23 5 * * 4'
     # Friday morning, before the weekend deadline: save the gameweek's projections with the latest news.
     - cron: '23 8 * * 5'
