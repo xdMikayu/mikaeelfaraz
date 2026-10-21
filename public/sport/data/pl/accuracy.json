@@ -1,10 +1,49 @@
 {
- "built": "2026-10-19T10:52:10.694Z",
- "firstWeek": 8,
+ "built": "2026-10-21T07:04:02.127Z",
+ "firstWeek": 7,
  "pending": {
   "gw": 8,
   "deadline": "2026-10-23T17:30:00Z"
  },
- "season": null,
- "weeks": []
+ "awaiting": [],
+ "season": {
+  "weeks": 1,
+  "maeOurs": 2.2575688073394495,
+  "maeFpl": 3.0165137614678894,
+  "top10Ours": 4.8,
+  "top10Fpl": 2.7,
+  "captainOurs": 13,
+  "captainFpl": 6,
+  "beatFplWeeks": 1
+ },
+ "weeks": [
+  {
+   "gw": 7,
+   "savedAt": "2026-10-16T13:20:19.608Z",
+   "n": 218,
+   "points": {
+    "maeOurs": 2.2575688073394495,
+    "maeFpl": 3.0165137614678894,
+    "corrOurs": 0.29388801878358634,
+    "corrFpl": -0.017319874289934572,
+    "top10Ours": 4.8,
+    "top10Fpl": 2.7,
+    "top10Best": 11.9,
+    "captainOurs": {
+     "name": "Haaland",
+     "pts": 13
+    },
+    "captainFpl": {
+     "name": "De Cuyper",
+     "pts": 6
+    }
+   },
+   "netXg": {
+    "n": 304,
+    "corr": 0.5460106822058499,
+    "top20": 0.406,
+    "top20Goals": null
+   }
+  }
+ ]
 }
