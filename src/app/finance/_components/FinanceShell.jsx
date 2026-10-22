@@ -217,7 +217,7 @@ export default function FinanceShell({ children }) {
           {session === undefined ? (
             <LoadingState />
           ) : !session ? (
-            <SignIn supabase={supabase} />
+            PUBLIC_PAGES.includes(pathname) ? children : <SignIn supabase={supabase} />
           ) : (
             <FinanceContext.Provider value={value}>
               {error && (
@@ -258,40 +258,81 @@ export function LoadingState() {
   );
 }
 
+// Readable without an account (linked from the sign-in screen and the App Store listing).
+const PUBLIC_PAGES = ['/finance/privacy'];
+
 function SignIn({ supabase }) {
+  // 'signin' · 'invite' (create an account with an invite code) · 'reset' (forgot password)
+  const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useState(null); // { ok, text }
+  const welcome = () => `${window.location.origin}/finance/welcome`;
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setMsg(error.message);
+    try {
+      if (mode === 'signin') {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else if (mode === 'reset') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: welcome() });
+        if (error) throw error;
+        setMsg({ ok: true, text: 'If that email has an account, a reset link is on its way.' });
+      } else {
+        const res = await fetch('/api/finance/signup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, code }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error || 'Something went wrong');
+        setMsg({ ok: true, text: json.message });
+      }
+    } catch (err) {
+      setMsg({ ok: false, text: err.message || String(err) });
+    }
     setBusy(false);
   };
+  const go = (m) => { setMode(m); setMsg(null); };
+  const title = { signin: 'Welcome back', invite: 'Create your account', reset: 'Reset your password' }[mode];
+  const cta = { signin: busy ? 'Signing in…' : 'Sign in', invite: busy ? 'Sending…' : 'Email me a sign-up link', reset: busy ? 'Sending…' : 'Email me a reset link' }[mode];
   return (
     <div className="grid min-h-[70vh] place-items-center">
       <form onSubmit={submit} className="fin-card fin-card-hero fin-fade-in w-full max-w-sm space-y-4 p-7">
         <div className="mb-2 flex flex-col items-start gap-4">
           <Logo />
           <div>
-            <h1 className="fin-h1">Welcome back</h1>
-            <p className="mt-1 text-sm fin-ink-2">Every card, every dirham, in one place.</p>
+            <h1 className="fin-h1">{title}</h1>
+            <p className="mt-1 text-sm fin-ink-2">{mode === 'invite' ? 'Mifolio is invite-only while in beta.' : 'Every card, every dirham, in one place.'}</p>
           </div>
         </div>
         <div>
           <label className="fin-label" htmlFor="email">Email</label>
           <input id="email" className="fin-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
-        <div>
-          <label className="fin-label" htmlFor="pw">Password</label>
-          <input id="pw" className="fin-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        </div>
-        {msg && <p className="text-sm" style={{ color: 'var(--fin-bad)' }}>{msg}</p>}
-        <button className="fin-btn fin-btn-primary h-11 w-full" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-        <p className="flex items-center gap-1.5 text-xs fin-muted"><Lock size={12} /> Data is private to your account.</p>
+        {mode === 'signin' && (
+          <div>
+            <div className="flex items-baseline justify-between">
+              <label className="fin-label" htmlFor="pw">Password</label>
+              <button type="button" className="fin-link text-xs" onClick={() => go('reset')}>Forgot?</button>
+            </div>
+            <input id="pw" className="fin-input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </div>
+        )}
+        {mode === 'invite' && (
+          <div>
+            <label className="fin-label" htmlFor="code">Invite code</label>
+            <input id="code" className="fin-input" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} required />
+          </div>
+        )}
+        {msg && <p className="text-sm" style={{ color: msg.ok ? 'var(--fin-good)' : 'var(--fin-bad)' }}>{msg.text}</p>}
+        <button className="fin-btn fin-btn-primary h-11 w-full" disabled={busy}>{cta}</button>
+        <p className="text-center text-sm fin-ink-2">
+          {mode === 'signin'
+            ? <>New here? <button type="button" className="fin-link" onClick={() => go('invite')}>I have an invite</button></>
+            : <button type="button" className="fin-link" onClick={() => go('signin')}>Back to sign in</button>}
+        </p>
+        <p className="flex items-center justify-center gap-1.5 text-xs fin-muted"><Lock size={12} /> Your data is private to your account · <Link className="fin-link" href="/finance/privacy">Privacy</Link></p>
       </form>
     </div>
   );

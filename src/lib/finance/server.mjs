@@ -2,7 +2,7 @@
 // categorization. Uses the Supabase service-role key, so never import this
 // from a client component.
 import { createClient } from '@supabase/supabase-js';
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { parseEvent, normalizeMerchant, normalizeMerchantLegacy } from './parse.mjs';
 import { CATEGORIES, ruleCategory, merchantKey, isTabbyCharge, isTabbyCardRepayment, planTabbyReconcile, TABBY_NOTES, MANAGED_TABBY_NOTES } from './categories.mjs';
 import { DEFAULT_ACCOUNTS } from './accounts.mjs';
@@ -41,29 +41,99 @@ function safeEqual(a, b) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
+// Personal API keys (Setup → API keys) look like "mf_" + 32 url-safe characters.
+// Only their SHA-256 hash is stored.
+export const API_KEY_PREFIX = 'mf_';
+export const hashApiKey = (key) => createHash('sha256').update(String(key)).digest('hex');
+export function newApiKey() {
+  const key = API_KEY_PREFIX + randomBytes(24).toString('base64url');
+  return { key, prefix: key.slice(0, 10), hash: hashApiKey(key) };
+}
+
 /**
- * Resolve the calling user from `Authorization: Bearer <token>`.
- * The token is either FINANCE_INGEST_TOKEN (iPhone Shortcuts, Gmail script,
- * scheduled job → acts as FINANCE_OWNER_USER_ID) or a Supabase session token
- * from the signed-in dashboard.
+ * True while the site still points at a Supabase project shared with other apps:
+ * then only FINANCE_OWNER_USER_ID may use the API. On Mifolio's own project set
+ * FINANCE_MULTI_USER=true and everyone with an account can.
+ */
+export function ownerOnly() {
+  return process.env.FINANCE_MULTI_USER !== 'true' && Boolean(process.env.FINANCE_OWNER_USER_ID);
+}
+
+/**
+ * Resolve the calling user from `Authorization: Bearer <token>`. The token is one of:
+ *  - a personal API key ("mf_…") — iPhone Shortcuts, the Gmail script;
+ *  - FINANCE_INGEST_TOKEN — the original single shared key, acts as FINANCE_OWNER_USER_ID
+ *    (kept so existing shortcuts work while moving to personal keys);
+ *  - a Supabase session token from the signed-in app.
+ * `via` says which, so routes that change the account itself can insist on a session.
  */
 export async function authenticate(request) {
   const header = request.headers.get('authorization') || '';
   const token = header.replace(/^Bearer\s+/i, '').trim();
   if (!token) throw new HttpError(401, 'Missing bearer token');
+
+  if (token.startsWith(API_KEY_PREFIX)) {
+    const db = getAdmin();
+    const { data, error } = await db.from('fin_api_keys').select('id, user_id, revoked_at, last_used_at').eq('key_hash', hashApiKey(token)).maybeSingle();
+    if (error) throw error;
+    if (!data || data.revoked_at) throw new HttpError(401, 'This API key is not valid. Create a new one in Mifolio → Setup → API keys.');
+    if (ownerOnly() && data.user_id !== process.env.FINANCE_OWNER_USER_ID) throw new HttpError(403, 'This dashboard is private');
+    // "Last used" is for the owner's peace of mind; an hour's precision is plenty.
+    if (!data.last_used_at || Date.now() - new Date(data.last_used_at) > 3600 * 1000) {
+      await db.from('fin_api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', data.id);
+    }
+    return { userId: data.user_id, via: 'key' };
+  }
+
   const ingestToken = process.env.FINANCE_INGEST_TOKEN;
   if (ingestToken && ingestToken.length >= 24 && safeEqual(token, ingestToken)) {
     const owner = process.env.FINANCE_OWNER_USER_ID;
     if (!owner) throw new HttpError(500, 'FINANCE_OWNER_USER_ID is not set');
     return { userId: owner, via: 'token' };
   }
+
   const { data, error } = await getAdmin().auth.getUser(token);
   if (error || !data?.user) throw new HttpError(401, 'Invalid token');
-  // The Supabase project is shared with other apps whose users can sign in, so
-  // only the owner may use these endpoints (they can spend Anthropic credit).
-  const owner = process.env.FINANCE_OWNER_USER_ID;
-  if (owner && data.user.id !== owner) throw new HttpError(403, 'This dashboard is private');
+  if (ownerOnly() && data.user.id !== process.env.FINANCE_OWNER_USER_ID) throw new HttpError(403, 'This dashboard is private');
   return { userId: data.user.id, via: 'session' };
+}
+
+/** For actions on the account itself (keys, export, deletion): a signed-in session only, never an API key. */
+export async function authenticateSession(request) {
+  const who = await authenticate(request);
+  if (who.via !== 'session') throw new HttpError(403, 'Sign in to Mifolio to do this; API keys can only send transactions');
+  return who;
+}
+
+/** Every table that holds a user's data, parents before children (the order a copy must follow). */
+export const USER_TABLES = ['fin_accounts', 'fin_merchant_rules', 'fin_budgets', 'fin_holdings', 'fin_prices', 'fin_networth', 'fin_transactions', 'fin_raw_events'];
+
+/** Everything stored for one user, for "Download my data". API key hashes are left out. */
+export async function exportUserData(db, userId) {
+  const out = {};
+  for (const table of USER_TABLES) {
+    const rows = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await db.from(table).select('*').eq('user_id', userId).range(from, from + 999);
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < 1000) break;
+    }
+    out[table] = rows;
+  }
+  return out;
+}
+
+/** Users with any Mifolio data, for the scheduled job. */
+export async function financeUserIds(db) {
+  const ids = new Set();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.from('fin_accounts').select('user_id').order('user_id').range(from, from + 999);
+    if (error) throw error;
+    data.forEach((r) => ids.add(r.user_id));
+    if (data.length < 1000) break;
+  }
+  return [...ids];
 }
 
 export async function ensureAccounts(db, userId) {

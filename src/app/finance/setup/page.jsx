@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Copy, Check, Trash as Trash2, ArrowClockwise as RefreshCw, ChatText as MessageSquareText, Bell as BellRing, Envelope as Mail, CaretDown as ChevronDown, CreditCard, Target, MagicWand as Wand2, Pulse as Activity, Flask as FlaskConical, Key as KeyRound } from '@phosphor-icons/react';
+import { Copy, Check, Trash as Trash2, ArrowClockwise as RefreshCw, ChatText as MessageSquareText, Bell as BellRing, Envelope as Mail, CaretDown as ChevronDown, CreditCard, Target, MagicWand as Wand2, Pulse as Activity, Flask as FlaskConical, Key as KeyRound, DownloadSimple, Warning, ShieldCheck } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from '../_components/FinanceShell';
 import { CategoryIcon } from '../_components/icons';
 import { CATEGORIES } from '@/lib/finance/categories.mjs';
@@ -86,7 +86,7 @@ export default function Setup() {
           <Guide icon={MessageSquareText} title="SIB — forward bank SMS" status="iPhone Shortcuts · message trigger">
             <ol className="fin-steps mt-1">
               <li>New shortcut → add trigger <b>When I receive a message</b> where <b>Message</b> contains <CopyText value="A txn on your" />. Automation on, Notify off.</li>
-              <li>Add <b>Get Contents of URL</b> → the endpoint below, Method <b>POST</b>, header <code className="fin-code">Authorization</code> = <code className="fin-code">Bearer YOUR_TOKEN</code>.</li>
+              <li>Add <b>Get Contents of URL</b> → the endpoint below, Method <b>POST</b>, header <code className="fin-code">Authorization</code> = <code className="fin-code">Bearer</code> + your API key (below).</li>
               <li>Request Body <b>JSON</b>: <code className="fin-code">source</code> = <code className="fin-code">sms</code>, <code className="fin-code">text</code> = <b>Shortcut Input → Content</b>.</li>
             </ol>
           </Guide>
@@ -107,16 +107,11 @@ export default function Setup() {
             <ol className="fin-steps mt-1">
               <li>Open <a className="fin-link" href="https://script.google.com/home/projects/create" target="_blank" rel="noreferrer">script.google.com → New project</a> in the Gmail that receives MashreqAlerts.</li>
               <li>Paste <a className="fin-link" href={REPO_SCRIPT} target="_blank" rel="noreferrer">integrations/mashreq-gmail.gs</a>.</li>
-              <li>⚙ Project Settings → Script Properties: <code className="fin-code">INGEST_URL</code> = endpoint, <code className="fin-code">INGEST_TOKEN</code> = your token.</li>
+              <li>⚙ Project Settings → Script Properties: <code className="fin-code">INGEST_URL</code> = endpoint, <code className="fin-code">INGEST_TOKEN</code> = an API key (below).</li>
               <li>Run <code className="fin-code">setup</code> (approve access), then <code className="fin-code">backfill</code> once for history.</li>
             </ol>
           </Guide>
-          <Section icon={KeyRound} title="Your details" subtitle="Used by the shortcuts and Netlify">
-            <div className="fin-inset space-y-2 px-4 py-3">
-              <p className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs fin-muted">Endpoint</span> <CopyText value={endpoint} /></p>
-              <p className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs fin-muted">User ID</span> {f.session?.user?.id ? <CopyText value={f.session.user.id} /> : '—'}</p>
-            </div>
-          </Section>
+          <ApiKeys endpoint={endpoint} />
         </div>
 
         <div className="space-y-5">
@@ -130,6 +125,7 @@ export default function Setup() {
         <BudgetsEditor />
       </div>
       <RulesList />
+      <YourData />
     </div>
   );
 }
@@ -319,6 +315,126 @@ function ActivityLog() {
           );
         })}
       </ul>
+    </Section>
+  );
+}
+
+/** Personal API keys for the Shortcuts and the Gmail script: created server-side, shown once, revocable. */
+function ApiKeys({ endpoint }) {
+  const f = useFinance();
+  const [keys, setKeys] = useState(null);
+  const [name, setName] = useState('iPhone');
+  const [fresh, setFresh] = useState(null); // the key just created, shown once
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const load = async () => {
+    if (f.demo) return setKeys([]);
+    const { data, error } = await f.supabase.from('fin_api_keys').select('id, name, prefix, created_at, last_used_at').is('revoked_at', null).order('created_at', { ascending: false });
+    if (error) setErr(/fin_api_keys|schema cache/.test(error.message) ? 'Run the multi-user migration (supabase/migrations/20261022000000_multi_user.sql) first.' : error.message);
+    setKeys(data || []);
+  };
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const create = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await f.api('keys', { name });
+      setFresh(res);
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    }
+    setBusy(false);
+  };
+  const revoke = async (k) => {
+    if (!confirm(`Revoke “${k.name}”? Anything using it stops sending transactions straight away.`)) return;
+    const { error } = await f.supabase.from('fin_api_keys').update({ revoked_at: new Date().toISOString() }).eq('id', k.id);
+    if (error) return setErr(error.message);
+    if (fresh?.id === k.id) setFresh(null);
+    load();
+  };
+  return (
+    <Section icon={KeyRound} title="API keys" subtitle="What your Shortcuts and Gmail script use to send transactions">
+      <div className="fin-inset space-y-2 px-4 py-3">
+        <p className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs fin-muted">Endpoint</span> <CopyText value={endpoint} /></p>
+      </div>
+      {fresh && (
+        <div className="space-y-2 rounded-xl border-2 px-4 py-3" style={{ borderColor: 'var(--fin-good)' }}>
+          <p className="font-medium" style={{ color: 'var(--fin-ink)' }}>Your new key: copy it now, it won’t be shown again.</p>
+          <CopyText value={fresh.key} />
+          <p className="text-xs fin-muted">In a Shortcut, use the header <code className="fin-code">Authorization</code> = <code className="fin-code">Bearer {fresh.prefix}…</code> (the whole key). Keep it private: anyone with it can add transactions to your account, but can’t read anything.</p>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input className="fin-input flex-1" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} aria-label="Key name" placeholder="iPhone" />
+        <button className="fin-btn fin-btn-primary" onClick={create} disabled={busy || f.demo}>{busy ? 'Creating…' : 'Create key'}</button>
+      </div>
+      {err && <p className="text-sm" style={{ color: 'var(--fin-bad)' }}>{err}</p>}
+      {keys?.length ? (
+        <ul className="divide-y" style={{ borderColor: 'var(--fin-border)' }}>
+          {keys.map((k) => (
+            <li key={k.id} className="flex items-center justify-between gap-3 py-2.5">
+              <span className="min-w-0">
+                <span className="block truncate font-medium" style={{ color: 'var(--fin-ink)' }}>{k.name} <code className="fin-code">{k.prefix}…</code></span>
+                <span className="block text-xs fin-muted">Created {relative(k.created_at)} · {k.last_used_at ? `last used ${relative(k.last_used_at)}` : 'not used yet'}</span>
+              </span>
+              <button className="fin-btn fin-btn-ghost fin-btn-danger" onClick={() => revoke(k)}>Revoke</button>
+            </li>
+          ))}
+        </ul>
+      ) : keys && <p className="text-xs fin-muted">No keys yet. Create one for each device or script, so you can revoke them separately.</p>}
+    </Section>
+  );
+}
+
+/** Download everything, or delete the account and all of its data. */
+function YourData() {
+  const f = useFinance();
+  const [busy, setBusy] = useState(null);
+  const [err, setErr] = useState(null);
+  const [confirmText, setConfirmText] = useState('');
+  const download = async () => {
+    setBusy('export');
+    setErr(null);
+    try {
+      const data = await f.api('export');
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      const a = Object.assign(document.createElement('a'), { href: url, download: `mifolio-${new Date().toISOString().slice(0, 10)}.json` });
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErr(e.message);
+    }
+    setBusy(null);
+  };
+  const remove = async () => {
+    setBusy('delete');
+    setErr(null);
+    try {
+      await f.api('delete-account', { confirm: 'DELETE' });
+      await f.supabase.auth.signOut();
+      window.location.href = '/finance';
+    } catch (e) {
+      setErr(e.message);
+      setBusy(null);
+    }
+  };
+  return (
+    <Section icon={ShieldCheck} title="Your data" subtitle="Yours to take or delete, any time">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p>Everything Mifolio stores about you, as one JSON file.</p>
+        <button className="fin-btn" onClick={download} disabled={busy || f.demo}><DownloadSimple size={15} /> {busy === 'export' ? 'Preparing…' : 'Download'}</button>
+      </div>
+      <div className="fin-inset space-y-2 px-4 py-3">
+        <p className="flex items-center gap-2 font-medium" style={{ color: 'var(--fin-bad)' }}><Warning size={15} /> Delete account</p>
+        <p>Deletes your account and every transaction, card, rule and holding, immediately. This can’t be undone.</p>
+        <div className="flex gap-2">
+          <input className="fin-input flex-1" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="Type DELETE" aria-label="Type DELETE to confirm" />
+          <button className="fin-btn fin-btn-danger" onClick={remove} disabled={confirmText !== 'DELETE' || busy || f.demo}>{busy === 'delete' ? 'Deleting…' : 'Delete'}</button>
+        </div>
+      </div>
+      {err && <p className="text-sm" style={{ color: 'var(--fin-bad)' }}>{err}</p>}
+      <p className="text-xs fin-muted">See the <a className="fin-link" href="/finance/privacy">privacy page</a> for what’s stored and who sees it.</p>
     </Section>
   );
 }

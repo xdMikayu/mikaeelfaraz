@@ -5,7 +5,7 @@
  *   1. Paste this file into a new Apps Script project.
  *   2. Project Settings -> Script Properties:
  *        INGEST_URL   = https://mikaeelfaraz.com/api/finance/ingest
- *        INGEST_TOKEN = <your FINANCE_INGEST_TOKEN>
+ *        INGEST_TOKEN = an API key from Mifolio -> Setup -> API keys (starts with mf_)
  *   3. Run setup() once (grants Gmail read access, installs a 5-minute trigger).
  *   4. Run backfill() once to import older alerts. It works through one month at a
  *      time from BACKFILL_FROM (default Sep 2022) and, because Apps Script stops a run
@@ -16,7 +16,7 @@
  * each under its own account. Account emails ("Your AC No: …1234 is credited with AED …
  * for Salary") go too: they update that bank balance on the Net worth page. Only messages newer than the last one sent go out on each
  * sync, and the server ignores re-sent Gmail message ids, so re-running is safe.
- * No secrets live in this file — keep the token in Script Properties.
+ * No secrets live in this file — keep the key in Script Properties.
  */
 // Card alerts come from MashreqAlerts@, account emails (salary, transfers) from other Mashreq
 // addresses, so search the whole domain; isAlert_ decides what gets sent.
