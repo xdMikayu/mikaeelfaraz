@@ -67,9 +67,17 @@
   --fin-s8: #a58576;
   --fin-radius: 16px;
   --fin-radius-sm: 11px;
+  /* Motion: strong ease-out for things that enter, iOS's sheet curve for drawers. */
+  --fin-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --fin-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --fin-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Where toasts sit: above the tab bar on phones, the bottom corner on desktop. */
+  --fin-toast-bottom: calc(76px + env(safe-area-inset-bottom));
   background: var(--fin-page);
   color: var(--fin-ink);
   min-height: 100vh;
+  min-height: 100dvh; /* the visible height, not the one behind Safari's toolbar */
+  -webkit-tap-highlight-color: transparent;
   font-family: var(--font-fin, 'Schibsted Grotesk'), system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 440;
   -webkit-font-smoothing: antialiased;
@@ -128,6 +136,8 @@
 }
 
 /* ---------- surfaces ---------- */
+/* Grid items default to min-width: auto, so one wide input or row could push a whole column past a phone's edge. */
+.fin-root .grid > * { min-width: 0; }
 .fin-card { background: var(--fin-surface); border: 1px solid var(--fin-border); border-radius: var(--fin-radius); }
 .fin-card-hero { background: var(--fin-glow, none), var(--fin-surface); }
 .fin-inset { background: var(--fin-surface-2); border-radius: var(--fin-radius-sm); }
@@ -151,28 +161,24 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 36px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 550;
   border: 1px solid var(--fin-border-strong); background: var(--fin-surface); color: var(--fin-ink);
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s, transform 0.16s var(--fin-ease-out);
   white-space: nowrap;
 }
-.fin-btn:hover { background: var(--fin-surface-2); }
 .fin-btn-sm { height: 30px; padding: 0 11px; font-size: 13px; border-radius: 8px; }
 .fin-btn:disabled { opacity: 0.5; cursor: default; }
 .fin-btn-primary { background: var(--fin-ink); color: var(--fin-accent-ink); border-color: var(--fin-ink); }
-.fin-btn-primary:hover { background: var(--fin-ink); opacity: 0.88; }
 .fin-btn-ghost { background: transparent; border-color: transparent; }
-.fin-btn-ghost:hover { background: var(--fin-surface-2); }
 .fin-btn-danger { color: var(--fin-bad); }
 .fin-icon-btn { width: 36px; padding: 0; }
 .fin-link { color: var(--fin-ink); font-weight: 550; text-decoration: underline; text-decoration-color: var(--fin-border-strong); text-underline-offset: 3px; }
-.fin-link:hover { text-decoration-color: currentColor; }
 
 .fin-input, .fin-select, .fin-textarea {
-  width: 100%; height: 42px; padding: 0 12px; border-radius: 10px; font-size: 15px;
+  width: 100%; height: 42px; padding: 0 12px; border-radius: 10px; font-size: 16px; /* under 16px, iOS zooms the page on focus */
   border: 1px solid var(--fin-border-strong); background: var(--fin-surface); color: var(--fin-ink);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .fin-textarea { height: auto; padding: 10px 12px; line-height: 1.5; }
-.fin-select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--fin-muted) 50%), linear-gradient(135deg, var(--fin-muted) 50%, transparent 50%); background-position: calc(100% - 18px) 18px, calc(100% - 13px) 18px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+.fin-select { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--fin-muted) 50%), linear-gradient(135deg, var(--fin-muted) 50%, transparent 50%); background-position: calc(100% - 18px) 18px, calc(100% - 13px) 18px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
 .fin-input:focus, .fin-select:focus, .fin-textarea:focus { outline: none; border-color: var(--fin-ink); box-shadow: 0 0 0 3px var(--fin-accent-soft); }
 .fin-input::placeholder, .fin-textarea::placeholder { color: var(--fin-muted); }
 .fin-root input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
@@ -182,12 +188,10 @@
 /* Segmented control: underlined text tabs, not a pill track. */
 .fin-seg { display: inline-flex; gap: 18px; max-width: 100%; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--fin-border); }
 .fin-seg::-webkit-scrollbar { display: none; }
-.fin-seg button { height: 36px; padding: 0 1px; margin-bottom: -1px; font-size: 14px; font-weight: 500; color: var(--fin-muted); white-space: nowrap; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
-.fin-seg button:hover { color: var(--fin-ink); }
-.fin-seg button[aria-pressed='true'] { color: var(--fin-ink); border-bottom-color: var(--fin-ink); font-weight: 600; }
+.fin-seg button { height: 36px; padding: 0 1px; margin-bottom: -1px; font-size: 14px; font-weight: 550; color: var(--fin-muted); white-space: nowrap; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+.fin-seg button[aria-pressed='true'] { color: var(--fin-ink); border-bottom-color: var(--fin-ink); } /* one weight, so tabs don't shift when picked */
 
-.fin-chipbtn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; border: 1px solid var(--fin-border-strong); color: var(--fin-ink-2); background: transparent; white-space: nowrap; transition: background 0.12s, color 0.12s; }
-.fin-chipbtn:hover { color: var(--fin-ink); background: var(--fin-surface-2); }
+.fin-chipbtn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 8px; font-size: 13.5px; font-weight: 500; border: 1px solid var(--fin-border-strong); color: var(--fin-ink-2); background: transparent; white-space: nowrap; transition: background 0.12s, color 0.12s, transform 0.16s var(--fin-ease-out); }
 .fin-chipbtn[aria-pressed='true'], .fin-chipbtn[data-active='true'] { background: var(--fin-ink); color: var(--fin-accent-ink); border-color: var(--fin-ink); }
 
 /* Status tags: small, square-ish, quiet. */
@@ -208,18 +212,23 @@
 
 /* ---------- lists ---------- */
 .fin-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 0 -12px; border-radius: 10px; transition: background 0.12s; text-align: left; width: calc(100% + 24px); }
-.fin-row:hover { background: var(--fin-surface-2); }
-.fin-day { position: sticky; top: 56px; z-index: 5; display: flex; justify-content: space-between; padding: 12px 0 6px; font-size: 13px; font-weight: 600; color: var(--fin-ink-2); background: var(--fin-page); border-bottom: 1px solid var(--fin-border); }
+.fin-day { position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 5; display: flex; justify-content: space-between; padding: 12px 0 6px; font-size: 13px; font-weight: 600; color: var(--fin-ink-2); background: var(--fin-page); border-bottom: 1px solid var(--fin-border); }
 
 /* ---------- navigation ---------- */
 .fin-side { position: fixed; inset: 0 auto 0 0; width: 232px; padding: 22px 14px; border-right: 1px solid var(--fin-side-border); background: var(--fin-side-bg); color: var(--fin-side-ink-strong); display: flex; flex-direction: column; z-index: 30; }
 .fin-side a.fin-nav-item, .fin-side button.fin-nav-item { display: flex; align-items: center; gap: 11px; height: 38px; padding: 0 10px; border-radius: 8px; font-size: 14.5px; font-weight: 500; color: var(--fin-side-ink); transition: background 0.12s, color 0.12s; }
-.fin-side .fin-nav-item:hover { background: var(--fin-side-hover); color: var(--fin-side-ink-strong); }
 .fin-side .fin-nav-item[aria-current='page'] { background: var(--fin-side-active); color: var(--fin-side-ink-strong); font-weight: 600; }
-.fin-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--fin-page); border-top: 1px solid var(--fin-border); }
+.fin-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); background: var(--fin-page); border-top: 1px solid var(--fin-border); }
 .fin-tabbar a { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0 4px; font-size: 11px; font-weight: 500; color: var(--fin-muted); }
 .fin-tabbar a[aria-current='page'] { color: var(--fin-ink); font-weight: 600; }
-.fin-topbar { position: sticky; top: 0; z-index: 20; background: var(--fin-page); border-bottom: 1px solid var(--fin-border); }
+.fin-topbar { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-inset-top); background: var(--fin-page); border-bottom: 1px solid var(--fin-border); }
+/* Bars are frosted where the browser can blur, and solid for anyone who asks for less transparency. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .fin-tabbar, .fin-topbar { background: color-mix(in srgb, var(--fin-page) 78%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .fin-tabbar, .fin-topbar { background: var(--fin-page); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 /* Visibility lives here (not Tailwind's hidden/lg:hidden) because these rules load after utilities. */
 @media (max-width: 1023.98px) { .fin-side { display: none; } }
 @media (min-width: 1024px) { .fin-tabbar, .fin-topbar { display: none; } }
@@ -237,16 +246,99 @@
   content: counter(step) '.'; position: absolute; left: 0; top: 0; width: 22px;
   color: var(--fin-muted); font-family: var(--font-money), ui-monospace, monospace; font-size: 13px; font-weight: 500;
 }
-.fin-sheet-backdrop { background: rgba(10, 9, 8, 0.45); animation: fin-fade 0.15s ease-out; }
-.fin-sheet { animation: fin-rise 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
 .fin-skeleton { background: var(--fin-surface-2); border-radius: 8px; animation: fin-pulse 1.4s ease-in-out infinite; }
-.fin-fade-in { animation: fin-fade 0.25s ease-out backwards; } /* not `both`: a held animation keeps a stacking context that traps the editor sheet under the tab bar */
-@keyframes fin-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fin-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes fin-pulse { 50% { opacity: 0.55; } }
-@media (prefers-reduced-motion: reduce) { .fin-sheet, .fin-fade-in, .fin-sheet-backdrop, .fin-skeleton { animation: none; } }
+/* For things that arrive after the page (the insight, filter chips), never for whole pages. */
+.fin-fade-in { animation: fin-fade 0.25s var(--fin-ease-out) backwards; }
+@keyframes fin-fade { from { opacity: 0; transform: translateY(4px); } }
+@keyframes fin-pulse { 50% { opacity: 0.7; } }
+@media (prefers-reduced-motion: reduce) { .fin-fade-in, .fin-skeleton { animation: none; } }
+
+/* ---------- sheets (Sheet.jsx on base-ui Drawer: data-starting-style / data-ending-style drive enter and exit) ----------
+   Phones: a bottom sheet that slides from the edge and follows your finger down. From sm up: a centred dialog.
+   --bleed hangs the sheet below the screen edge so dragging it up never shows a gap. */
+.fin-sheet-backdrop {
+  position: fixed; inset: 0; z-index: 50; background: rgba(10, 9, 8, 0.45);
+  opacity: calc(1 - var(--drawer-swipe-progress, 0));
+  transition: opacity 400ms var(--fin-ease-drawer);
+}
+.fin-sheet-backdrop[data-starting-style], .fin-sheet-backdrop[data-ending-style] { opacity: 0; }
+.fin-sheet-backdrop[data-ending-style] { transition-duration: 250ms; }
+.fin-sheet-backdrop[data-swiping] { transition-duration: 0ms; }
+.fin-sheet-viewport { position: fixed; inset: 0; z-index: 51; display: flex; align-items: flex-end; justify-content: center; }
+.fin-sheet {
+  --bleed: 48px;
+  position: relative; width: 100%; max-height: calc(92vh + var(--bleed)); max-height: calc(92dvh + var(--bleed));
+  margin-bottom: calc(-1 * var(--bleed));
+  overflow-y: auto; overscroll-behavior: contain; outline: none;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  padding: 8px 20px calc(20px + env(safe-area-inset-bottom) + var(--bleed));
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition: transform 400ms var(--fin-ease-drawer);
+}
+.fin-sheet[data-starting-style], .fin-sheet[data-ending-style] { transform: translateY(calc(100% - var(--bleed) + 2px)); }
+.fin-sheet[data-ending-style] { transition-duration: 250ms; }
+.fin-sheet[data-ending-style][data-swipe-dismiss] { transition-duration: calc(var(--drawer-swipe-strength, 0.6) * 400ms); }
+.fin-sheet[data-swiping] { transition-duration: 0ms; -webkit-user-select: none; user-select: none; }
+.fin-sheet-grab { width: 40px; height: 4px; margin: 0 auto 16px; border-radius: 99px; background: var(--fin-surface-3); }
+@media (min-width: 640px) {
+  .fin-sheet-viewport { align-items: center; padding: 24px; }
+  .fin-sheet {
+    --bleed: 0px; width: min(32rem, 100%); max-height: calc(100dvh - 48px); margin: 0;
+    border-radius: 20px; padding: 28px; transform: none;
+    transition: transform 250ms var(--fin-ease-out), opacity 250ms var(--fin-ease-out);
+  }
+  .fin-sheet-md { width: min(28rem, 100%); padding: 24px; border-radius: 16px; }
+  .fin-sheet[data-starting-style], .fin-sheet[data-ending-style] { transform: scale(0.96); opacity: 0; }
+  .fin-sheet[data-ending-style], .fin-sheet[data-ending-style][data-swipe-dismiss] { transition-duration: 150ms; }
+  .fin-sheet-grab { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fin-sheet, .fin-sheet-backdrop { transition: opacity 200ms ease; }
+  .fin-sheet[data-starting-style], .fin-sheet[data-ending-style] { transform: none; opacity: 0; }
+}
+
+/* Small confirm dialog (base-ui AlertDialog), centred at every size. */
+.fin-alert {
+  position: fixed; z-index: 51; left: 50%; top: 50%; translate: -50% -50%;
+  width: min(24rem, calc(100vw - 32px)); padding: 24px; outline: none;
+  transition: transform 200ms var(--fin-ease-out), opacity 200ms var(--fin-ease-out);
+}
+.fin-alert[data-starting-style], .fin-alert[data-ending-style] { transform: scale(0.96); opacity: 0; }
+.fin-alert[data-ending-style] { transition-duration: 150ms; }
+@media (prefers-reduced-motion: reduce) { .fin-alert[data-starting-style], .fin-alert[data-ending-style] { transform: none; } }
+
+/* ---------- touch ---------- */
+.fin-root :is(button, a, [role='button'], label, select, summary) { touch-action: manipulation; }
+.fin-root :is(button, .fin-btn, .fin-chipbtn, .fin-tabbar, .fin-side, .fin-seg) { -webkit-user-select: none; user-select: none; }
+.fin-btn:active:not(:disabled), .fin-chipbtn:active { transform: scale(0.97); }
+.fin-row:active { background: var(--fin-surface-2); }
+.fin-tabbar a:active { opacity: 0.6; }
+/* Hover only where there is a pointer that hovers; on a phone it sticks after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .fin-btn:hover { background: var(--fin-surface-2); }
+  .fin-btn-primary:hover { background: var(--fin-ink); opacity: 0.88; }
+  .fin-btn-ghost:hover { background: var(--fin-surface-2); }
+  .fin-link:hover { text-decoration-color: currentColor; }
+  .fin-seg button:hover { color: var(--fin-ink); }
+  .fin-chipbtn:hover { color: var(--fin-ink); background: var(--fin-surface-2); }
+  .fin-chipbtn[aria-pressed='true']:hover, .fin-chipbtn[data-active='true']:hover { color: var(--fin-accent-ink); background: var(--fin-ink); }
+  .fin-row:hover { background: var(--fin-surface-2); }
+  .fin-side .fin-nav-item:hover { background: var(--fin-side-hover); color: var(--fin-side-ink-strong); }
+}
+/* Switching theme: no colour transitions for one frame, so everything flips at once. */
+.fin-no-transition *, .fin-no-transition *::before, .fin-no-transition *::after { transition: none !important; }
+
+/* ---------- toasts (sonner) ---------- */
+/* The Toaster sits inside .fin-root so it picks up the tokens; offsets come from FinanceShell. */
+.fin-root [data-sonner-toaster] { font-family: inherit; }
+.fin-root [data-sonner-toaster] [data-sonner-toast] { --normal-bg: var(--fin-surface); --normal-text: var(--fin-ink); --normal-border: var(--fin-border-strong); font-size: 14px; border-radius: 12px; box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.3); }
+.fin-root [data-sonner-toaster] [data-sonner-toast] [data-description] { color: var(--fin-ink-2); }
+.fin-root [data-sonner-toaster] [data-sonner-toast] [data-button] { background: var(--fin-ink); color: var(--fin-accent-ink); font-size: 13px; font-weight: 600; border-radius: 8px; height: 28px; padding: 0 10px; }
+@media (min-width: 1024px) { .fin-root { --fin-toast-bottom: 24px; } }
 
 @media (min-width: 1024px) { .fin-day { top: 0; } }
+/* Off-screen days skip layout and paint until they scroll near. */
+.fin-day-group { content-visibility: auto; contain-intrinsic-size: auto 320px; }
 /* Icon-only on phones, icon + label from sm up. */
 .fin-btn-collapse { width: 36px; padding: 0; }
 @media (min-width: 640px) { .fin-btn-collapse { width: auto; padding: 0 14px; } }

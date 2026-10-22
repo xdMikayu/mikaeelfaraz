@@ -266,9 +266,15 @@ export function typicalMonth(transactions, before, n = 6) {
   return { total: median(live.map((mo) => mo.total)), months, count: live.length };
 }
 
+// A single payment this big is a one-off (a flight, a laptop, a deposit): it happens once, so
+// the projection counts it once instead of multiplying it out over the rest of the month.
+export const ONE_OFF_MIN_AED = 1000;
+export const ONE_OFF_SHARE = 0.3; // of a typical month
+
 /**
  * Running total through a month or week, day by day, against the period before and an even
- * pace to your typical month (or week). Also where you'll land at today's rate.
+ * pace to your typical month (or week). Also where you'll land at today's rate: everyday
+ * spending is extrapolated, one-offs (listed in `oneOffs`) are added once.
  * Returns null for periods it doesn't apply to (quarters, years).
  */
 export function paceSeries(transactions, period, now = new Date()) {
@@ -291,7 +297,8 @@ export function paceSeries(transactions, period, now = new Date()) {
   const prevStart = isMonth ? dubaiDate(dubaiParts(start).y, dubaiParts(start).m - 1, 1) : new Date(start.getTime() - 7 * DAY);
   const prevLen = isMonth ? daysInMonth(dubaiParts(prevStart).y, dubaiParts(prevStart).m) : 7;
   const prevCum = cum(byDay(prevStart, prevLen));
-  const typical = isMonth ? typicalMonth(transactions, start).total : typicalMonth(transactions, start).total * (7 / 30.44);
+  const typicalMo = typicalMonth(transactions, start).total;
+  const typical = isMonth ? typicalMo : typicalMo * (7 / 30.44);
   const points = Array.from({ length: n }, (_, i) => {
     const d = new Date(start.getTime() + i * DAY);
     const p = dubaiParts(d);
@@ -304,10 +311,17 @@ export function paceSeries(transactions, period, now = new Date()) {
   });
   const spent = elapsed ? cur[elapsed - 1] : 0;
   const complete = elapsed >= n;
-  const projected = complete ? spent : elapsed >= 3 ? (spent / elapsed) * n : null;
+  const bigAt = Math.max(ONE_OFF_MIN_AED, typicalMo * ONE_OFF_SHARE);
+  const sofar = new Date(start.getTime() + elapsed * DAY);
+  const oneOffs = transactions
+    .filter((t) => spendOf(t) >= bigAt && new Date(t.occurred_at) >= start && new Date(t.occurred_at) < sofar)
+    .sort((a, b) => spendOf(b) - spendOf(a));
+  const oneOffTotal = oneOffs.reduce((sum, t) => sum + spendOf(t), 0);
+  const projected = complete ? spent : elapsed >= 3 ? ((spent - oneOffTotal) / elapsed) * n + oneOffTotal : null;
   const evenNow = typical && elapsed ? (typical * elapsed) / n : null;
   return {
     unit: isMonth ? 'month' : 'week', points, elapsed, days: n, spent, projected, typical: typical || null, complete,
+    oneOffs, oneOffTotal,
     prevTotal: prevCum[prevLen - 1] || 0,
     prevSame: prevCum[Math.min(Math.max(elapsed, 1), prevLen) - 1] || 0,
     // Positive: spending faster than a typical period at this point.

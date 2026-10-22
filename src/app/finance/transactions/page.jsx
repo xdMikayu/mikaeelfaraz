@@ -1,5 +1,6 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { memo, useDeferredValue, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
 import { Plus, UploadSimple as Upload, DownloadSimple as Download, Tray as Inbox, MagnifyingGlass as Search, X, CaretDown as ChevronDown, ArrowClockwise as RefreshCw, Copy, Check } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from '../_components/FinanceShell';
@@ -9,16 +10,17 @@ import { aed, dateTime } from '../_components/format';
 import { CATEGORIES, UNCATEGORIZED } from '@/lib/finance/categories.mjs';
 import { PERIODS, getPeriod } from '@/lib/finance/periods.mjs';
 import { inRange, spendOf } from '@/lib/finance/analytics.mjs';
-import { accountColorVar } from '@/lib/finance/accounts.mjs';
+import { accountColorVar, cardLabel } from '@/lib/finance/accounts.mjs';
+import { deleteWithUndo } from '../_components/undo';
 import { dubaiParts, dubaiDate, splitPastedMessages } from '@/lib/finance/parse.mjs';
 
 const SOURCE_LABEL = { sms: 'SMS', email: 'Email', wallet: 'Wallet', alert: 'Tabby alert', manual: 'Manual', import: 'Import', text: 'Text', statement: 'Statement' };
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function dayLabel(iso) {
+// `t` is today's dubaiParts, worked out once per list rather than once per row.
+function dayLabel(iso, t) {
   const p = dubaiParts(iso);
-  const t = dubaiParts(new Date());
   const today = dubaiDate(t.y, t.m, t.d).getTime();
   const that = dubaiDate(p.y, p.m, p.d).getTime();
   const diff = Math.round((today - that) / 86400000);
@@ -42,11 +44,13 @@ export default function Transactions() {
   const [editing, setEditing] = useState(null); // tx | 'new' | null
   const [showImport, setShowImport] = useState(false);
   const [limit, setLimit] = useState(120);
+  // Typing stays instant; the list catches up when React has a moment.
+  const query = useDeferredValue(q);
 
   const accountById = useMemo(() => new Map(f.accounts.map((a) => [a.id, a])), [f.accounts]);
   const rows = useMemo(() => {
     const period = periodKey === 'all' ? null : getPeriod(periodKey);
-    const needle = q.trim().toLowerCase();
+    const needle = query.trim().toLowerCase();
     return f.transactions.filter((t) => {
       if (period && !inRange(t, period.start, period.end)) return false;
       if (account && t.account_id !== account) return false;
@@ -54,13 +58,14 @@ export default function Transactions() {
       if (needle && !`${t.merchant} ${t.merchant_raw} ${t.notes || ''} ${t.amount}`.toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [f.transactions, q, account, category, periodKey]);
+  }, [f.transactions, query, account, category, periodKey]);
   const total = rows.reduce((s, t) => s + spendOf(t), 0);
 
   const groups = useMemo(() => {
     const out = [];
+    const today = dubaiParts(new Date());
     for (const t of rows.slice(0, limit)) {
-      const label = dayLabel(t.occurred_at);
+      const label = dayLabel(t.occurred_at, today);
       if (!out.length || out[out.length - 1].label !== label) out.push({ label, items: [], total: 0 });
       const g = out[out.length - 1];
       g.items.push(t);
@@ -81,15 +86,16 @@ export default function Transactions() {
     a.download = `transactions-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
+    toast.success(`Exported ${rows.length} transaction${rows.length === 1 ? '' : 's'}`);
   };
 
   if (f.loading) return <LoadingState />;
 
   return (
-    <div className="fin-fade-in space-y-5">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="fin-eyebrow">{rows.length} transactions{filtered ? ' · filtered' : ''}</p>
+          <p className="fin-eyebrow">{rows.length.toLocaleString('en-US')} transaction{rows.length === 1 ? '' : 's'}{filtered ? ' · filtered' : ''}</p>
           <h1 className="fin-h1 mt-1">Activity</h1>
           <p className="fin-num mt-1 text-sm fin-ink-2">{aed(total)} total</p>
         </div>
@@ -116,7 +122,7 @@ export default function Transactions() {
           <button className="fin-chipbtn" aria-pressed={!account} onClick={() => setAccount('')}>All cards</button>
           {f.accounts.map((a) => (
             <button key={a.id} className="fin-chipbtn" aria-pressed={account === a.id} onClick={() => setAccount(account === a.id ? '' : a.id)}>
-              <span className="fin-dot" style={{ background: accountColorVar(a.slug, f.accounts) }} />{a.name}
+              <span className="fin-dot" style={{ background: accountColorVar(a.slug, f.accounts) }} />{cardLabel(a)}
             </button>
           ))}
           <SelectChip value={category} onChange={setCategory} label={category || 'Category'} active={!!category}>
@@ -145,44 +151,16 @@ export default function Transactions() {
       ) : (
         <div>
           {groups.map((g) => (
-            <section key={g.label} className="mb-2">
+            <section key={g.label} className="fin-day-group mb-2">
               <div className="fin-day">
                 <span>{g.label}</span>
                 <span className="fin-num">{aed(g.total, { decimals: 0 })}</span>
               </div>
               <div className="fin-card px-4 py-1.5 sm:px-5">
                 <ul>
-                  {g.items.map((t, i) => {
-                    const a = accountById.get(t.account_id);
-                    return (
-                      <li key={t.id} className={i ? 'border-t fin-divider' : ''}>
-                        <button className="fin-row" style={{ opacity: t.excluded ? 0.5 : 1 }} onClick={() => setEditing(t)}>
-                          <span className="relative">
-                            <CategoryAvatar category={t.category} />
-                            <span className="fin-dot absolute -bottom-0.5 -right-0.5" style={{ background: accountColorVar(a?.slug, f.accounts), boxShadow: '0 0 0 2px var(--fin-surface)' }} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14.5px] font-medium">{t.merchant}</span>
-                            <span className="block truncate text-xs fin-muted">
-                              {t.category || UNCATEGORIZED}{t.category_source === 'ai' ? ' ✦' : ''} · {a?.name} · {hhmm(t.occurred_at)}
-                              <span className="hidden sm:inline"> · {(t.sources || [t.source]).map((s) => SOURCE_LABEL[s] || s).join(' + ')}</span>
-                              {t.excluded ? ' · excluded' : ''}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-right">
-                            <span className="fin-num block text-[14.5px] font-semibold" style={t.direction === 'credit' ? { color: 'var(--fin-good)' } : undefined}>
-                              {t.direction === 'credit' ? '+' : '−'}{Number(t.amount_aed).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                            {t.currency !== 'AED' ? (
-                              <span className="fin-num block text-xs fin-muted">{t.currency} {Number(t.amount).toFixed(2)}{t.fx_estimated ? ' ≈' : ''}</span>
-                            ) : t.available_balance != null ? (
-                              <span className="fin-num hidden text-xs fin-muted sm:block">{aed(t.available_balance, { decimals: 0 })} left</span>
-                            ) : null}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {g.items.map((t, i) => (
+                    <TxRow key={t.id} t={t} first={!i} account={accountById.get(t.account_id)} accounts={f.accounts} onOpen={setEditing} />
+                  ))}
                 </ul>
               </div>
             </section>
@@ -198,6 +176,42 @@ export default function Transactions() {
     </div>
   );
 }
+
+/** One row of the feed. Memoised: typing in search or opening a sheet doesn't redraw hundreds of these. */
+const TxRow = memo(function TxRow({ t, first, account: a, accounts, onOpen }) {
+  const foreign = t.currency !== 'AED';
+  return (
+    <li className={first ? '' : 'border-t fin-divider'}>
+      <button className="fin-row" style={{ opacity: t.excluded ? 0.5 : 1 }} onClick={() => onOpen(t)}>
+        <span className="relative">
+          <CategoryAvatar category={t.category} />
+          <span className="fin-dot absolute -bottom-0.5 -right-0.5" style={{ background: accountColorVar(a?.slug, accounts), boxShadow: '0 0 0 2px var(--fin-surface)' }} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[14.5px] font-medium">{t.merchant}</span>
+          <span className="block truncate text-xs fin-muted">
+            {t.category || UNCATEGORIZED}{t.category_source === 'ai' ? ' ✦' : ''} · {cardLabel(a)}
+            {foreign ? ` · ${hhmm(t.occurred_at)}` : ''}
+            <span className="hidden sm:inline">
+              {' · '}{(t.sources || [t.source]).map((s) => SOURCE_LABEL[s] || s).join(' + ')}
+              {!foreign && t.available_balance != null ? ` · ${aed(t.available_balance, { decimals: 0 })} left` : ''}
+            </span>
+            {t.excluded ? ' · excluded' : ''}
+          </span>
+        </span>
+        {/* Amount and time on the right, so a long merchant or card name never pushes the time out. */}
+        <span className="shrink-0 text-right">
+          <span className="fin-num block text-[14.5px] font-semibold" style={t.direction === 'credit' ? { color: 'var(--fin-good)' } : undefined}>
+            {t.direction === 'credit' ? '+' : '−'}{Number(t.amount_aed).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <span className="fin-num block text-xs fin-muted">
+            {foreign ? `${t.currency} ${Number(t.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${t.fx_estimated ? ' ≈' : ''}` : hhmm(t.occurred_at)}
+          </span>
+        </span>
+      </button>
+    </li>
+  );
+});
 
 /** A filter chip that opens a native select (great on phones). */
 function SelectChip({ value, onChange, label, active, children }) {
@@ -231,6 +245,7 @@ function ImportPanel({ onDone, onClose }) {
       }
       setResult(totals);
       setText('');
+      toast.success(`Imported ${totals.parsed} new transaction${totals.parsed === 1 ? '' : 's'}`, { description: `${totals.duplicate + totals.merged} already there · ${totals.ignored} skipped · ${totals.unparsed} unreadable` });
       onDone();
     } catch (e) {
       setResult({ error: e.message });
@@ -277,6 +292,18 @@ function UnreadInbox() {
     if (!f.demo) await f.supabase.from('fin_raw_events').update({ status: 'dismissed' }).eq('id', id);
     f.setData((d) => ({ ...d, rawEvents: d.rawEvents.filter((r) => r.id !== id) }));
   };
+  // From the Dismiss button: gone at once, with a few seconds to take it back.
+  const dismissWithUndo = (r) => deleteWithUndo({
+    message: 'Message dismissed',
+    ids: [r.id],
+    hide: () => f.setData((d) => ({ ...d, rawEvents: d.rawEvents.filter((x) => x.id !== r.id) })),
+    restore: () => f.setData((d) => ({ ...d, rawEvents: d.rawEvents.some((x) => x.id === r.id) ? d.rawEvents : [...d.rawEvents, r].sort((a, b) => b.received_at.localeCompare(a.received_at)) })),
+    commit: async () => {
+      if (f.demo) return;
+      const { error } = await f.supabase.from('fin_raw_events').update({ status: 'dismissed' }).eq('id', r.id);
+      if (error) throw error;
+    },
+  });
   const textOf = (r) => r.payload?.text || [r.payload?.title, r.payload?.subtitle, r.payload?.body].filter(Boolean).join(' · ') || JSON.stringify(r.payload);
   const [bulk, setBulk] = useState(null); // { done, total, fixed }
   const [copied, setCopied] = useState(null);
@@ -303,6 +330,7 @@ function UnreadInbox() {
       }
       setBulk({ done: Math.min(items.length, i + 5), total: items.length, fixed });
     }
+    toast.success(`Read ${fixed} of ${items.length} message${items.length === 1 ? '' : 's'}`);
     f.reload();
   };
   const copy = async (r) => {
@@ -328,7 +356,7 @@ function UnreadInbox() {
   };
   return (
     <section className="fin-card overflow-hidden">
-      <button className="flex w-full items-center gap-3 px-5 py-4 text-left" onClick={() => setOpen((o) => !o)}>
+      <button className="flex w-full items-center gap-3 px-5 py-4 text-left" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: 'var(--fin-bad-soft)', color: 'var(--fin-bad)' }}><Inbox size={17} /></span>
         <span className="flex-1">
           <span className="block text-sm font-semibold">{f.rawEvents.length} message{f.rawEvents.length === 1 ? ' needs' : 's need'} a look</span>
@@ -359,7 +387,7 @@ function UnreadInbox() {
                   {!isBlankAlert(r) && (
                     <button className="fin-btn fin-btn-ghost fin-btn-sm" onClick={() => copy(r)} aria-label="Copy message text">{copied === r.id ? <Check size={13} /> : <Copy size={13} />}</button>
                   )}
-                  <button className="fin-btn fin-btn-ghost fin-btn-sm" onClick={() => dismiss(r.id)}>Dismiss</button>
+                  <button className="fin-btn fin-btn-ghost fin-btn-sm" onClick={() => dismissWithUndo(r)}>Dismiss</button>
                 </span>
               </div>
               <p className="whitespace-pre-wrap break-words text-sm">

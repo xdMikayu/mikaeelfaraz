@@ -5,7 +5,9 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { Moon, Sun, SignOut as LogOut, House as LayoutDashboard, Receipt as ReceiptText, SlidersHorizontal as Settings2, TrendUp as TrendingUp, Lock } from '@phosphor-icons/react';
 import { getSupabase, supabaseConfigured } from '@/lib/finance/supabase-browser';
 import { DEFAULT_ACCOUNTS } from '@/lib/finance/accounts.mjs';
+import { Toaster } from 'sonner';
 import { demoData } from './demo';
+import { pendingDeletes } from './undo';
 
 const FinanceContext = createContext(null);
 export const useFinance = () => useContext(FinanceContext);
@@ -29,7 +31,12 @@ function useTheme() {
     setDark(stored ? stored === 'dark' : prefers ?? true);
   }, []);
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
+    // Flip every colour in the same frame: no element lags behind on its own transition.
+    const root = document.documentElement;
+    root.classList.add('fin-no-transition');
+    root.classList.toggle('dark', dark);
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('fin-no-transition')));
+    return () => cancelAnimationFrame(id);
   }, [dark]);
   const toggle = () => {
     setDark((d) => {
@@ -78,6 +85,7 @@ export default function FinanceShell({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const reloadTimer = useRef(null);
+  const lastLoad = useRef(0);
 
   useEffect(() => {
     if (demo) {
@@ -116,7 +124,9 @@ export default function FinanceShell({ children }) {
         supabase.from('fin_raw_events').select('id, received_at, source, status, reason, payload').order('received_at', { ascending: false }).limit(25)
           .then((r) => (r.error ? Promise.reject(r.error) : r.data)),
       ]);
-      setData({ accounts, transactions, rules, budgets, rawEvents: raw, activity });
+      const hidden = (r) => !pendingDeletes.has(r.id); // waiting on an Undo toast
+      setData({ accounts, transactions: transactions.filter(hidden), rules: rules.filter(hidden), budgets, rawEvents: raw.filter(hidden), activity });
+      lastLoad.current = Date.now();
       setError(null);
     } catch (e) {
       setError(e.message || String(e));
@@ -136,7 +146,10 @@ export default function FinanceShell({ children }) {
       .channel('fin-transactions')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fin_transactions' }, () => {
         clearTimeout(reloadTimer.current);
-        reloadTimer.current = setTimeout(load, 600);
+        reloadTimer.current = setTimeout(() => {
+          // Our own saves reload straight away; skip their echo instead of loading everything twice.
+          if (Date.now() - lastLoad.current > 2000) load();
+        }, 600);
       })
       .subscribe();
     return () => {
@@ -231,6 +244,13 @@ export default function FinanceShell({ children }) {
         </main>
       </div>
 
+      <Toaster
+        theme={dark ? 'dark' : 'light'}
+        position="bottom-right"
+        offset={{ bottom: 'var(--fin-toast-bottom)', right: 24 }}
+        mobileOffset={{ bottom: 'var(--fin-toast-bottom)', left: 16, right: 16 }}
+        gap={8}
+      />
       {signedIn && (
         <nav className="fin-tabbar" aria-label="Sections">
           {NAV.map(({ href: h, label, icon: Icon }) => (

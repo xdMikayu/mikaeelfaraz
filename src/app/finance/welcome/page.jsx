@@ -28,7 +28,7 @@ export default function Welcome() {
   };
   return (
     <div className="grid min-h-[60vh] place-items-center">
-      <form onSubmit={submit} className="fin-card fin-card-hero fin-fade-in w-full max-w-sm space-y-4 p-7">
+      <form onSubmit={submit} className="fin-card fin-card-hero w-full max-w-sm space-y-4 p-7">
         <div>
           <h1 className="fin-h1">Choose a password</h1>
           <p className="mt-1 text-sm fin-ink-2">For {f.session?.user?.email || 'your account'}. You’ll use it to sign in to Mifolio.</p>

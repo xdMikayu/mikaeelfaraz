@@ -14,7 +14,7 @@ function H({ children }) {
 
 export default function Privacy() {
   return (
-    <article className="fin-fade-in mx-auto max-w-2xl space-y-3 text-[15px] leading-relaxed fin-ink-2">
+    <article className="mx-auto max-w-2xl space-y-3 text-[15px] leading-relaxed fin-ink-2">
       <p className="fin-eyebrow">Last updated {UPDATED}</p>
       <h1 className="fin-h1" style={{ color: 'var(--fin-ink)' }}>Privacy</h1>
       <p>Mifolio keeps track of your card spending from the alerts your banks already send you. This page says exactly what that means for your data.</p>

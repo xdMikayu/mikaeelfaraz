@@ -1,7 +1,9 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Trash as Trash2, X } from '@phosphor-icons/react';
+import { Plus, Trash as Trash2 } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from '../_components/FinanceShell';
+import Sheet from '../_components/Sheet';
+import { deleteWithUndo, pendingDeletes } from '../_components/undo';
 import { NetWorthLine } from '../_components/charts';
 import { aed, relative } from '../_components/format';
 import { typicalMonth } from '@/lib/finance/analytics.mjs';
@@ -65,7 +67,7 @@ function usePortfolio() {
     }
     setSetup(false);
     setError(null);
-    setHoldings(h.data);
+    setHoldings(h.data.filter((x) => !pendingDeletes.has(x.id)));
     setHistory(n.data.map((r) => ({ day: r.day, total: Number(r.total_aed) })));
     setStored(p.data || null);
   }, [f.demo, f.supabase]);
@@ -107,12 +109,21 @@ function usePortfolio() {
     await load();
     snapshot();
   };
-  const remove = async (id) => {
-    if (f.demo) return setHoldings((hs) => hs.filter((h) => h.id !== id));
-    const { error: e } = await f.supabase.from('fin_holdings').delete().eq('id', id);
-    if (e) throw e;
-    await load();
-    snapshot();
+  const remove = (holding) => {
+    const label = holding.name || holding.symbol || (holding.asset === 'gold' ? `${holding.karat}K gold` : 'holding');
+    deleteWithUndo({
+      message: `Removed ${label}`,
+      ids: [holding.id],
+      hide: () => setHoldings((hs) => hs.filter((h) => h.id !== holding.id)),
+      restore: () => setHoldings((hs) => (hs.some((h) => h.id === holding.id) ? hs : [...hs, holding])),
+      commit: async () => {
+        if (f.demo) return;
+        const { error: e } = await f.supabase.from('fin_holdings').delete().eq('id', holding.id);
+        if (e) throw e;
+        await load();
+        snapshot();
+      },
+    });
   };
 
   // What a normal month of spending costs, for "how long would my cash last".
@@ -158,10 +169,10 @@ export default function Portfolio() {
   const rangeLabel = RANGES.find((r) => r.key === range).label;
 
   return (
-    <div className="fin-fade-in space-y-6">
+    <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="fin-eyebrow">Everything you own, less what the cards owe</p>
+          <p className="fin-eyebrow"><span className="sm:hidden">What you own, less card debt</span><span className="hidden sm:inline">Everything you own, less what the cards owe</span></p>
           <h1 className="fin-h1 mt-1">Net worth</h1>
         </div>
         <div className="fin-seg" role="group" aria-label="Currency">
@@ -280,8 +291,8 @@ export default function Portfolio() {
           prices={p.prices}
           debitCards={p.debitCards}
           onClose={() => setEditing(null)}
-          onSave={async (row) => { await p.save(row, editing.id); setEditing(null); }}
-          onDelete={editing.id ? async () => { await p.remove(editing.id); setEditing(null); } : null}
+          onSave={(row) => p.save(row, editing.id)}
+          onDelete={editing.id ? () => p.remove(editing) : null}
         />
       )}
     </div>
@@ -407,7 +418,16 @@ function PriceNotes({ prices, gold }) {
 }
 
 // ---------- add / edit ----------
-function HoldingSheet({ holding, prices, debitCards = [], onClose, onSave, onDelete }) {
+function HoldingSheet({ holding, onClose, ...rest }) {
+  const heading = `${holding.id ? 'Edit' : 'Add'} ${{ cash: 'bank account', stock: 'DFM stock', crypto: 'crypto', gold: 'gold' }[holding.asset]}`;
+  return (
+    <Sheet title={heading} size="md" onClose={onClose}>
+      {(close) => <HoldingForm holding={holding} close={close} {...rest} />}
+    </Sheet>
+  );
+}
+
+function HoldingForm({ holding, prices, debitCards = [], close, onSave, onDelete }) {
   const kind = holding.asset;
   const [form, setForm] = useState({
     name: holding.name || '',
@@ -457,91 +477,84 @@ function HoldingSheet({ holding, prices, debitCards = [], onClose, onSave, onDel
     setErr(null);
     try {
       await onSave(row);
+      close();
     } catch (x) {
       setErr(/last4|card_slug|balance_at/.test(x.message) ? 'Run supabase/migrations/20260928000000_cash_sync.sql first, then save again.' : /check constraint|column|schema cache/.test(x.message) ? 'Run the portfolio migration first (see the note at the top).' : x.message);
       setBusy(false);
     }
   };
 
-  const heading = `${holding.id ? 'Edit' : 'Add'} ${{ cash: 'bank account', stock: 'DFM stock', crypto: 'crypto', gold: 'gold' }[kind]}`;
   return (
-    <div className="fin-sheet-backdrop fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" onClick={onClose}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="fin-card fin-sheet max-h-[92vh] w-full max-w-md overflow-y-auto rounded-b-none p-5 pb-[calc(20px+env(safe-area-inset-bottom))] sm:rounded-b-[16px] sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="fin-h2">{heading}</h2>
-          <button type="button" className="fin-btn fin-btn-ghost fin-icon-btn" onClick={onClose} aria-label="Close"><X size={18} /></button>
-        </div>
+    <form onSubmit={submit}>
+      <div className="grid gap-4">
+        {kind === 'cash' && (
+          <>
+            <Field label="Bank or account"><input className="fin-input" value={form.name} onChange={set('name')} placeholder="Mashreq current account" autoFocus /></Field>
+            <div className="grid grid-cols-[110px_1fr] gap-3">
+              <Field label="Currency">
+                <select className="fin-select" value={form.currency} onChange={set('currency')}>{CASH_CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
+              </Field>
+              <Field label="Balance"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" value={form.quantity} onChange={set('quantity')} placeholder="0.00" /></Field>
+            </div>
+            <Field label="Account number ends with" hint="optional · Mashreq salary and transfer emails then update this balance">
+              <input className="fin-input fin-num" inputMode="numeric" maxLength={4} value={form.last4} onChange={(e) => setForm((f) => ({ ...f, last4: e.target.value.replace(/\D/g, '').slice(0, 4) }))} placeholder="1234" />
+            </Field>
+            {debitCards.length > 0 && (
+              <Field label="Debit card on this account" hint="optional · its alerts carry the balance">
+                <select className="fin-select" value={form.card_slug} onChange={set('card_slug')}>
+                  <option value="">None</option>
+                  {debitCards.map((a) => <option key={a.id} value={a.slug}>{a.name}{a.last4 ? ` •• ${a.last4}` : ''}</option>)}
+                </select>
+              </Field>
+            )}
+          </>
+        )}
+        {kind === 'stock' && (
+          <>
+            <Field label="DFM symbol" hint={quote ? `AED ${quote.price.toFixed(2)} · ${quote.changePct >= 0 ? '+' : ''}${quote.changePct.toFixed(2)}% today` : sym && symbols.length ? 'No price for this symbol today' : 'EMAAR, DEWA, SALIK, DIB…'}>
+              <input className="fin-input fin-num uppercase" value={form.symbol} onChange={set('symbol')} list="dfm-symbols" placeholder="EMAAR" autoFocus autoCapitalize="characters" />
+              <datalist id="dfm-symbols">{symbols.map((s) => <option key={s} value={s} />)}</datalist>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Shares"><input className="fin-input fin-num" type="number" inputMode="decimal" step="1" min="0" value={form.quantity} onChange={set('quantity')} placeholder="100" /></Field>
+              <Field label="Paid in total" hint="AED, optional"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" min="0" value={form.cost_aed} onChange={set('cost_aed')} /></Field>
+            </div>
+          </>
+        )}
+        {kind === 'crypto' && (
+          <>
+            <Field label="Coin">
+              <select className="fin-select" value={form.symbol} onChange={set('symbol')}>{Object.entries(CRYPTO).map(([s, n]) => <option key={s} value={s}>{n} ({s})</option>)}</select>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Amount"><input className="fin-input fin-num" type="number" inputMode="decimal" step="any" min="0" value={form.quantity} onChange={set('quantity')} placeholder="4.5" autoFocus /></Field>
+              <Field label="Paid in total" hint="AED, optional"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" min="0" value={form.cost_aed} onChange={set('cost_aed')} /></Field>
+            </div>
+          </>
+        )}
+        {kind === 'gold' && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Grams"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.001" min="0" value={form.grams} onChange={set('grams')} placeholder="20" autoFocus /></Field>
+              <Field label="Karat"><select className="fin-select" value={form.karat} onChange={set('karat')}>{KARATS.map((k) => <option key={k} value={k}>{k}K</option>)}</select></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Paid in total" hint="AED, optional"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" min="0" value={form.cost_aed} onChange={set('cost_aed')} /></Field>
+              <Field label="Note" hint="optional"><input className="fin-input" value={form.note} onChange={set('note')} placeholder="Bar, coin…" maxLength={60} /></Field>
+            </div>
+          </>
+        )}
+      </div>
 
-        <div className="grid gap-4">
-          {kind === 'cash' && (
-            <>
-              <Field label="Bank or account"><input className="fin-input" value={form.name} onChange={set('name')} placeholder="Mashreq current account" autoFocus /></Field>
-              <div className="grid grid-cols-[110px_1fr] gap-3">
-                <Field label="Currency">
-                  <select className="fin-select" value={form.currency} onChange={set('currency')}>{CASH_CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
-                </Field>
-                <Field label="Balance"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" value={form.quantity} onChange={set('quantity')} placeholder="0.00" /></Field>
-              </div>
-              <Field label="Account number ends with" hint="optional · Mashreq salary and transfer emails then update this balance">
-                <input className="fin-input fin-num" inputMode="numeric" maxLength={4} value={form.last4} onChange={(e) => setForm((f) => ({ ...f, last4: e.target.value.replace(/\D/g, '').slice(0, 4) }))} placeholder="1234" />
-              </Field>
-              {debitCards.length > 0 && (
-                <Field label="Debit card on this account" hint="optional · its alerts carry the balance">
-                  <select className="fin-select" value={form.card_slug} onChange={set('card_slug')}>
-                    <option value="">None</option>
-                    {debitCards.map((a) => <option key={a.id} value={a.slug}>{a.name}{a.last4 ? ` •• ${a.last4}` : ''}</option>)}
-                  </select>
-                </Field>
-              )}
-            </>
-          )}
-          {kind === 'stock' && (
-            <>
-              <Field label="DFM symbol" hint={quote ? `AED ${quote.price.toFixed(2)} · ${quote.changePct >= 0 ? '+' : ''}${quote.changePct.toFixed(2)}% today` : sym && symbols.length ? 'No price for this symbol today' : 'EMAAR, DEWA, SALIK, DIB…'}>
-                <input className="fin-input fin-num uppercase" value={form.symbol} onChange={set('symbol')} list="dfm-symbols" placeholder="EMAAR" autoFocus autoCapitalize="characters" />
-                <datalist id="dfm-symbols">{symbols.map((s) => <option key={s} value={s} />)}</datalist>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Shares"><input className="fin-input fin-num" type="number" inputMode="decimal" step="1" min="0" value={form.quantity} onChange={set('quantity')} placeholder="100" /></Field>
-                <Field label="Paid in total" hint="AED, optional"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" min="0" value={form.cost_aed} onChange={set('cost_aed')} /></Field>
-              </div>
-            </>
-          )}
-          {kind === 'crypto' && (
-            <>
-              <Field label="Coin">
-                <select className="fin-select" value={form.symbol} onChange={set('symbol')}>{Object.entries(CRYPTO).map(([s, n]) => <option key={s} value={s}>{n} ({s})</option>)}</select>
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Amount"><input className="fin-input fin-num" type="number" inputMode="decimal" step="any" min="0" value={form.quantity} onChange={set('quantity')} placeholder="4.5" autoFocus /></Field>
-                <Field label="Paid in total" hint="AED, optional"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" min="0" value={form.cost_aed} onChange={set('cost_aed')} /></Field>
-              </div>
-            </>
-          )}
-          {kind === 'gold' && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Grams"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.001" min="0" value={form.grams} onChange={set('grams')} placeholder="20" autoFocus /></Field>
-                <Field label="Karat"><select className="fin-select" value={form.karat} onChange={set('karat')}>{KARATS.map((k) => <option key={k} value={k}>{k}K</option>)}</select></Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Paid in total" hint="AED, optional"><input className="fin-input fin-num" type="number" inputMode="decimal" step="0.01" min="0" value={form.cost_aed} onChange={set('cost_aed')} /></Field>
-                <Field label="Note" hint="optional"><input className="fin-input" value={form.note} onChange={set('note')} placeholder="Bar, coin…" maxLength={60} /></Field>
-              </div>
-            </>
-          )}
-        </div>
-
-        {err && <p className="mt-4 text-sm" style={{ color: 'var(--fin-bad)' }}>{err}</p>}
-        <div className="mt-6 flex items-center gap-2">
-          <button className="fin-btn fin-btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
-          <button type="button" className="fin-btn fin-btn-ghost" onClick={onClose}>Cancel</button>
-          {onDelete && (
-            <button type="button" className="fin-btn fin-btn-ghost fin-btn-danger ml-auto" onClick={() => window.confirm('Remove this holding?') && onDelete()}><Trash2 size={15} /> Remove</button>
-          )}
-        </div>
-      </form>
-    </div>
+      {err && <p className="mt-4 text-sm" style={{ color: 'var(--fin-bad)' }}>{err}</p>}
+      <div className="mt-6 flex items-center gap-2">
+        <button className="fin-btn fin-btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+        <button type="button" className="fin-btn fin-btn-ghost" onClick={close}>Cancel</button>
+        {onDelete && (
+          <button type="button" className="fin-btn fin-btn-ghost fin-btn-danger ml-auto" onClick={() => { close(); onDelete(); }}><Trash2 size={15} /> Remove</button>
+        )}
+      </div>
+    </form>
   );
 }
 
