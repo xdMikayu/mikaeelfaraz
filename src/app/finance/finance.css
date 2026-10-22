@@ -229,6 +229,11 @@
 @media (prefers-reduced-transparency: reduce) {
   .fin-tabbar, .fin-topbar { background: var(--fin-page); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+/* Home Screen app on iOS: the status bar sits on top of the page with white text. In dark mode
+   the top bar is already dark behind it; in light mode give the clock a dark strip to sit on. */
+@media (display-mode: standalone) {
+  html:not(.dark) .fin-topbar::before { content: ''; position: absolute; inset: 0 0 auto; height: env(safe-area-inset-top); background: #0b0b0c; }
+}
 /* Visibility lives here (not Tailwind's hidden/lg:hidden) because these rules load after utilities. */
 @media (max-width: 1023.98px) { .fin-side { display: none; } }
 @media (min-width: 1024px) { .fin-tabbar, .fin-topbar { display: none; } }

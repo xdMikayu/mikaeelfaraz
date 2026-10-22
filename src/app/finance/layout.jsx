@@ -17,7 +17,9 @@ export const metadata = {
     icon: [{ url: '/finance/favicon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/finance/icon.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/finance/apple-touch-icon.png', sizes: '180x180' }],
   },
-  appleWebApp: { title: 'Mifolio' },
+  // Home Screen app: draw under the status bar (the default is a plain white bar). Its text is
+  // always white, so the top bar puts a dark strip behind it in light mode (finance.css).
+  appleWebApp: { title: 'Mifolio', statusBarStyle: 'black-translucent' },
 };
 
 export const viewport = {
