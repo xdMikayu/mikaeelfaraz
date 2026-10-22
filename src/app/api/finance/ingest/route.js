@@ -2,7 +2,7 @@
 // Called by the iPhone Shortcuts automations (SIB SMS, Apple Wallet taps), the
 // Gmail Apps Script (Mashreq emails) and the dashboard's bulk import.
 //
-// Auth: Authorization: Bearer <FINANCE_INGEST_TOKEN or Supabase session token>
+// Auth: Authorization: Bearer <personal API key "mf_…", legacy FINANCE_INGEST_TOKEN, or Supabase session token>
 // Body: one event, { events: [...] }, or plain text (treated as one message).
 //   SMS/email: { "source": "sms", "text": "A txn on your Card ..." }
 //   Wallet:    { "source": "wallet", "card": "Tabby Card", "merchant": "du", "amount": "AED 1.00" }

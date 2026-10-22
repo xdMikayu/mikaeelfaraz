@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Sparkle as Sparkles, Tag as Tags, ArrowUpRight, ArrowDownRight, Minus, CaretRight as ChevronRight, X } from '@phosphor-icons/react';
 import { useFinance, LoadingState } from './_components/FinanceShell';
 import { PeriodBars, SpendBars, HBar, CategoryRing, ringSlices, WeekBars, PaceChart, Spark } from './_components/charts';
@@ -9,7 +10,7 @@ import { CategoryAvatar, CategoryIcon } from './_components/icons';
 import { aed, pct, dateTime, relative } from './_components/format';
 import { PERIODS, getPeriod, monthPeriod, rangePeriod } from '@/lib/finance/periods.mjs';
 import { summarize, monthlySeries, periodBars, monthlyContext, spendOf, weekCompare, paceSeries, typicalMonth, categoryContext, recurringCharges } from '@/lib/finance/analytics.mjs';
-import { accountColorVar } from '@/lib/finance/accounts.mjs';
+import { accountColorVar, cardLabel } from '@/lib/finance/accounts.mjs';
 import { dubaiParts } from '@/lib/finance/parse.mjs';
 
 const whole = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');
@@ -54,7 +55,7 @@ export default function Overview() {
   const [periodKey, setPeriodKey] = useState('this_month');
   const [editing, setEditing] = useState(null);
   const [insight, setInsight] = useState({ busy: false, text: null, error: null });
-  const [catBusy, setCatBusy] = useState(null);
+  const [catBusy, setCatBusy] = useState(false);
   const [ringSel, setRingSel] = useState(null);
   const [chartMode, setChartMode] = useState('pace');
 
@@ -93,7 +94,7 @@ export default function Overview() {
   };
   const notes = useMemo(() => buildNotes({ s, pace, catCtx, recurring, period }), [s, pace, catCtx, recurring, period]);
   const recent = txs.slice(0, 6);
-  const scopeLabel = focused ? `${focused.name} · ${period.label}` : period.label;
+  const scopeLabel = focused ? `${cardLabel(focused)} · ${period.label}` : period.label;
   // A summary belongs to the view it was asked for.
   useEffect(() => { setInsight({ busy: false, text: null, error: null }); setRingSel(null); }, [period.key, focusAccount]);
   const openBucket = (b) => {
@@ -116,17 +117,20 @@ export default function Overview() {
   const avgMonth = months.reduce((t, m) => t + m.total, 0) / 12;
 
   const categorize = async () => {
-    setCatBusy('Categorizing…');
+    setCatBusy(true);
+    const id = toast.loading(`Sorting ${totalUncategorized} transaction${totalUncategorized === 1 ? '' : 's'}…`);
     try {
       const r = await f.api('categorize');
       await f.reload();
-      setCatBusy(
-        r.aiError ? `Mifolio AI error: ${r.aiError}` :
-        `Done: ${r.byRule} by rules, ${r.byAi} by Mifolio AI${r.remaining ? `, ${r.remaining} left` : ''}${!r.ai ? ' (add ANTHROPIC_API_KEY to turn on Mifolio AI)' : ''}`
-      );
+      if (r.aiError) toast.error('Mifolio AI couldn’t sort them', { id, description: r.aiError });
+      else toast.success(`Sorted ${r.byRule + r.byAi}`, {
+        id,
+        description: `${r.byRule} by rules, ${r.byAi} by Mifolio AI${r.remaining ? `, ${r.remaining} left` : ''}${!r.ai ? ' · add ANTHROPIC_API_KEY to turn on Mifolio AI' : ''}`,
+      });
     } catch (e) {
-      setCatBusy(e.message);
+      toast.error('Couldn’t sort', { id, description: e.message });
     }
+    setCatBusy(false);
   };
 
   const askAi = async () => {
@@ -156,17 +160,17 @@ export default function Overview() {
   if (f.loading) return <LoadingState />;
 
   return (
-    <div className="fin-fade-in space-y-5">
+    <div className="space-y-5">
       {/* Header */}
       <div className="space-y-4">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">
             <p className="fin-eyebrow">{greeting()}</p>
             <h1 className="fin-h1 mt-1">Your spending</h1>
           </div>
           <div className="flex shrink-0 gap-2">
             {totalUncategorized > 0 && (
-              <button className="fin-btn" onClick={categorize} disabled={catBusy === 'Categorizing…'}>
+              <button className="fin-btn" onClick={categorize} disabled={catBusy}>
                 <Tags size={16} /> <span className="hidden sm:inline">Sort</span> {totalUncategorized}
               </button>
             )}
@@ -181,14 +185,13 @@ export default function Overview() {
           ))}
         </div>
       </div>
-      {catBusy && catBusy !== 'Categorizing…' && <p className="text-sm fin-ink-2">{catBusy}</p>}
 
       {(focused || range) && (
         <div className="fin-fade-in flex flex-wrap items-center gap-2">
           <span className="text-sm fin-muted">Showing</span>
           {focused && (
-            <button className="fin-chipbtn" data-active="true" onClick={() => setFocusAccount(null)} aria-label={`Show all cards instead of ${focused.name}`}>
-              <span className="fin-dot" style={{ background: accountColorVar(focused.slug, f.accounts) }} />{focused.name}<X size={13} />
+            <button className="fin-chipbtn" data-active="true" onClick={() => setFocusAccount(null)} aria-label={`Show all cards instead of ${cardLabel(focused)}`}>
+              <span className="fin-dot" style={{ background: accountColorVar(focused.slug, f.accounts) }} />{cardLabel(focused)}<X size={13} />
             </button>
           )}
           {range && (
@@ -230,6 +233,12 @@ export default function Overview() {
                   On pace for <span className="fin-num font-semibold" style={{ color: 'var(--fin-ink)' }}>{aed(pace.projected, { decimals: 0 })}</span>
                   {pace.typical ? <> · a typical {pace.unit} is <span className="fin-num">{aed(pace.typical, { decimals: 0 })}</span></> : null}
                 </p>
+              )}
+              {pace?.oneOffs?.length > 0 && !pace.complete && (
+                <div className="mt-1 text-[13px] fin-muted">
+                  <p>One-off{pace.oneOffs.length === 1 ? '' : 's'} <span className="fin-num font-medium fin-ink-2">{aed(pace.oneOffTotal, { decimals: 0 })}</span>, counted once, not projected</p>
+                  <p className="truncate">{pace.oneOffs.slice(0, 2).map((t) => t.merchant).join(', ')}{pace.oneOffs.length > 2 ? ` and ${pace.oneOffs.length - 2} more` : ''}</p>
+                </div>
               )}
               {!period.noCompare && <div className="mt-3"><DeltaPill change={s.change} label={period.prevLabel} /></div>}
             </div>
@@ -287,7 +296,7 @@ export default function Overview() {
       {!period.week && !range && (
         <Panel
           title="This week"
-          subtitle={`Monday to today${focused ? ` · ${focused.name}` : ''}`}
+          subtitle={`Monday to today${focused ? ` · ${cardLabel(focused)}` : ''}`}
           action={<button className="fin-link text-xs" onClick={() => { setRange(null); setPeriodKey('last_week'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Open last week</button>}
         >
           <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
@@ -525,7 +534,7 @@ function CardTile({ b, accounts, selected, dimmed, onClick }) {
   const change = b.prevTotal ? (b.total - b.prevTotal) / b.prevTotal : null;
   return (
     <button type="button" onClick={onClick} aria-pressed={selected}
-      className="fin-card relative flex w-full min-w-0 flex-col justify-start overflow-hidden p-4 text-left sm:p-5 transition-[opacity,box-shadow] duration-150"
+      className="fin-card relative flex w-full min-w-0 flex-col justify-start overflow-hidden p-4 text-left transition-[opacity,transform] duration-150 active:scale-[0.98] sm:p-5"
       style={{
         opacity: dimmed ? 0.5 : 1,
         boxShadow: selected ? `0 0 0 1px ${color}` : undefined,
@@ -535,7 +544,7 @@ function CardTile({ b, accounts, selected, dimmed, onClick }) {
       <div className="flex items-center justify-between gap-2">
         <span className="fin-chip min-w-0 text-[13px] font-medium" style={{ color: 'var(--fin-ink)' }}>
           <span className="fin-dot" style={{ background: color }} />
-          <span className="truncate">{b.account.name}</span>
+          <span className="truncate">{cardLabel(b.account)}</span>
         </span>
         {b.account.last4 && <span className="fin-num hidden text-xs fin-muted sm:inline">•• {b.account.last4}</span>}
       </div>

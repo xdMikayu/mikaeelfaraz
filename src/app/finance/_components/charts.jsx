@@ -2,7 +2,7 @@
 // Hand-rolled SVG charts following the dataviz mark specs: 2px lines, <=24px
 // bars with a 4px rounded data-end, 2px surface gaps between stacked segments,
 // hairline grid, crosshair/per-mark tooltips, text in ink tokens only.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { aed, compact } from './format';
 import { accountColorVar } from '@/lib/finance/accounts.mjs';
 
@@ -16,6 +16,49 @@ function useWidth() {
     return () => ro.disconnect();
   }, []);
   return [ref, w];
+}
+
+/**
+ * Hover or drag across a line chart to read a day. Pointer events for mouse, pen and touch;
+ * the chart's touch-action: pan-y leaves vertical swipes to the page (the browser cancels the
+ * pointer when it scrolls). The rect is measured once per gesture and updates are batched to
+ * one per frame, so a drag re-renders the crosshair, not the whole chart, at most 60 times a second.
+ */
+function useScrub(toIndex) {
+  const [hover, setHover] = useState(null);
+  const st = useRef({ rect: null, x: 0, raf: 0 });
+  const toIndexRef = useRef(toIndex);
+  toIndexRef.current = toIndex;
+  useEffect(() => {
+    const s = st.current;
+    const forget = () => { s.rect = null; };
+    window.addEventListener('scroll', forget, { passive: true });
+    return () => { window.removeEventListener('scroll', forget); cancelAnimationFrame(s.raf); };
+  }, []);
+  const queue = (e) => {
+    const s = st.current;
+    if (!s.rect) s.rect = e.currentTarget.getBoundingClientRect();
+    s.x = e.clientX - s.rect.left;
+    if (!s.raf) s.raf = requestAnimationFrame(() => {
+      s.raf = 0;
+      const i = toIndexRef.current(s.x);
+      setHover((h) => (h === i ? h : i));
+    });
+  };
+  const end = () => {
+    cancelAnimationFrame(st.current.raf);
+    st.current.raf = 0;
+    st.current.rect = null;
+    setHover(null);
+  };
+  const handlers = {
+    onPointerDown: queue,
+    onPointerMove: queue,
+    onPointerLeave: end,
+    onPointerCancel: end,
+    onPointerUp: (e) => e.pointerType !== 'mouse' && end(),
+  };
+  return [hover, handlers];
 }
 
 /** Clean axis ticks: 0, 500, 1,000 … */
@@ -378,46 +421,56 @@ export function WeekBars({ days, height = 150 }) {
  */
 export function NetWorthLine({ points, height = 200, format = (v) => aed(v, { decimals: 0 }) }) {
   const [ref, width] = useWidth();
-  const [hover, setHover] = useState(null);
   const pad = { top: 12, right: 12, bottom: 24, left: 52 };
-  if (!points.length) return <div ref={ref} style={{ height }} />;
-  const vals = points.map((p) => p.total);
-  let lo = Math.min(...vals);
-  let hi = Math.max(...vals);
-  if (hi - lo < Math.max(1, hi * 0.02)) { lo -= Math.max(1, hi * 0.02); hi += Math.max(1, hi * 0.02); }
-  const span = hi - lo;
-  lo -= span * 0.12;
-  hi += span * 0.08;
   const iw = Math.max(10, width - pad.left - pad.right);
-  const ih = height - pad.top - pad.bottom;
-  const x = (i) => pad.left + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
-  const y = (v) => pad.top + ih - ((v - lo) / (hi - lo)) * ih;
-  const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join('');
-  const area = `${line}L${x(points.length - 1)},${pad.top + ih}L${x(0)},${pad.top + ih}Z`;
-  const ticks = [lo + (hi - lo) * 0.15, lo + (hi - lo) * 0.5, lo + (hi - lo) * 0.85];
-  const labelAt = [0, Math.floor((points.length - 1) / 2), points.length - 1].filter((v, i, a) => a.indexOf(v) === i);
+  const [hover, scrub] = useScrub((px) => Math.max(0, Math.min(points.length - 1, Math.round(((px - pad.left) / iw) * (points.length - 1)))));
+  const geo = useMemo(() => {
+    if (!points.length) return null;
+    const vals = points.map((p) => p.total);
+    let lo = Math.min(...vals);
+    let hi = Math.max(...vals);
+    if (hi - lo < Math.max(1, hi * 0.02)) { lo -= Math.max(1, hi * 0.02); hi += Math.max(1, hi * 0.02); }
+    const span = hi - lo;
+    lo -= span * 0.12;
+    hi += span * 0.08;
+    const ih = height - pad.top - pad.bottom;
+    const x = (i) => pad.left + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
+    const y = (v) => pad.top + ih - ((v - lo) / (hi - lo)) * ih;
+    return { x, y, ih, lo, hi };
+  }, [points, height, iw]); // eslint-disable-line react-hooks/exhaustive-deps
   const fmtDay = (d) => { const [yy, mm, dd] = d.split('-').map(Number); return `${dd} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][mm - 1]}${points.length > 200 ? ` ${yy}` : ''}`; };
-  const onMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-    setHover(Math.max(0, Math.min(points.length - 1, Math.round(((px - pad.left) / iw) * (points.length - 1)))));
-  };
+  // Everything that doesn't move with the pointer, drawn once per data/size change.
+  const staticLayer = useMemo(() => {
+    if (!geo || !width) return null;
+    const { x, y, ih, lo, hi } = geo;
+    const line = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.total).toFixed(1)}`).join('');
+    const area = `${line}L${x(points.length - 1)},${pad.top + ih}L${x(0)},${pad.top + ih}Z`;
+    const ticks = [lo + (hi - lo) * 0.15, lo + (hi - lo) * 0.5, lo + (hi - lo) * 0.85];
+    const labelAt = [0, Math.floor((points.length - 1) / 2), points.length - 1].filter((v, i, a) => a.indexOf(v) === i);
+    return (
+      <>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={pad.left} x2={width - pad.right} y1={y(t)} y2={y(t)} stroke="var(--fin-grid)" />
+            <text x={pad.left - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--fin-muted)" className="fin-num">{compact(t)}</text>
+          </g>
+        ))}
+        <path d={area} fill="var(--fin-ink)" opacity="0.05" />
+        <path d={line} fill="none" stroke="var(--fin-ink)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {labelAt.map((i) => (
+          <text key={i} x={x(i)} y={height - 6} textAnchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'} fontSize="11" fill="var(--fin-muted)">{fmtDay(points[i].day)}</text>
+        ))}
+      </>
+    );
+  }, [geo, width, points, height]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!geo) return <div ref={ref} style={{ height }} />;
+  const { x, y, ih } = geo;
   const h = hover != null ? points[hover] : null;
   return (
     <div ref={ref} className="relative select-none" style={{ height }}>
       {width > 0 && (
-        <svg width={width} height={height} role="img" aria-label="Net worth over time" onMouseMove={onMove} onTouchMove={onMove} onTouchStart={onMove} onMouseLeave={() => setHover(null)} onTouchEnd={() => setHover(null)} style={{ touchAction: 'pan-y' }}>
-          {ticks.map((t) => (
-            <g key={t}>
-              <line x1={pad.left} x2={width - pad.right} y1={y(t)} y2={y(t)} stroke="var(--fin-grid)" />
-              <text x={pad.left - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--fin-muted)" className="fin-num">{compact(t)}</text>
-            </g>
-          ))}
-          <path d={area} fill="var(--fin-ink)" opacity="0.05" />
-          <path d={line} fill="none" stroke="var(--fin-ink)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          {labelAt.map((i) => (
-            <text key={i} x={x(i)} y={height - 6} textAnchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'} fontSize="11" fill="var(--fin-muted)">{fmtDay(points[i].day)}</text>
-          ))}
+        <svg width={width} height={height} role="img" aria-label="Net worth over time" {...scrub} style={{ touchAction: 'pan-y' }}>
+          {staticLayer}
           {h && (
             <g>
               <line x1={x(hover)} x2={x(hover)} y1={pad.top} y2={pad.top + ih} stroke="var(--fin-axis)" />
@@ -427,7 +480,7 @@ export function NetWorthLine({ points, height = 200, format = (v) => aed(v, { de
         </svg>
       )}
       {h && (
-        <div className="fin-tooltip" style={{ left: Math.min(Math.max(0, x(hover) - 75), Math.max(0, width - 160)), top: -8 }}>
+        <div className="fin-tooltip" style={{ left: 0, top: -8, transform: `translateX(${Math.min(Math.max(0, x(hover) - 75), Math.max(0, width - 160))}px)` }}>
           <p className="text-xs fin-muted">{fmtDay(h.day)}</p>
           <p className="fin-num text-sm font-semibold">{format(h.total)}</p>
         </div>
@@ -443,54 +496,58 @@ export function NetWorthLine({ points, height = 200, format = (v) => aed(v, { de
  */
 export function PaceChart({ pace, height = 230, color = 'var(--fin-ink)' }) {
   const [ref, width] = useWidth();
-  const [hover, setHover] = useState(null);
   const pad = { top: 14, right: 16, bottom: 26, left: 48 };
   const pts = pace.points;
   const n = pts.length;
+  const iw = Math.max(10, width - pad.left - pad.right);
+  const ih = height - pad.top - pad.bottom;
+  const [hover, scrub] = useScrub((px) => Math.max(0, Math.min(n - 1, Math.round(((px - pad.left) / iw) * (n - 1)))));
   const max = Math.max(1, pace.projected || 0, ...pts.map((p) => Math.max(p.cur || 0, p.prev || 0, p.even || 0)));
   const ticks = niceTicks(max, 3);
   const top = ticks[ticks.length - 1];
-  const iw = Math.max(10, width - pad.left - pad.right);
-  const ih = height - pad.top - pad.bottom;
   const x = (i) => pad.left + (n === 1 ? 0 : (i / (n - 1)) * iw);
   const y = (v) => pad.top + ih - (v / top) * ih;
-  const path = (key) => pts.filter((p) => p[key] != null).map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
-  const last = pts.filter((p) => p.cur != null).at(-1);
-  const curPath = path('cur');
-  const area = last ? `${curPath}L${x(last.i)},${y(0)}L${x(0)},${y(0)}Z` : '';
-  const labelIdx = pace.unit === 'week' ? pts.map((p) => p.i) : pts.filter((p) => [1, 8, 15, 22].includes(p.day) || p.i === n - 1).map((p) => p.i);
-  const onMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-    setHover(Math.max(0, Math.min(n - 1, Math.round(((px - pad.left) / iw) * (n - 1)))));
-  };
+  // Everything that doesn't move with the pointer, drawn once per data/size change.
+  const staticLayer = useMemo(() => {
+    if (!width) return null;
+    const path = (key) => pts.filter((p) => p[key] != null).map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
+    const last = pts.filter((p) => p.cur != null).at(-1);
+    const curPath = path('cur');
+    const area = last ? `${curPath}L${x(last.i)},${y(0)}L${x(0)},${y(0)}Z` : '';
+    const labelIdx = pace.unit === 'week' ? pts.map((p) => p.i) : pts.filter((p) => [1, 8, 15, 22].includes(p.day) || p.i === n - 1).map((p) => p.i);
+    return (
+      <>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={pad.left} x2={width - pad.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? 'var(--fin-axis)' : 'var(--fin-grid)'} />
+            <text x={pad.left - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--fin-muted)" className="fin-num">{compact(t)}</text>
+          </g>
+        ))}
+        {pts[0].even != null && <path d={path('even')} fill="none" stroke="var(--fin-compare)" strokeWidth="1.5" strokeDasharray="4 4" />}
+        <path d={path('prev')} fill="none" stroke="var(--fin-compare)" strokeWidth="1.75" strokeLinejoin="round" />
+        {area && <path d={area} fill={color} opacity="0.06" />}
+        {curPath && <path d={curPath} fill="none" stroke={color} strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />}
+        {last && pace.projected != null && !pace.complete && (
+          <path d={`M${x(last.i)},${y(last.cur)}L${x(n - 1)},${y(pace.projected)}`} fill="none" stroke={color} strokeWidth="1.75" strokeDasharray="2 4" strokeLinecap="round" opacity="0.55" />
+        )}
+        {last && <circle cx={x(last.i)} cy={y(last.cur)} r="4" fill={color} stroke="var(--fin-surface)" strokeWidth="2" />}
+        {labelIdx.map((i) => (
+          <text key={i} x={x(i)} y={height - 7} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'} fontSize="11" fill={last && i === last.i ? 'var(--fin-ink)' : 'var(--fin-muted)'}>{pts[i].label}</text>
+        ))}
+      </>
+    );
+  }, [pace, width, height, color]); // eslint-disable-line react-hooks/exhaustive-deps
   const h = hover != null ? pts[hover] : null;
   return (
     <div ref={ref} className="relative select-none" style={{ height }}>
       {width > 0 && (
-        <svg width={width} height={height} role="img" aria-label="Running total this period against last period" onMouseMove={onMove} onTouchStart={onMove} onTouchMove={onMove} onMouseLeave={() => setHover(null)} onTouchEnd={() => setHover(null)} style={{ touchAction: 'pan-y' }}>
-          {ticks.map((t) => (
-            <g key={t}>
-              <line x1={pad.left} x2={width - pad.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? 'var(--fin-axis)' : 'var(--fin-grid)'} />
-              <text x={pad.left - 8} y={y(t)} dy="0.32em" textAnchor="end" fontSize="11" fill="var(--fin-muted)" className="fin-num">{compact(t)}</text>
-            </g>
-          ))}
-          {pts[0].even != null && <path d={path('even')} fill="none" stroke="var(--fin-compare)" strokeWidth="1.5" strokeDasharray="4 4" />}
-          <path d={path('prev')} fill="none" stroke="var(--fin-compare)" strokeWidth="1.75" strokeLinejoin="round" />
-          {area && <path d={area} fill={color} opacity="0.06" />}
-          {curPath && <path d={curPath} fill="none" stroke={color} strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />}
-          {last && pace.projected != null && !pace.complete && (
-            <path d={`M${x(last.i)},${y(last.cur)}L${x(n - 1)},${y(pace.projected)}`} fill="none" stroke={color} strokeWidth="1.75" strokeDasharray="2 4" strokeLinecap="round" opacity="0.55" />
-          )}
-          {last && <circle cx={x(last.i)} cy={y(last.cur)} r="4" fill={color} stroke="var(--fin-surface)" strokeWidth="2" />}
-          {labelIdx.map((i) => (
-            <text key={i} x={x(i)} y={height - 7} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'} fontSize="11" fill={last && i === last.i ? 'var(--fin-ink)' : 'var(--fin-muted)'}>{pts[i].label}</text>
-          ))}
+        <svg width={width} height={height} role="img" aria-label="Running total this period against last period" {...scrub} style={{ touchAction: 'pan-y' }}>
+          {staticLayer}
           {h && <line x1={x(hover)} x2={x(hover)} y1={pad.top} y2={pad.top + ih} stroke="var(--fin-axis)" />}
         </svg>
       )}
       {h && (
-        <div className="fin-tooltip" style={{ left: Math.min(Math.max(0, x(hover) - 80), Math.max(0, width - 180)), top: 0 }}>
+        <div className="fin-tooltip" style={{ left: 0, top: 0, transform: `translateX(${Math.min(Math.max(0, x(hover) - 80), Math.max(0, width - 180))}px)` }}>
           <p className="mb-1.5 font-semibold">{pace.unit === 'week' ? h.label : `Day ${h.day}`}</p>
           <Row color={color} label="This period" value={h.cur == null ? '—' : aed(h.cur, { decimals: 0 })} />
           <Row color="var(--fin-compare)" label="Last period" value={aed(h.prev, { decimals: 0 })} />

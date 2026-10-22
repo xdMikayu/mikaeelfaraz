@@ -525,6 +525,13 @@ test('pace, typical month, category context and recurring charges', async () => 
   assert.equal(pace.prevTotal, 9056);
   assert.ok(pace.aheadOfTypical > 0); // 1500 vs an even 1018.7
   assert.equal(paceSeries(rows, getPeriod('6m', now), now), null);
+  assert.deepEqual(pace.oneOffs, []); // 900 is under max(1000, 30% of 3056)
+  // A 2400 flight on day 5 is counted once, not multiplied out over the month.
+  const trip = paceSeries([...rows, tx('f1', '2026-09-05T08:00:00Z', 2400, 'Travel', 'Airline')], period, now);
+  assert.equal(trip.spent, 3900);
+  assert.deepEqual(trip.oneOffs.map((t) => t.id), ['f1']);
+  assert.equal(trip.oneOffTotal, 2400);
+  assert.equal(trip.projected, 4500 + 2400);
   const ctx = categoryContext(rows, period);
   assert.equal(ctx.get('Shopping').usual, 3000);
   assert.deepEqual(ctx.get('Shopping').trail, [3000, 3000, 3000, 3000, 3000, 9000]);

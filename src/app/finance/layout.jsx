@@ -21,6 +21,8 @@ export const metadata = {
 };
 
 export const viewport = {
+  // Draw under the notch and home indicator; the bars pad themselves with env(safe-area-inset-*).
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#f6f6f4' },
     { media: '(prefers-color-scheme: dark)', color: '#0b0b0c' },

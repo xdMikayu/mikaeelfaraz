@@ -16,3 +16,10 @@ export function accountColorVar(slug, accounts = DEFAULT_ACCOUNTS) {
   const i = Math.max(0, accounts.findIndex((a) => a.slug === slug));
   return `var(--fin-s${Math.min(i, 7) + 1})`;
 }
+
+/** What a row calls its card: the name you gave it, else its last 4 digits. */
+export function cardLabel(account) {
+  const name = String(account?.name ?? '').trim();
+  if (name) return name;
+  return account?.last4 ? `Card •• ${account.last4}` : 'Card';
+}
