@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { standingsNow, withScores, moveWords } from '@/lib/sport/as-it-stands.mjs';
-import { titleRace } from '@/lib/sport/f1.mjs';
+import { standingsNow, withScores, moveWords } from '@/lib/matchday/as-it-stands.mjs';
+import { titleRace } from '@/lib/matchday/f1.mjs';
 
 // MatchdayMini's three screens, drawn as Matchday draws them: its type, crests, kit colours, bands
-// and cards (src/app/sport/sport.css). Each changes with a tap and says, as the app does, what it
+// and cards (Matchday's sport.css). Each changes with a tap and says, as the app does, what it
 // means: where the score leaves the table, what the chase needs, who can still take the title. The
 // made-up numbers, and everything a tap can't change, come in as props worked out at build time.
 

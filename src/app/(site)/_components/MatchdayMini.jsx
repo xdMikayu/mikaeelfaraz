@@ -1,13 +1,14 @@
 import { Archivo } from 'next/font/google';
-import { crest } from '@/lib/sport/espn.mjs';
-import { matchKits, inkOn } from '@/lib/sport/kit-colors.mjs';
-import CIRCUITS from '@/lib/sport/f1-circuits.json';
+import { matchKits, inkOn } from '@/lib/matchday/kit-colors.mjs';
+import CIRCUITS from '@/lib/matchday/circuits.json';
 import { Football, Cricket, Formula1 } from './MatchdaySnippets';
+import MatchdayLink from './MatchdayLink';
 
 // Three of Matchday's screens, phone-sized, on made-up numbers: a derby with the table as it stands
-// (src/lib/sport/as-it-stands.mjs), the last over of a chase, and the end of an F1 season with
+// (src/lib/matchday/as-it-stands.mjs), the last over of a chase, and the end of an F1 season with
 // Matchday's title sums (f1.mjs). Drawn as the app draws them, with ESPN's crests, Matchday's kit
-// colours (kit-colors.mjs) and its circuit maps.
+// colours (kit-colors.mjs) and its circuit maps. Matchday itself is at its own address now; these
+// are copies of its sums (src/lib/matchday).
 //
 // This part runs when the page is built: what a tap can't change (crests, kits, circuits, team
 // colours) is worked out here, so the browser loads the screens and the sums, not the circuit file or
@@ -88,8 +89,10 @@ const DRIVERS = [
   ['antonelli', 'Antonelli', 'mercedes', 262],
 ];
 
+// A club's crest from ESPN's image resizer, at twice the 32 px it's drawn (as Matchday's espn.mjs does).
+const logo = (id, dark) => `https://a.espncdn.com/combiner/i?img=${encodeURIComponent(`/i/teamlogos/soccer/${dark ? '500-dark' : '500'}/${id}.png`)}&w=64&h=64`;
+
 export default function MatchdayMini() {
-  const logo = (id, dark) => crest(`https://a.espncdn.com/i/teamlogos/soccer/${dark ? '500-dark' : '500'}/${id}.png`, 32);
   const clubs = Object.fromEntries(Object.entries(CLUBS).map(([k, [name, id, color]]) => [k, { name, color, crest: logo(id), crestDark: logo(id, true) }]));
   const kits = matchKits({ color: CLUBS.eve[2] }, { color: CLUBS.liv[2] });
   const ck = matchKits({ color: CHASE.colors.first }, { color: CHASE.colors.chase });
@@ -134,9 +137,9 @@ export default function MatchdayMini() {
       </div>
       <p className="mf-note mono faint">
         Matchday’s own screens and sums, on a made-up table, chase and title race.{' '}
-        <a href="/sport" target="_blank" rel="noopener">
+        <MatchdayLink target="_blank" rel="noopener">
           Open Matchday ↗
-        </a>
+        </MatchdayLink>
       </p>
     </div>
   );
