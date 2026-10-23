@@ -155,7 +155,7 @@ export default function Home() {
                 rules with Claude handling the rest, and shown against what is usual for me.
               </p>
               <p className="links">
-                <a className="btn" href="/finance?demo=1" target="_blank" rel="noopener">Try the full demo ↗</a>
+                <a className="btn" href="https://mifolio.mikaeelfaraz.com/?demo=1" target="_blank" rel="noopener">Try the full demo ↗</a>
                 <Link href="/notes/why-i-built-mifolio">Why I built it</Link>
                 <Link href="/notes/reading-bank-sms">How it counts each purchase once</Link>
               </p>

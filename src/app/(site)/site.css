@@ -1,4 +1,4 @@
-/* Portfolio styles. Scoped to .site so the Mifolio app at /finance keeps its own system.
+/* Portfolio styles. Scoped to .site so it never shares styles with other apps.
    Ink on paper, one accent (ledger green) used for links, status and the lit path in the map. */
 
 .site {

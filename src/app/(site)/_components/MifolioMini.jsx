@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CategoryRing, ringSlices, PaceChart, NetWorthLine } from '@/app/finance/_components/charts';
+import { CategoryRing, ringSlices, PaceChart, NetWorthLine } from './MifolioCharts';
 
 // Mifolio's own chart components, fed with made-up numbers. Hover or tap to read them.
 const CATEGORIES = [
@@ -131,7 +131,7 @@ export default function MifolioMini() {
         <NetWorthLine points={nw} height={190} />
       </figure>
       <p className="mf-note mono faint">
-        Mifolio’s own charts, on made-up numbers. <a href="/finance?demo=1" target="_blank" rel="noopener">Open the full demo ↗</a>
+        Mifolio’s own charts, on made-up numbers. <a href="https://mifolio.mikaeelfaraz.com/?demo=1" target="_blank" rel="noopener">Open the full demo ↗</a>
       </p>
     </div>
   );
