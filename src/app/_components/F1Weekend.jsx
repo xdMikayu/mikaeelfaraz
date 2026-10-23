@@ -1,8 +1,8 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { sessionEnd } from '@/lib/sport/othersports.mjs';
-import { SESSION_KEY, lapText, gapText } from '@/lib/sport/f1.mjs';
+import { sessionEnd } from '@/lib/othersports.mjs';
+import { SESSION_KEY, lapText, gapText } from '@/lib/f1.mjs';
 import { kickoff, shortDate, zoneLabel } from './time';
 import { useJson, useF1Index, teamColor, teamName, Driver, Mark, useF1Reveal, Reveal } from './f1bits';
 import { LapChart, TyreStrip, PaceList, LapTrace } from './F1Charts';
@@ -42,12 +42,12 @@ const fromRoster = (r) => ({ id: r.id ?? r.code, code: r.code, first: r.first ??
  */
 export default function F1Weekend() {
   const q = useSearchParams();
-  const cal = useJson('/api/sport/f1/season');
+  const cal = useJson('/api/f1/season');
   // Jolpica sends the season as a string.
   const season = Number(q.get('season')) || Number(cal.data?.season) || null;
   const round = Number(q.get('round')) || null;
   const race = cal.data?.races.find((r) => r.round === round) ?? null;
-  const rd = useJson(season && round ? `/api/sport/f1/round/${season}/${round}` : null);
+  const rd = useJson(season && round ? `/api/f1/round/${season}/${round}` : null);
   const ix = useF1Index(season);
   const colorOf = useCallback((team) => teamColor(ix.data, team), [ix.data]);
   const nameOf = useCallback((team) => teamName(ix.data, team), [ix.data]);
@@ -123,8 +123,8 @@ export default function F1Weekend() {
 }
 
 function Session({ s, sKey, season, round, rd, onFile, settled, predicted, colorOf, nameOf, now, hidden, reveal }) {
-  const file = useJson(onFile ? `/api/sport/f1/data/${season}/${round}-${sKey}` : null);
-  const pred = useJson(sKey === 'race' && predicted ? `/api/sport/f1/data/${season}/${round}-predict` : null);
+  const file = useJson(onFile ? `/api/f1/data/${season}/${round}-${sKey}` : null);
+  const pred = useJson(sKey === 'race' && predicted ? `/api/f1/data/${season}/${round}-predict` : null);
   const start = Date.parse(s.at);
   const end = sessionEnd(s);
   const f = file.data;
@@ -181,7 +181,7 @@ function Session({ s, sKey, season, round, rd, onFile, settled, predicted, color
 // A chance as a whole percentage, never 0% or 100%: there's always something left to happen.
 const chance = (p) => (p < 0.005 ? '<1%' : p > 0.995 ? '>99%' : `${Math.round(p * 100)}%`);
 
-/** Before the race: each driver's chances from qualifying, practice and form (scripts/sport/f1_model.py). */
+/** Before the race: each driver's chances from qualifying, practice and form (scripts/f1_model.py). */
 function Prediction({ p, colorOf }) {
   const t = p.model?.test;
   const gridOnly = p.model?.inputs?.length === 1 && p.model.inputs[0] === 'grid';

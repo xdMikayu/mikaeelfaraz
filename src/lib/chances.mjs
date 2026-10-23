@@ -1,7 +1,7 @@
 // Every Premier League club's chances at both ends, in Opta's numbers (what FPL and most charts use):
 // expected goals from FPL's players added up by club, and big chances and penalties from the Premier
-// League's own match stats. scripts/sport/build-chances.mjs puts each finished match in
-// public/sport/data/pl/chances.json; the Fantasy stats chart adds them up (clubChances).
+// League's own match stats. scripts/build-chances.mjs puts each finished match in
+// public/data/pl/chances.json; the Fantasy stats chart adds them up (clubChances).
 
 // Opta's value for a penalty: FPL players whose only shot in a match was one have exactly 0.79 xG.
 export const PENALTY_XG = 0.79;

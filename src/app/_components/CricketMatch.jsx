@@ -6,8 +6,8 @@ import { useLive, useAge } from './useLive';
 import { ShirtMark } from './glyphs';
 import { teamColors, useDark } from './colors';
 import { zoneLabel } from './time';
-import { situation } from '@/lib/sport/cricket.mjs';
-import { oversOf } from '@/lib/sport/cricket-form.mjs';
+import { situation } from '@/lib/cricket.mjs';
+import { oversOf } from '@/lib/cricket-form.mjs';
 import { Status, Chances, MatchRead, GroundRecord, pct, series, dayOf } from './CricketNow';
 import { Scoreboard, ThisOver, Crease, Bowling, SameStage, Wickets, useKits, settle, inningsDone } from './CricketLive';
 
@@ -39,7 +39,7 @@ export default function CricketMatch() {
   const q = useSearchParams();
   const league = q.get('l');
   const id = q.get('id');
-  const { data: d, error, at } = useLive((signal) => (league && id ? getJson(`/api/sport/cricket/match/${league}/${id}`, signal) : Promise.resolve(null)), [league, id], {
+  const { data: d, error, at } = useLive((signal) => (league && id ? getJson(`/api/cricket/match/${league}/${id}`, signal) : Promise.resolve(null)), [league, id], {
     every: 30000,
     live: (x) => x?.state === 'in',
   });
@@ -86,7 +86,7 @@ function Header({ d, sit }) {
   return (
     <>
       <div className="sp-pad sp-cmh">
-        <Link className="sp-cmh-back" href="/sport/cricket">
+        <Link className="sp-cmh-back" href="/cricket">
           <span aria-hidden="true">‹</span> Cricket
         </Link>
       </div>

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Builds src/lib/sport/f1-circuits.json, each circuit's outline as an SVG path for the F1 pages,
+// Builds src/lib/f1-circuits.json, each circuit's outline as an SVG path for the F1 pages,
 // from Tomislav Bacinger's f1-circuits (https://github.com/bacinger/f1-circuits, MIT licence,
 // copyright (c) 2019-2025 Tomislav Bacinger; not official F1 data).
 //
 //   curl -sLo /tmp/f1-circuits.geojson https://raw.githubusercontent.com/bacinger/f1-circuits/master/f1-circuits.geojson
-//   node scripts/sport/f1-circuits.mjs /tmp/f1-circuits.geojson
+//   node scripts/f1-circuits.mjs /tmp/f1-circuits.geojson
 //
 // Keyed by Jolpica's circuit id (what the calendar gives). Each outline is projected flat (fine at a
 // circuit's size), north up, fitted to 100 across its longer side, and simplified to a point every
@@ -113,6 +113,6 @@ for (const [jolpica, id] of Object.entries(IDS)) {
     path: `M${pts.map(([x, y]) => `${r(x)} ${r(y)}`).join('L')}Z`,
   };
 }
-const dest = new URL('../../src/lib/sport/f1-circuits.json', import.meta.url);
+const dest = new URL('../src/lib/f1-circuits.json', import.meta.url);
 fs.writeFileSync(dest, `${JSON.stringify(out, null, 0)}\n`);
 console.log(`${Object.keys(out).length} circuits, ${fs.statSync(dest).size} bytes`);

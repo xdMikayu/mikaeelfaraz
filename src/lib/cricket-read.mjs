@@ -1,4 +1,4 @@
-// Matchday's read on a cricket match, from the model scripts/sport/fit-cricket.mjs learns from
+// Matchday's read on a cricket match, from the model scripts/fit-cricket.mjs learns from
 // Cricsheet's ball-by-ball history: par at the ground, where an innings is heading, each side's
 // chances, and the ground's record (batting first and chasing, the toss, how an innings usually
 // goes). Pure functions: the model's tables come in as an argument, so the server can load them

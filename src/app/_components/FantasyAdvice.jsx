@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { POS } from '@/lib/sport/fpl.mjs';
-import { estimateFree } from '@/lib/sport/optimise.mjs';
+import { POS } from '@/lib/fpl.mjs';
+import { estimateFree } from '@/lib/optimise.mjs';
 import { Face, one } from './fplbits';
 
 const CHIP = { none: 'No chip', wildcard: 'Wildcard', freehit: 'Free Hit', bboost: 'Bench Boost', '3xc': 'Triple Captain' };
@@ -72,7 +72,7 @@ export default function Advice({ entry, gw, els, teams, league }) {
   const club = (team) => teams[team]?.name ?? '';
 
   const ask = async () => {
-    const base = `/api/sport/advice?id=${entry.id}&ft=${free}`;
+    const base = `/api/advice?id=${entry.id}&ft=${free}`;
     try {
       setRun({ stage: 'prep' });
       const prep = await getJson(`${base}&stage=prep`);
@@ -84,7 +84,7 @@ export default function Advice({ entry, gw, els, teams, league }) {
       };
       const reports = await Promise.all(
         prep.clubs.map((c) =>
-          getJson(`/api/sport/news/${c.team}/${prep.gw}`)
+          getJson(`/api/news/${c.team}/${prep.gw}`)
             .then((r) => {
               if (r.gw !== prep.gw) throw new Error('News for another gameweek');
               mark(c.team, { state: 'ok', report: r });

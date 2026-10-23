@@ -1,8 +1,8 @@
-// GET /api/sport/f1/round/{season}/{round}: one weekend's race, sprint and qualifying
+// GET /api/f1/round/{season}/{round}: one weekend's race, sprint and qualifying
 // classifications from Jolpica. Both numbers are in the path, so the CDN's path-only key tells
 // rounds apart. A weekend that's over and done keeps for a day; one still in play for 10 minutes.
-import { roundOf } from '@/lib/sport/f1.mjs';
-import { inTurn, cdn, failed } from '@/lib/sport/f1-server.mjs';
+import { roundOf } from '@/lib/f1.mjs';
+import { inTurn, cdn, failed } from '@/lib/f1-server.mjs';
 
 export const dynamic = 'force-dynamic';
 

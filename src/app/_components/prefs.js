@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { LEAGUES } from '@/lib/sport/leagues.mjs';
+import { LEAGUES } from '@/lib/leagues.mjs';
 import { SPORTS } from './nav';
 
 // Everything the viewer chooses lives in their own browser; there are no accounts.

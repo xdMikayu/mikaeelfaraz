@@ -3,8 +3,8 @@ import { useLive, useAge } from './useLive';
 import { teamColors, useDark } from './colors';
 import { CricketCard } from './CricketLive';
 import { kickoff, shortDate, zoneLabel } from './time';
-import { isLive, started, bigMatch } from '@/lib/sport/cricket.mjs';
-import about from '@/lib/sport/cricket/about.json';
+import { isLive, started, bigMatch } from '@/lib/cricket.mjs';
+import about from '@/lib/cricket/about.json';
 
 async function getJson(url, signal) {
   const res = await fetch(url, { signal });
@@ -371,7 +371,7 @@ function grouped(matches) {
 }
 
 function Upcoming({ shown }) {
-  const { data, error } = useLive((signal) => getJson('/api/sport/cricket/week', signal), []);
+  const { data, error } = useLive((signal) => getJson('/api/cricket/week', signal), []);
   const list = (data?.matches ?? []).filter((m) => Date.parse(m.start) > Date.now() && !shown.has(m.id));
   const big = list.filter(bigMatch);
   const rows = (big.length ? big : list).slice(0, 8);
@@ -469,7 +469,7 @@ function HowItWorks() {
 
 /** What's on in cricket now, from ESPN, until the full section is built. */
 export default function CricketNow() {
-  const { data, error } = useLive((signal) => getJson('/api/sport/cricket/now', signal), [], {
+  const { data, error } = useLive((signal) => getJson('/api/cricket/now', signal), [], {
     every: 30000,
     live: (d) => d?.internationals.some(isLive) || d?.domestic?.some(isLive) || d?.leagues?.some((l) => l.live),
   });

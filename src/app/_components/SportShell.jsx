@@ -8,7 +8,7 @@ import Crest from './Crest';
 import TabBar from './TabBar';
 import Find, { useFind } from './Find';
 import { SPORTS, sportOf } from './nav';
-import { LEAGUES } from '@/lib/sport/leagues.mjs';
+import { LEAGUES } from '@/lib/leagues.mjs';
 
 // The frame of every page. The header names the sport you're in ("Matchday · F1"); on phones the
 // sport's sections are the tab bar at the bottom, in reach of a thumb, since they're used all the
@@ -17,7 +17,7 @@ import { LEAGUES } from '@/lib/sport/leagues.mjs';
 
 // The mark, "the fixture": two halves facing each other across a gap, home and away, or a ball
 // about to be kicked off. Red and ink, Matchday's own colours, on a white tile that reads on any
-// background. It's the app icon too (public/sport/icon.svg) and sits before the name everywhere.
+// background. It's the app icon too (public/icon.svg) and sits before the name everywhere.
 export function Mark({ size = 22 }) {
   return (
     <svg className="sp-mark" width={size} height={size} viewBox="0 0 512 512" aria-hidden="true">
@@ -125,7 +125,7 @@ function SideNav({ onFind }) {
         <div className="sp-side-group">
           <span className="sp-side-head">Your teams</span>
           {prefs.teams.slice(0, 10).map((t) => (
-            <Link key={t.id} href={`/sport/team?id=${t.id}${t.leagues?.[0] ? `&l=${t.leagues[0]}` : ''}`}>
+            <Link key={t.id} href={`/team?id=${t.id}${t.leagues?.[0] ? `&l=${t.leagues[0]}` : ''}`}>
               <Crest src={t.logo} size={18} /> <span className="sp-side-clip">{t.name}</span>
             </Link>
           ))}
@@ -135,19 +135,19 @@ function SideNav({ onFind }) {
         <div className="sp-side-group">
           <span className="sp-side-head">Tables</span>
           {tables.map((l) => (
-            <Link key={l.slug} href={`/sport/table/${l.slug}`} aria-current={pathname === `/sport/table/${l.slug}` ? 'page' : undefined}>
+            <Link key={l.slug} href={`/table/${l.slug}`} aria-current={pathname === `/table/${l.slug}` ? 'page' : undefined}>
               {l.name}
             </Link>
           ))}
         </div>
       )}
       <div className="sp-side-group sp-side-foot">
-        <Link href="/sport/settings" className="sp-side-settings" aria-current={pathname.startsWith('/sport/settings') ? 'page' : undefined}>
+        <Link href="/settings" className="sp-side-settings" aria-current={pathname.startsWith('/settings') ? 'page' : undefined}>
           <SettingsIcon /> Settings
         </Link>
         <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0', lineHeight: 1.5 }}>
           No ads, no tracking, no accounts.{' '}
-          <Link className="sp-link" href="/sport/settings#about">
+          <Link className="sp-link" href="/settings#about">
             About the data
           </Link>
         </p>
@@ -161,7 +161,7 @@ function Rail({ onFind }) {
   const here = sportOf(usePathname());
   return (
     <aside className="sp-rail">
-      <Link href={here?.href ?? '/sport'} className="sp-rail-brand">
+      <Link href={here?.href ?? '/'} className="sp-rail-brand">
         <Wordmark sport={here?.label} />
       </Link>
       <SideNav onFind={onFind} />
@@ -213,7 +213,7 @@ function Drawer({ open, onClose, onFind }) {
 }
 
 /**
- * A link to part of a page (/sport/f1#calendar, from search or the tab bar) whose content loads
+ * A link to part of a page (/f1#calendar, from search or the tab bar) whose content loads
  * after the page does: wait for it, then go there. Gives up after a few seconds.
  */
 function useHashScroll() {
@@ -264,7 +264,7 @@ function useStartSport() {
       sessionStorage.setItem('md-opened', '1');
     } catch {}
     const to = SPORTS.find((s) => s.key === prefs.start);
-    if (first && pathname === '/sport' && !window.location.search && to && to.key !== 'football') router.replace(to.href);
+    if (first && pathname === '/' && !window.location.search && to && to.key !== 'football') router.replace(to.href);
     // Only ever on the first page of a visit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
@@ -277,7 +277,7 @@ function Top({ onMenu, open }) {
   const params = useSearchParams();
   const standalone = useStandalone();
   const here = sportOf(pathname);
-  const detail = pathname.startsWith('/sport/match') || pathname.startsWith('/sport/team');
+  const detail = pathname.startsWith('/match') || pathname.startsWith('/team');
   // Back only returns to a page seen inside the app; opened straight onto a match, it goes to the scores.
   const at = `${pathname}?${params}`;
   const landing = useRef(at);
@@ -289,7 +289,7 @@ function Top({ onMenu, open }) {
     <header className="sp-top">
       <div className="sp-top-in">
         {standalone && detail ? (
-          <button className="sp-back" onClick={() => (moved.current ? router.back() : router.push('/sport'))}>
+          <button className="sp-back" onClick={() => (moved.current ? router.back() : router.push('/'))}>
             <span aria-hidden="true">‹</span> Back
           </button>
         ) : (
@@ -297,7 +297,7 @@ function Top({ onMenu, open }) {
             <MenuIcon />
           </button>
         )}
-        <Link href={here?.href ?? '/sport'} aria-label={`Matchday${here ? `, ${here.label}` : ''}`}>
+        <Link href={here?.href ?? '/'} aria-label={`Matchday${here ? `, ${here.label}` : ''}`}>
           <Wordmark sport={here ? here.label : 'Settings'} />
         </Link>
       </div>

@@ -1,4 +1,4 @@
-/* Matchday: kit colours. Rules in ./DESIGN.md.
+/* Matchday: kit colours. Rules in DESIGN.md at the root.
    A white page and black type; the only colour fields are the teams' own kits, the grass and red for
    "live now". Everything is flat: no gradients, glows, blur or shadows. Dark mode is the same idea on
    neutral near-black. Dark values apply with data-sport-theme="dark" on <html>, or when nothing is

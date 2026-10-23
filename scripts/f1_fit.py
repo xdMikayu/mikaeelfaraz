@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Fits Matchday's F1 race prediction (scripts/sport/f1_model.py) on past seasons' session files and
+Fits Matchday's F1 race prediction (scripts/f1_model.py) on past seasons' session files and
 tests it walk-forward: every test race is predicted by a model fitted only on races before it, so
-the test numbers are what the page would have said at the time. Writes scripts/sport/f1-model.json.
+the test numbers are what the page would have said at the time. Writes scripts/f1-model.json.
 
-    python scripts/sport/f1_fit.py --data DIR [--test-from 2025] [--out scripts/sport/f1-model.json]
+    python scripts/f1_fit.py --data DIR [--test-from 2025] [--out scripts/f1-model.json]
 
 DIR holds a folder per season, as f1_sessions.py writes them.
 """

@@ -1,15 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { nextRace, sessionEnd } from '@/lib/sport/othersports.mjs';
-import { SESSION_KEY, titleRace } from '@/lib/sport/f1.mjs';
+import { nextRace, sessionEnd } from '@/lib/othersports.mjs';
+import { SESSION_KEY, titleRace } from '@/lib/f1.mjs';
 import { kickoff, shortDate, until, zoneLabel } from './time';
 import { useJson, useF1Index, teamColor, teamName, Driver, Mark, shortRace } from './f1bits';
 import { RaceHero, TitleFight } from './F1Hero';
 
 const DAY = 864e5;
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-const weekendHref = (season, round) => `/sport/f1/race?season=${season}&round=${round}`;
+const weekendHref = (season, round) => `/f1/race?season=${season}&round=${round}`;
 
 /** The viewer's time zone, named after the page loads (the server doesn't know it). */
 function useZone() {
@@ -33,14 +33,14 @@ function useNow(every) {
  * championships with the title maths done, and the season's calendar with each winner.
  */
 export default function F1Home() {
-  const cal = useJson('/api/sport/f1/season');
-  const st = useJson('/api/sport/f1/standings');
+  const cal = useJson('/api/f1/season');
+  const st = useJson('/api/f1/standings');
   const season = cal.data?.season ?? st.data?.season ?? null;
   const ix = useF1Index(season);
   const color = (team) => teamColor(ix.data, team);
   const named = (team) => teamName(ix.data, team);
   const lastRound = st.data ? Math.max(0, ...Object.keys(st.data.winners).map(Number)) : 0;
-  const last = useJson(season && lastRound ? `/api/sport/f1/round/${season}/${lastRound}` : null);
+  const last = useJson(season && lastRound ? `/api/f1/round/${season}/${lastRound}` : null);
   const now = useNow(30000);
   const zone = useZone();
   return (

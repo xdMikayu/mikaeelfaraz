@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { projectedBonus, teamLive, leagueLive, pointChanges, buildModel, withMatchups, POS, STAT_LABEL } from '@/lib/sport/fpl.mjs';
+import { projectedBonus, teamLive, leagueLive, pointChanges, buildModel, withMatchups, POS, STAT_LABEL } from '@/lib/fpl.mjs';
 import { usePrefs } from './prefs';
 import { useLive, Freshness } from './useLive';
 import { kickoff, shortDate, until } from './time';
@@ -19,7 +19,7 @@ import { DefconTracker, DefconBar, defconNow, defconWords } from './FantasyDefco
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
 async function api(path, signal) {
-  const res = await fetch(`/api/sport/fpl/${path}`, { signal });
+  const res = await fetch(`/api/fpl/${path}`, { signal });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `FPL ${res.status}`);
   return json;
@@ -27,7 +27,7 @@ async function api(path, signal) {
 
 // The bookmakers' expected goals for priced Premier League matches; the page works without them.
 async function oddsApi(signal) {
-  const res = await fetch('/api/sport/odds', { signal });
+  const res = await fetch('/api/odds', { signal });
   if (!res.ok) throw new Error(`odds ${res.status}`);
   return res.json();
 }

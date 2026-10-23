@@ -99,5 +99,5 @@
   "loss": 21.6,
   "stops": 42
  },
- "_note": "From 77 races and sprints, 2024–2026, by scripts/sport/f1_pitloss.py."
+ "_note": "From 77 races and sprints, 2024–2026, by scripts/f1_pitloss.py."
 }

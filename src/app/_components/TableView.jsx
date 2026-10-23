@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { fetchStandings } from '@/lib/sport/espn.mjs';
-import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
+import { fetchStandings } from '@/lib/espn.mjs';
+import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/leagues.mjs';
 import { useLive, Freshness } from './useLive';
 import { usePrefs, useFollow } from './prefs';
 import Crest from './Crest';
@@ -56,7 +56,7 @@ function LeaguePicker({ choices, slug }) {
   return (
     <nav className="sp-days sp-leagues" aria-label="Competition">
       {choices.map((l) => (
-        <Link key={l.slug} href={`/sport/table/${l.slug}`} className="sp-day" ref={l.slug === slug ? here : undefined} aria-current={l.slug === slug ? 'page' : undefined}>
+        <Link key={l.slug} href={`/table/${l.slug}`} className="sp-day" ref={l.slug === slug ? here : undefined} aria-current={l.slug === slug ? 'page' : undefined}>
           {l.short}
         </Link>
       ))}
@@ -92,7 +92,7 @@ function Group({ g, slug, isFollowed }) {
                 </span>
               </td>
               <td className="l" style={{ maxWidth: 0, width: '100%' }}>
-                <Link href={`/sport/team?id=${r.id}&l=${slug}`} className="sp-tteam">
+                <Link href={`/team?id=${r.id}&l=${slug}`} className="sp-tteam">
                   <Crest src={r.logo} size={22} /> <span>{r.short}</span>
                 </Link>
               </td>

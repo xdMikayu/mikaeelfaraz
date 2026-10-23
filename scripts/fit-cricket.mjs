@@ -2,9 +2,9 @@
 // Learns Matchday's cricket model from Cricsheet's ball-by-ball history (run cricket-extract.mjs
 // first), scores it on seasons it never saw, then refits it on everything for the site.
 //
-//   node scripts/sport/fit-cricket.mjs     # → src/lib/sport/cricket/{model,grounds,ratings,about}.json
-//   DIAG=1 node scripts/sport/fit-cricket.mjs            # also prints calibration by year, stage and pool
-//   VALIDATE_ONLY=1 node scripts/sport/fit-cricket.mjs   # the validation alone, writing nothing
+//   node scripts/fit-cricket.mjs     # → src/lib/cricket/{model,grounds,ratings,about}.json
+//   DIAG=1 node scripts/fit-cricket.mjs            # also prints calibration by year, stage and pool
+//   VALIDATE_ONLY=1 node scripts/fit-cricket.mjs   # the validation alone, writing nothing
 //
 // Per format (men's and women's T20 and one-day cricket):
 //   levels     how many runs a first innings makes in each competition, recent seasons counting
@@ -30,11 +30,11 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseVenue, sameGround } from '../../src/lib/sport/cricket-venues.mjs';
-import { runsLeft, projectTotal, chaseInputs, chaseWin, firstWin, eloWin, ratingIn, withStrength, compKey, endKeys, BALL_RUNS } from '../../src/lib/sport/cricket-model.mjs';
+import { parseVenue, sameGround } from '../src/lib/cricket-venues.mjs';
+import { runsLeft, projectTotal, chaseInputs, chaseWin, firstWin, eloWin, ratingIn, withStrength, compKey, endKeys, BALL_RUNS } from '../src/lib/cricket-model.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const OUT = join(ROOT, 'src/lib/sport/cricket');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const OUT = join(ROOT, 'src/lib/cricket');
 const YEARS = [2024, 2025, 2026];
 const DAY = 864e5;
 const YEAR = 365.25 * DAY;
@@ -68,7 +68,7 @@ const r4 = (x) => Math.round(x * 1e4) / 1e4;
 const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
 const pct = (n, d) => (d ? r0((n / d) * 100) : null);
 
-const matches = JSON.parse(await readFile(join(ROOT, 'data/sport/cricket/matches.json'), 'utf8')).filter((m) => m.date && m.teams?.length === 2);
+const matches = JSON.parse(await readFile(join(ROOT, 'data/cricket/matches.json'), 'utf8')).filter((m) => m.date && m.teams?.length === 2);
 for (const m of matches) m.t = Date.parse(m.date);
 const through = matches.at(-1).date;
 console.log(`${matches.length} matches to ${through}`);

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { simulateSeason } from '@/lib/sport/forecast.mjs';
+import { simulateSeason } from '@/lib/forecast.mjs';
 import { useMatchupIndex, useForecastKit } from './matchupData';
 
 const pct = (p) => (p < 0.005 ? '–' : p < 0.01 ? '<1%' : p > 0.99 ? '>99%' : `${Math.round(p * 100)}%`);
@@ -16,7 +16,7 @@ export default function SeasonForecast({ rows }) {
   const [err, setErr] = useState(null);
   useEffect(() => {
     let on = true;
-    fetch('/api/sport/fpl/fixtures')
+    fetch('/api/fpl/fixtures')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))))
       .then((f) => on && setFixtures(f), (e) => on && setErr(e.message));
     return () => {

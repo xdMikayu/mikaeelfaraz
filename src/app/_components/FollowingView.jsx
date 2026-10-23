@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { fetchTeams } from '@/lib/sport/espn.mjs';
-import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
+import { fetchTeams } from '@/lib/espn.mjs';
+import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/leagues.mjs';
 import { usePrefs, useFollow } from './prefs';
 import Crest from './Crest';
 import { Star } from './glyphs';
@@ -13,14 +13,14 @@ export default function FollowingView() {
   const router = useRouter();
   // "About the data" and the xG notes moved to the settings; old links still land there.
   useEffect(() => {
-    if (['#about', '#xg'].includes(window.location.hash)) router.replace(`/sport/settings${window.location.hash}`);
+    if (['#about', '#xg'].includes(window.location.hash)) router.replace(`/settings${window.location.hash}`);
   }, [router]);
   return (
     <div className="sp-pad" style={{ paddingTop: 16 }}>
       <h1 className="sp-h1">Following</h1>
       <p className="sp-small sp-ink2" style={{ margin: '4px 0 0' }}>
         Saved in this browser only. There are no accounts. Spoilers and dark mode are in{' '}
-        <Link className="sp-link" href="/sport/settings">
+        <Link className="sp-link" href="/settings">
           Settings
         </Link>
         .

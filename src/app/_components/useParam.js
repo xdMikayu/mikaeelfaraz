@@ -3,7 +3,7 @@ import { useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 /**
- * A tab kept in the address (/sport/fantasy?tab=players&view=sets), so every view can be linked
+ * A tab kept in the address (/fantasy?tab=players&view=sets), so every view can be linked
  * to, found from search and come back to. Changing it replaces the address without a page load;
  * `clear` names the other parameters that belong to the old choice (a tab's own sub-tab).
  */

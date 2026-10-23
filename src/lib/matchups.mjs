@@ -3,7 +3,7 @@
 // the xG of his shots and of the shots he set up. From those rows come two things fans ask for:
 //  - how much a team allows to each role ("Spurs give right wingers 0.31 xG per 90");
 //  - what a player has done against one opponent before.
-// The rows are built by scripts/sport/build-matchups.mjs and served as static JSON.
+// The rows are built by scripts/build-matchups.mjs and served as static JSON.
 
 import { formationLines } from './espn.mjs';
 

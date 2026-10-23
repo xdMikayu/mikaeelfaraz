@@ -1,15 +1,15 @@
 'use client';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { fetchTeam } from '@/lib/sport/espn.mjs';
-import { LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
+import { fetchTeam } from '@/lib/espn.mjs';
+import { LEAGUE_BY_SLUG } from '@/lib/leagues.mjs';
 import { useLive, Freshness } from './useLive';
 import { useFollow, usePrefs } from './prefs';
 import Crest from './Crest';
 import MatchRow from './MatchRow';
 import MatchCard from './MatchCard';
 import { inkOn, useDark } from './colors';
-import { fillOf, isWhite, lineOf } from '@/lib/sport/kit-colors.mjs';
+import { fillOf, isWhite, lineOf } from '@/lib/kit-colors.mjs';
 import { Star } from './glyphs';
 import TeamAnalysis from './TeamAnalysis';
 

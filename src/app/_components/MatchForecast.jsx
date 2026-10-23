@@ -1,9 +1,9 @@
 'use client';
 import { useMemo } from 'react';
-import { fetchStandings } from '@/lib/sport/espn.mjs';
-import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, ratesFromTable } from '@/lib/sport/forecast.mjs';
-import { mainRole, versus, rolesFromLines, ROLE_ONE } from '@/lib/sport/matchups.mjs';
-import { bookmakersView } from '@/lib/sport/odds.mjs';
+import { fetchStandings } from '@/lib/espn.mjs';
+import { rateTeams, goalRates, matchOdds, inPlay, winPath, shotOutcomes, ratesFromTable } from '@/lib/forecast.mjs';
+import { mainRole, versus, rolesFromLines, ROLE_ONE } from '@/lib/matchups.mjs';
+import { bookmakersView } from '@/lib/odds.mjs';
 import { useLive } from './useLive';
 import { useMatchupIndex, useForecastKit, usePlayerLog, useNetXgModel } from './matchupData';
 import { Ball } from './glyphs';

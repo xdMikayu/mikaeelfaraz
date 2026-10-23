@@ -3,17 +3,17 @@
 // gameweek (points, xG, xA, Net xG) next to FPL's own expected points; once the gameweek is over it
 // grades both against what happened. Nothing is graded that wasn't saved before the deadline.
 //
-//   data/sport/projections/gw<N>.json     saved projections (rewritten until the deadline passes)
-//   public/sport/data/pl/accuracy.json    the graded record the site shows
+//   data/projections/gw<N>.json     saved projections (rewritten until the deadline passes)
+//   public/data/pl/accuracy.json    the graded record the site shows
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { getStatic, getFixtures, getLive } from '../../src/lib/sport/fpl-server.mjs';
-import { projectAhead } from '../../src/lib/sport/fpl.mjs';
-import { netBoard } from '../../src/lib/sport/netxg.mjs';
-import { bookmakersByFixture } from '../../src/lib/sport/odds-feed.mjs';
+import { getStatic, getFixtures, getLive } from '../src/lib/fpl-server.mjs';
+import { projectAhead } from '../src/lib/fpl.mjs';
+import { netBoard } from '../src/lib/netxg.mjs';
+import { bookmakersByFixture } from '../src/lib/odds-feed.mjs';
 import { ROOT, DATA, readJson, loadKit, makeCtx } from './kit.mjs';
 
-const SNAP = join(ROOT, 'data/sport/projections');
+const SNAP = join(ROOT, 'data/projections');
 const r2 = (v) => Math.round(v * 100) / 100;
 await mkdir(SNAP, { recursive: true });
 

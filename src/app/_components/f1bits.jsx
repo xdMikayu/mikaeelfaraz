@@ -34,7 +34,7 @@ export function useJson(url) {
 }
 
 /** The session data's index for a season: which sessions are on file, every team's colour. */
-export const useF1Index = (season) => useJson(season ? `/api/sport/f1/data/${season}/index` : null);
+export const useF1Index = (season) => useJson(season ? `/api/f1/data/${season}/index` : null);
 
 /** A team's colour as CSS, or null when the index doesn't have it yet. */
 export const teamColor = (index, team) => (index?.teams?.[team]?.color ? `#${index.teams[team].color}` : null);

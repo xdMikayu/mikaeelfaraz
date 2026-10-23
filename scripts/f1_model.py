@@ -1,5 +1,5 @@
 """
-Matchday's F1 race prediction, from the session files scripts/sport/f1_sessions.py writes.
+Matchday's F1 race prediction, from the session files scripts/f1_sessions.py writes.
 
 Before a race, each driver gets a strength from what's known after qualifying:
   - his grid slot (the log of his qualifying position: the front rows matter most);
@@ -9,8 +9,8 @@ Before a race, each driver gets a strength from what's known after qualifying:
   - his team's race pace over its last three races against the quickest team each time, as a share.
 The cars that finish come home in a Plackett–Luce order on those strengths: the chance a driver
 beats everyone still behind him is proportional to e^strength. Each car also retires with a
-chance learned from past races. Weights and that chance are fitted by scripts/sport/f1_fit.py,
-which also tests them on races they never saw; the result is in scripts/sport/f1-model.json.
+chance learned from past races. Weights and that chance are fitted by scripts/f1_fit.py,
+which also tests them on races they never saw; the result is in scripts/f1-model.json.
 """
 import json
 import math

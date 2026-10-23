@@ -1,4 +1,4 @@
-// The server half of /api/sport/news/<club>/<gameweek>: one club's news before the next deadline,
+// The server half of /api/news/<club>/<gameweek>: one club's news before the next deadline,
 // its press conference and fitness news, found with web search (news.mjs). Shared by every
 // manager: the CDN keeps each club's answer until 45 minutes after a press conference still to
 // come, or a couple of hours otherwise. The CDN's cache key is the path, so the gameweek is in it.

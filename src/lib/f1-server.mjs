@@ -1,7 +1,7 @@
 // Jolpica requests for the F1 routes. It asks callers to keep to about four requests a second, so a
 // route's requests go one after another; the CDN then keeps each answer.
 const BASE = 'https://api.jolpi.ca/ergast/f1';
-const UA = { 'user-agent': 'Mozilla/5.0 (personal F1 pages; mikaeelfaraz.com)' };
+const UA = { 'user-agent': 'Mozilla/5.0 (personal F1 pages; matchday.mikaeelfaraz.com)' };
 
 /** One Jolpica answer (null for a 404: a round or season it doesn't have). */
 export async function jolpica(path) {

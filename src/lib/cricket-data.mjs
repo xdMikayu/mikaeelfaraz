@@ -5,10 +5,10 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const DIR = join(process.cwd(), 'src/lib/sport/cricket');
+const DIR = join(process.cwd(), 'src/lib/cricket');
 const loaded = new Map();
 
-/** A table by its path under src/lib/sport/cricket without ".json": 'model', 'players/t20-male'. */
+/** A table by its path under src/lib/cricket without ".json": 'model', 'players/t20-male'. */
 export function cricketTable(name) {
   if (!/^[a-z0-9-]+(\/[a-z0-9-]+)?$/.test(name)) return Promise.reject(new Error(`No table ${name}`));
   if (!loaded.has(name)) {

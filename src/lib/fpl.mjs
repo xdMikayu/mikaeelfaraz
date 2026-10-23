@@ -1,4 +1,4 @@
-// Fantasy Premier League maths on top of the compact shapes /api/sport/fpl/* returns.
+// Fantasy Premier League maths on top of the compact shapes /api/fpl/* returns.
 // Since 2026/27 FPL puts its own live bonus into fixture stats and players' totals from about
 // 20 minutes in. Where a started fixture has none yet, bonus is projected here from the live BPS.
 // Bonus stays provisional until FPL marks the fixture finished.
@@ -273,7 +273,7 @@ export function buildModel(elements) {
 }
 
 /**
- * Adds the longer view from the matchup data (public/sport/data/pl/index.json): team ratings fitted
+ * Adds the longer view from the matchup data (public/data/pl/index.json): team ratings fitted
  * on every match since 2023/24 (forecast.mjs rateTeams) replace this season's FPL numbers for goal
  * rates, and each player's xG and xA are scaled by how much his opponent usually allows his role.
  * m: { ratings, goalRates, fplTeams: { fplTeam: espnTeam }, roles: { fplPlayer: role }, roleFactor(espnOpp, role) }
@@ -350,7 +350,7 @@ export function laterAvailability(el, f, k, now = Date.now()) {
 
 /** Expected goals each side scores in this fixture, before kick-off. */
 export function fixtureRates(f, model) {
-  // The bookmakers' expected goals where they've priced the match (see /api/sport/odds).
+  // The bookmakers' expected goals where they've priced the match (see /api/odds).
   const odds = model.byFixture?.[f.id];
   if (odds) return { home: odds.home, away: odds.away, odds };
   const r = model.rates?.(f.home, f.away);

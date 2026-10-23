@@ -1,7 +1,7 @@
-// GET /api/sport/tennis/now: tournaments on the ATP and WTA tours from yesterday to a week ahead,
+// GET /api/tennis/now: tournaments on the ATP and WTA tours from yesterday to a week ahead,
 // for the tennis page while its section is built. ESPN's two scoreboards are about 2 MB together;
 // this keeps the few fields the page shows. No query string, so the CDN's path-only key is right.
-import { tennisOnNow } from '@/lib/sport/othersports.mjs';
+import { tennisOnNow } from '@/lib/othersports.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function GET() {
   const tours = ['ATP', 'WTA'];
   const got = await Promise.allSettled(
     tours.map(async (tour) => {
-      const res = await fetch(`${ESPN}/${tour.toLowerCase()}/scoreboard`, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' }, cache: 'no-store' });
+      const res = await fetch(`${ESPN}/${tour.toLowerCase()}/scoreboard`, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; matchday.mikaeelfaraz.com)' }, cache: 'no-store' });
       if (!res.ok) throw new Error(`ESPN ${res.status}`);
       return { tour, json: await res.json() };
     }),

@@ -1,7 +1,7 @@
 'use client';
 import { Fragment, useEffect, useRef, useState } from 'react';
 
-// Ask Matchday AI about a transfer (src/lib/sport/chat.mjs through /api/sport/chat): why we suggest
+// Ask Matchday AI about a transfer (src/lib/chat.mjs through /api/chat): why we suggest
 // one player and not the one you want, whether yours is a good pick anyway, who else fits the budget.
 // The answer streams in as it's written; while the model looks things up the page says what it's
 // checking. The conversation is kept for this browser tab, per team.
@@ -93,7 +93,7 @@ export default function TransferChat({ entry, horizon, league, suggestions = [] 
     abort.current = ctl;
     let answer = '';
     try {
-      const res = await fetch('/api/sport/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id, horizon, league: league ?? undefined, messages: history }),

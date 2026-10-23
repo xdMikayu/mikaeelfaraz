@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { projectAhead, POS } from '@/lib/sport/fpl.mjs';
-import { netFor } from '@/lib/sport/netxg.mjs';
-import { fetchTeam, fetchMatch } from '@/lib/sport/espn.mjs';
+import { projectAhead, POS } from '@/lib/fpl.mjs';
+import { netFor } from '@/lib/netxg.mjs';
+import { fetchTeam, fetchMatch } from '@/lib/espn.mjs';
 import { usePrefs } from './prefs';
 import { useLive } from './useLive';
 import { useNetXgData, useNetXgModel } from './matchupData';

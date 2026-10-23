@@ -1,7 +1,7 @@
-// GET /api/sport/f1/live: F1's live timing now, in the shape src/lib/sport/f1-live.mjs gives it.
+// GET /api/f1/live: F1's live timing now, in the shape src/lib/f1-live.mjs gives it.
 // While a session is on, the CDN keeps each answer for 3 seconds, so F1 sees about one connection
 // every 3 seconds however many people are watching. Otherwise it keeps it for a minute.
-import { liveState } from '@/lib/sport/f1-live-server.mjs';
+import { liveState } from '@/lib/f1-live-server.mjs';
 
 export const dynamic = 'force-dynamic';
 

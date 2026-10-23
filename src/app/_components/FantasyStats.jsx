@@ -1,20 +1,20 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { addSources, SOURCES, sourcePoints, POS } from '@/lib/sport/fpl.mjs';
+import { addSources, SOURCES, sourcePoints, POS } from '@/lib/fpl.mjs';
 import { shirt, heat } from './fplbits';
 import { ChancesChart, DefconChart } from './FantasyCharts';
 
 const loads = {};
 /** A past gameweek's live data never changes, so each is fetched once per visit. */
 const liveFor = (gw) => {
-  loads[gw] ??= fetch(`/api/sport/fpl/live/${gw}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))));
+  loads[gw] ??= fetch(`/api/fpl/live/${gw}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))));
   loads[gw].catch(() => delete loads[gw]);
   return loads[gw];
 };
 /** The season so far, point sources and defensive-contribution hits for everyone (fpl-server getSeason). */
 let seasonLoad = null;
 const seasonFor = () => {
-  seasonLoad ??= fetch('/api/sport/fpl/season').then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))));
+  seasonLoad ??= fetch('/api/fpl/season').then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))));
   seasonLoad.catch(() => (seasonLoad = null));
   return seasonLoad;
 };

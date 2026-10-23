@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { headToHead, fixtureRates } from '@/lib/sport/fpl.mjs';
+import { headToHead, fixtureRates } from '@/lib/fpl.mjs';
 import { shirt, one, fixturesOf, fxLong, phase, Face } from './fplbits';
 import { kickoff } from './time';
 

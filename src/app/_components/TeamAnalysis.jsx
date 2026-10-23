@@ -1,7 +1,7 @@
 'use client';
 import { useMemo } from 'react';
-import { goalRates, matchOdds, rolling, slope } from '@/lib/sport/forecast.mjs';
-import { allowedByRole, ROLE_NAME } from '@/lib/sport/matchups.mjs';
+import { goalRates, matchOdds, rolling, slope } from '@/lib/forecast.mjs';
+import { allowedByRole, ROLE_NAME } from '@/lib/matchups.mjs';
 import { useMatchupIndex, useForecastKit, usePlayerLog } from './matchupData';
 import { TeamSetPieces } from './SetPieces';
 

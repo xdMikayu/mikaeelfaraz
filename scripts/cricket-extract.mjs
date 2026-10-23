@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Reads Cricsheet's ball-by-ball archive and writes one compact record per match, the input to
-// scripts/sport/fit-cricket.mjs. Cricsheet (https://cricsheet.org) shares it under ODC-By 1.0.
+// scripts/fit-cricket.mjs. Cricsheet (https://cricsheet.org) shares it under ODC-By 1.0.
 //
-//   curl -L -o data/sport/cricsheet/all_json.zip https://cricsheet.org/downloads/all_json.zip
-//   unzip -q -o data/sport/cricsheet/all_json.zip -d data/sport/cricsheet/all
-//   node scripts/sport/cricket-extract.mjs        # → data/sport/cricket/matches.json (not committed)
+//   curl -L -o data/cricsheet/all_json.zip https://cricsheet.org/downloads/all_json.zip
+//   unzip -q -o data/cricsheet/all_json.zip -d data/cricsheet/all
+//   node scripts/cricket-extract.mjs        # → data/cricket/matches.json (not committed)
 //
 // Each match: { id, date, gender, kind ('t20' | 'odi' | 'test' | null), event, club, teams, venue,
 // city, toss: [team, 'bat' | 'field'], winner, result ('win' | 'tie' | 'draw' | 'no result'), dl,
@@ -14,9 +14,9 @@ import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const SRC = join(ROOT, 'data/sport/cricsheet/all');
-const OUT = join(ROOT, 'data/sport/cricket');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const SRC = join(ROOT, 'data/cricsheet/all');
+const OUT = join(ROOT, 'data/cricket');
 
 // 20-over and 50-over cricket with six-ball overs; Tests and other first-class matches. The
 // Hundred (five-ball sets) and the rest are kept for venue names but not modelled.

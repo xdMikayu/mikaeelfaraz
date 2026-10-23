@@ -1,19 +1,19 @@
-// GET /api/sport/cricket/match/{league}/{event}: one match in full for the match page. From ESPN:
+// GET /api/cricket/match/{league}/{event}: one match in full for the match page. From ESPN:
 // the summary (each innings, every player's batting and bowling, the fall of wickets, who's in) and
 // the ball-by-ball commentary (each over, the partnerships, how each batter was out). From Matchday's
 // model: par, the projected total, each side's chance now and after every over, the ground's record.
 // From Cricsheet: every player's form and record, and how the batters in have fared against these
 // bowlers. Both ids are in the path, so the CDN's path-only key tells matches apart.
-import { matchFromSummary, asListMatch, ballsOf, inningsBalls, phasesOf, quotaOf } from '@/lib/sport/cricket-match.mjs';
-import { readMatch, formatOf } from '@/lib/sport/cricket-read.mjs';
-import { formFor, matchupsFor } from '@/lib/sport/cricket-form.mjs';
-import { cricketTable, modelTables } from '@/lib/sport/cricket-data.mjs';
+import { matchFromSummary, asListMatch, ballsOf, inningsBalls, phasesOf, quotaOf } from '@/lib/cricket-match.mjs';
+import { readMatch, formatOf } from '@/lib/cricket-read.mjs';
+import { formFor, matchupsFor } from '@/lib/cricket-form.mjs';
+import { cricketTable, modelTables } from '@/lib/cricket-data.mjs';
 
 export const dynamic = 'force-dynamic';
 
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/cricket';
-const UA = { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' };
-// The formats with player records (src/lib/sport/cricket/players), read the first time a match in
+const UA = { 'user-agent': 'Mozilla/5.0 (personal score viewer; matchday.mikaeelfaraz.com)' };
+// The formats with player records (src/lib/cricket/players), read the first time a match in
 // that format is asked for.
 const PLAYER_FORMATS = new Set(['t20-male', 't20-female', 'odi-male', 'odi-female', 'test-male', 'test-female', 'fc-male']);
 const headers = (s) => ({ 'cache-control': 'public, max-age=0, must-revalidate', 'cdn-cache-control': `public, s-maxage=${s}`, 'netlify-cdn-cache-control': `public, s-maxage=${s}, durable` });

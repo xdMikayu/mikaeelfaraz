@@ -24,7 +24,7 @@ export function makeKit(ix, learned) {
 
 /**
  * ctx as the Fantasy page builds it, from getStatic() and a live gameweek (or none). byFixture: the
- * bookmakers' expected goals by FPL fixture id (/api/sport/odds), used in place of the model's
+ * bookmakers' expected goals by FPL fixture id (/api/odds), used in place of the model's
  * where a match is priced.
  */
 export function makeCtx(st, kit, live = { elements: {}, fixtures: [] }, byFixture = null) {

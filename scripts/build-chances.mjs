@@ -1,24 +1,24 @@
 #!/usr/bin/env node
-// Builds public/sport/data/pl/chances.json: every finished Premier League match this season with each
-// side's goals, Opta's xG (FPL's players added up by club, src/lib/sport/chances.mjs fixtureXg), and its
+// Builds public/data/pl/chances.json: every finished Premier League match this season with each
+// side's goals, Opta's xG (FPL's players added up by club, src/lib/chances.mjs fixtureXg), and its
 // big chances and penalties from the Premier League's own match stats. Fantasy › Stats charts them.
-// Finished matches are cached in data/sport/pl-chances/<season>.json, so a run only fetches what's new;
+// Finished matches are cached in data/pl-chances/<season>.json, so a run only fetches what's new;
 // a gameweek's xG is fetched again until FPL marks its data checked. FPL and the Premier League both
 // sometimes turn cloud machines away; then whatever is cached stands, and the file waits for next run.
 //
-//   node scripts/sport/build-chances.mjs
+//   node scripts/build-chances.mjs
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fixtureXg, matchChances, MATCH_FIELDS, PENALTY_XG } from '../../src/lib/sport/chances.mjs';
-import { fplTeamFor } from '../../src/lib/sport/fplmap.mjs';
+import { fixtureXg, matchChances, MATCH_FIELDS, PENALTY_XG } from '../src/lib/chances.mjs';
+import { fplTeamFor } from '../src/lib/fplmap.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const CACHE = join(ROOT, 'data/sport/pl-chances');
-const OUT = join(ROOT, 'public/sport/data/pl/chances.json');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const CACHE = join(ROOT, 'data/pl-chances');
+const OUT = join(ROOT, 'public/data/pl/chances.json');
 const FPL = 'https://fantasy.premierleague.com/api';
 const PL = 'https://footballapi.pulselive.com/football';
-const UA = 'Mozilla/5.0 (Matchday data build; mikaeelfaraz.com)';
+const UA = 'Mozilla/5.0 (Matchday data build; matchday.mikaeelfaraz.com)';
 // The Premier League's stats API answers its own site's pages.
 const PL_HEADERS = { 'user-agent': UA, accept: 'application/json', origin: 'https://www.premierleague.com', referer: 'https://www.premierleague.com/' };
 

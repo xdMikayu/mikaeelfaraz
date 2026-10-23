@@ -1,5 +1,5 @@
 'use client';
-import { defconFixture } from '@/lib/sport/fpl.mjs';
+import { defconFixture } from '@/lib/fpl.mjs';
 import { fixturesOf, fxLong, shirt } from './fplbits';
 
 // DEFCON, live: where each of the manager's players stands against FPL's defensive-contribution line this

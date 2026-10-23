@@ -22,13 +22,13 @@ async function attempt(url, signal) {
  */
 export const espnKey = (url) => btoa(url).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-/** Direct first; in the browser, our own /api/sport/espn relay if ESPN turns the request away. */
+/** Direct first; in the browser, our own /api/espn relay if ESPN turns the request away. */
 async function get(url, { signal } = {}) {
   try {
     return await attempt(url, signal);
   } catch (e) {
     if (e.name === 'AbortError' || typeof window === 'undefined') throw e;
-    return attempt(`/api/sport/espn/${espnKey(url)}`, signal);
+    return attempt(`/api/espn/${espnKey(url)}`, signal);
   }
 }
 

@@ -1,9 +1,9 @@
-// GET /api/sport/fpl/static | fixtures | top | season | live/<gw> | entry/<team>/<gw> | league/<league>/<gw>
+// GET /api/fpl/static | fixtures | top | season | live/<gw> | entry/<team>/<gw> | league/<league>/<gw>
 // Everything that changes the answer is in the path. The CDN's cache key ignores query strings on
 // this site (Netlify's Next.js runtime narrows it to Next's own parameters), so ?id= would hand one
 // manager's team to the next. The old ?id=&event= form still answers, for pages loaded before this
 // change, but uncached.
-import { getStatic, getLive, getEntry, getLeague, getFixtures, getTop, getSeason, fplRequest } from '@/lib/sport/fpl-server.mjs';
+import { getStatic, getLive, getEntry, getLeague, getFixtures, getTop, getSeason, fplRequest } from '@/lib/fpl-server.mjs';
 
 export const dynamic = 'force-dynamic';
 

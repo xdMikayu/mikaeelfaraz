@@ -1,10 +1,10 @@
 // The bookmakers' prices for Premier League matches: DraftKings', as ESPN's scoreboard carries them.
-// ESPN has no date ranges, so one request a day. Shared by /api/sport/odds and the weekly
-// projections snapshot (scripts/sport/accuracy.mjs); odds.mjs turns the prices into expected goals.
+// ESPN has no date ranges, so one request a day. Shared by /api/odds and the weekly
+// projections snapshot (scripts/accuracy.mjs); odds.mjs turns the prices into expected goals.
 import { pricedFixtures } from './odds.mjs';
 
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard';
-const UA = { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' };
+const UA = { 'user-agent': 'Mozilla/5.0 (personal score viewer; matchday.mikaeelfaraz.com)' };
 const DAY = 864e5;
 const ymd = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, '');
 

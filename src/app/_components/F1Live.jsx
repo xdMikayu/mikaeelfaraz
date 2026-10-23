@@ -1,15 +1,15 @@
 'use client';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { lapText } from '@/lib/sport/f1.mjs';
-import { plain, rejoin, sameSession } from '@/lib/sport/f1-live.mjs';
-import PITLOSS from '@/lib/sport/f1-pitloss.json';
+import { lapText } from '@/lib/f1.mjs';
+import { plain, rejoin, sameSession } from '@/lib/f1-live.mjs';
+import PITLOSS from '@/lib/f1-pitloss.json';
 import { kickoff } from './time';
 import { heat } from './fplbits';
 import { Mark, Reveal } from './f1bits';
 import { COMPOUND, SHADE } from './F1Charts';
 import { useScrolledPast, StickyBar } from './Sticky';
 
-// Live timing for one session, from /api/sport/f1/live every 3 seconds. Every answer is kept for
+// Live timing for one session, from /api/f1/live every 3 seconds. Every answer is kept for
 // three minutes, so the view can run behind live to match the viewer's TV picture, which is often
 // 5–60 seconds late: the timing shouldn't tell them what they're about to see.
 
@@ -74,7 +74,7 @@ function useFeed() {
       busy = true;
       let wait = POLL;
       try {
-        const r = await fetch('/api/sport/f1/live', { cache: 'no-store' });
+        const r = await fetch('/api/f1/live', { cache: 'no-store' });
         const t = await r.json().catch(() => ({}));
         if (!r.ok || !t.session) throw new Error(t.error || `it answered ${r.status}`);
         const got = Date.now();

@@ -2,10 +2,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { fetchMatch, fetchStandings, fetchScoreboard } from '@/lib/sport/espn.mjs';
-import { standingsNow, inTable, groupOf, ifTheyWin, moveWords } from '@/lib/sport/as-it-stands.mjs';
-import { optaXg, fplFixtureFor, fplPlayersFor, fplElementsFor } from '@/lib/sport/fplmap.mjs';
-import { LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
+import { fetchMatch, fetchStandings, fetchScoreboard } from '@/lib/espn.mjs';
+import { standingsNow, inTable, groupOf, ifTheyWin, moveWords } from '@/lib/as-it-stands.mjs';
+import { optaXg, fplFixtureFor, fplPlayersFor, fplElementsFor } from '@/lib/fplmap.mjs';
+import { LEAGUE_BY_SLUG } from '@/lib/leagues.mjs';
 import { useLive, Freshness } from './useLive';
 import { useSpoiler, useFollow } from './prefs';
 import { teamColors, useDark, kitPair, inkOn } from './colors';
@@ -19,7 +19,7 @@ import { useMatchRates, ForecastPanel, BookmakersPanel, WinPathChart, Deserved, 
 import { useScrolledPast, StickyBar, StickyTeam } from './Sticky';
 import { useMatchupIndex } from './matchupData';
 import { RatingsPanel } from './Ratings';
-import { matchRatings } from '@/lib/sport/ratings.mjs';
+import { matchRatings } from '@/lib/ratings.mjs';
 
 const hot = (d) => {
   if (!d) return false;
@@ -90,7 +90,7 @@ export default function MatchView() {
               <section className="sp-panel">
                 <div className="sp-section-head">
                   <h2 className="sp-h2">Expected goals</h2>
-                  <Link className="sp-tiny sp-muted sp-link" href="/sport/settings#xg">Our estimate</Link>
+                  <Link className="sp-tiny sp-muted sp-link" href="/settings#xg">Our estimate</Link>
                 </div>
                 <XgChart shots={data.shots} colors={colors} names={names} endMinute={live ? axisMinute(m.status.label) : null} />
                 {live && <Momentum shots={data.shots} now={axisMinute(m.status.label)} names={names} />}
@@ -188,7 +188,7 @@ function useFplMatch(data) {
   useEffect(() => {
     if (!isPl) return undefined;
     let off = false;
-    const get = (p) => fetch(`/api/sport/fpl/${p}`).then((r) => (r.ok ? r.json() : null));
+    const get = (p) => fetch(`/api/fpl/${p}`).then((r) => (r.ok ? r.json() : null));
     Promise.all([get('static'), get('fixtures')]).then(
       ([st, fixtures]) => !off && st && fixtures && setBase({ st, fixtures }),
       () => {}
@@ -204,7 +204,7 @@ function useFplMatch(data) {
   useEffect(() => {
     if (!event) return undefined;
     let off = false;
-    fetch(`/api/sport/fpl/live/${event}`)
+    fetch(`/api/fpl/live/${event}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => !off && d && setLive(d), () => {});
     return () => {
@@ -382,7 +382,7 @@ function Header({ m, data, hidden, reveal, at, error, band }) {
     <div className="sp-hero-half" style={{ background: color, color: inkOn(color) }}>
       <span className="sp-hero-crest"><Crest src={t.logo} size={46} light /></span>
       <span className="sp-hero-name">
-        <Link href={`/sport/team?id=${t.id}&l=${m.league}`}>{t.name}</Link>
+        <Link href={`/team?id=${t.id}&l=${m.league}`}>{t.name}</Link>
         {/* Beside the name, so both halves line up. */}
         {!hidden && reds(side).length > 0 && (
           <span className="sp-pips" aria-label={`${reds(side).length} red card${reds(side).length > 1 ? 's' : ''}`}>
@@ -402,7 +402,7 @@ function Header({ m, data, hidden, reveal, at, error, band }) {
         {half(m.away, 'away', kits['--away'])}
         <p className="sp-hero-meta" style={{ margin: 0 }}>
           <span style={{ background: '#fff', color: '#111', padding: '2px 8px', borderRadius: 4 }}>
-            {lg?.table ? <Link href={`/sport/table/${m.league}`}>{m.leagueName ?? lg.name}</Link> : m.leagueName ?? lg?.name}
+            {lg?.table ? <Link href={`/table/${m.league}`}>{m.leagueName ?? lg.name}</Link> : m.leagueName ?? lg?.name}
             {m.round ? ` · ${m.round}` : ''}
           </span>
         </p>

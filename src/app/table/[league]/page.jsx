@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
+import { LEAGUES, LEAGUE_BY_SLUG } from '@/lib/leagues.mjs';
 import TableView from '../../_components/TableView';
 
 // One static page per competition; the standings themselves load in the browser.

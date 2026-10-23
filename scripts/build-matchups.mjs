@@ -1,27 +1,27 @@
 #!/usr/bin/env node
 // Builds the Premier League matchup data the Matchday app reads as static files:
-//   public/sport/data/pl/index.json         xG allowed by role, team match logs, FPL -> ESPN ids
-//   public/sport/data/pl/players-<team>.json every match row for that club's current players
-//   public/sport/data/pl/setpieces.json     who each club aims for at set pieces, this season and last
-// Finished matches are cached in data/sport/pl-matches/<season>.json, so a weekly run only
+//   public/data/pl/index.json         xG allowed by role, team match logs, FPL -> ESPN ids
+//   public/data/pl/players-<team>.json every match row for that club's current players
+//   public/data/pl/setpieces.json     who each club aims for at set pieces, this season and last
+// Finished matches are cached in data/pl-matches/<season>.json, so a weekly run only
 // fetches what's new. Everything comes from ESPN's public match summaries; costs nothing.
 //
-//   node scripts/sport/build-matchups.mjs            # seasons 2023/24 to now
-//   node scripts/sport/build-matchups.mjs --from 2024
+//   node scripts/build-matchups.mjs            # seasons 2023/24 to now
+//   node scripts/build-matchups.mjs --from 2024
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fetchMatch } from '../../src/lib/sport/espn.mjs';
-import { playerRows, mainRole, ROLES } from '../../src/lib/sport/matchups.mjs';
-import { matchSetPieces, seasonSetPieces } from '../../src/lib/sport/setpieces.mjs';
-import { fplTeamFor } from '../../src/lib/sport/fplmap.mjs';
+import { fetchMatch } from '../src/lib/espn.mjs';
+import { playerRows, mainRole, ROLES } from '../src/lib/matchups.mjs';
+import { matchSetPieces, seasonSetPieces } from '../src/lib/setpieces.mjs';
+import { fplTeamFor } from '../src/lib/fplmap.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const CACHE = join(ROOT, 'data/sport/pl-matches');
-const OUT = join(ROOT, 'public/sport/data/pl');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const CACHE = join(ROOT, 'data/pl-matches');
+const OUT = join(ROOT, 'public/data/pl');
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 const WEB = 'https://site.web.api.espn.com/apis/v2/sports/soccer';
-const UA = { 'user-agent': 'Mozilla/5.0 (Matchday data build; mikaeelfaraz.com)', accept: 'application/json' };
+const UA = { 'user-agent': 'Mozilla/5.0 (Matchday data build; matchday.mikaeelfaraz.com)', accept: 'application/json' };
 
 const arg = (name, d) => {
   const i = process.argv.indexOf(name);

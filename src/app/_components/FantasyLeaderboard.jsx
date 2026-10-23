@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { netBoard } from '@/lib/sport/netxg.mjs';
-import { ROLE_SHORT } from '@/lib/sport/matchups.mjs';
+import { netBoard } from '@/lib/netxg.mjs';
+import { ROLE_SHORT } from '@/lib/matchups.mjs';
 import { useNetXgData, useNetXgModel } from './matchupData';
 import { shirt } from './fplbits';
 

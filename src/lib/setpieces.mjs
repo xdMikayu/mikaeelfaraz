@@ -6,7 +6,7 @@
 //  - who delivers: the players whose balls set those attempts up;
 //  - how a team does at both ends: corners, attempts, goals and xG, for and against.
 // It counts attempts, not first contacts: a flick-on, or a header that's cleared, isn't in the
-// commentary. Built into public/sport/data/pl/setpieces.json by scripts/sport/build-matchups.mjs.
+// commentary. Built into public/data/pl/setpieces.json by scripts/build-matchups.mjs.
 
 import { shotTraits } from './xg.mjs';
 

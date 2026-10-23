@@ -4,7 +4,7 @@
 import { addSources } from './fpl.mjs';
 
 const BASE = 'https://fantasy.premierleague.com/api';
-const UA = 'Mozilla/5.0 (personal FPL viewer; mikaeelfaraz.com)';
+const UA = 'Mozilla/5.0 (personal FPL viewer; matchday.mikaeelfaraz.com)';
 
 const memo = new Map(); // per function instance; picks for a past deadline never change
 
@@ -180,7 +180,7 @@ const num10 = (v) => (/^\d{1,10}$/.test(v ?? '') ? Number(v) : null);
 const KINDS = { static: 0, fixtures: 0, top: 0, season: 0, live: 1, entry: 2, league: 2 };
 
 /**
- * What /api/sport/fpl/... asks for: { kind, id, event, legacy } or { error, status }.
+ * What /api/fpl/... asks for: { kind, id, event, legacy } or { error, status }.
  * Path form: static, fixtures, live/<gw>, entry/<team>/<gw>, league/<league>/<gw>. The old query
  * form (entry?id=&event=) is still read, and flagged `legacy` so it isn't cached.
  */

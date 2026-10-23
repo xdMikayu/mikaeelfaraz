@@ -1,4 +1,4 @@
-// Players' form for the match page, from the per-format tables scripts/sport/cricket-players.mjs
+// Players' form for the match page, from the per-format tables scripts/cricket-players.mjs
 // builds from Cricsheet: averages, strike rates and economy worked out, the last few innings with
 // their dates and opponents, how each player goes in each phase, and how each batter in has fared
 // against each bowler. Pure functions over a table, so they can be tested.

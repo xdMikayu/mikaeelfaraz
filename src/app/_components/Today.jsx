@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { fetchDay } from '@/lib/sport/espn.mjs';
-import { LEAGUE_BY_SLUG } from '@/lib/sport/leagues.mjs';
+import { fetchDay } from '@/lib/espn.mjs';
+import { LEAGUE_BY_SLUG } from '@/lib/leagues.mjs';
 import { usePrefs } from './prefs';
 import { useLive, Freshness } from './useLive';
 import { useAlerts } from './alerts';
@@ -109,7 +109,7 @@ export default function Today() {
       {data && shown.length === 0 && data.failed.length < slugs.length && (
         <div className="sp-empty">
           <p style={{ margin: '0 0 10px' }}>{liveOnly ? 'Nothing is being played right now.' : `No matches on ${longDate(ymdToDate(day))} in the competitions you follow.`}</p>
-          <Link className="sp-btn sp-btn-sm" href="/sport/following">Choose competitions</Link>
+          <Link className="sp-btn sp-btn-sm" href="/following">Choose competitions</Link>
         </div>
       )}
     </div>
@@ -124,7 +124,7 @@ function Group({ slug, title, matches, showLeague, leagues }) {
       <header className="sp-ghead">
         {slug && <span className="sp-lgmark">{logo ? <Crest src={logo} size={22} /> : null}</span>}
         <h2 className="sp-h3">{title}</h2>
-        {lg?.table && <Link className="sp-small sp-link sp-ink2" href={`/sport/table/${slug}`}>Table</Link>}
+        {lg?.table && <Link className="sp-small sp-link sp-ink2" href={`/table/${slug}`}>Table</Link>}
       </header>
       {matches.map((m) => (
         <MatchRow key={m.id} m={m} caption={showLeague ? LEAGUE_BY_SLUG[m.league]?.name ?? m.league : null} />

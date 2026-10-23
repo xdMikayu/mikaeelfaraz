@@ -10,7 +10,7 @@
 // scale (where an ordinary 90 minutes lands, how far a great one goes) in SCALE; both are set so
 // ratings spread the way people know from those apps (most starters 6 to 7.5, 8 a fine game, 9 rare)
 // and are checked in ratings.test.mjs, and against FPL's own Opta-based bonus point scores (BPS) on
-// this season's Premier League matches by scripts/sport/check-ratings.mjs.
+// this season's Premier League matches by scripts/check-ratings.mjs.
 
 import { rolesFromLines } from './matchups.mjs';
 
@@ -61,7 +61,7 @@ export const DEFENDING_P90 = { GK: 0.15, DEF: 0.62, MID: 0.55, ATT: 0.24 };
  * The scale: each role's base (where a quiet 90 minutes lands), how far the points above move a
  * rating (k), a substitute's lower start, and the curve that keeps both ends rare: above `soft` each
  * point counts for less and less, approaching 10; below `low`, approaching 3. Fitted to this season's
- * Premier League matches by scripts/sport/check-ratings.mjs so that starters average about 6.8 in
+ * Premier League matches by scripts/check-ratings.mjs so that starters average about 6.8 in
  * every role and spread as the familiar apps' ratings do.
  */
 export const SCALE = { k: 0.711, base: { GK: 6.39, DEF: 6.62, MID: 6.36, ATT: 6.12 }, subDrop: 0.15, soft: 8, low: 5 };

@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { matchKits, inkOn as inkOnHex } from '@/lib/sport/kit-colors.mjs';
+import { matchKits, inkOn as inkOnHex } from '@/lib/kit-colors.mjs';
 
-// Team colours on a page, from src/lib/sport/kit-colors.mjs: one colour per team for a whole match,
+// Team colours on a page, from src/lib/kit-colors.mjs: one colour per team for a whole match,
 // the same in its block, its chart lines and its bars.
 
 /** { home, away } colours for charts and bars on the current surface. */

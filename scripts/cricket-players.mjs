@@ -4,8 +4,8 @@
 // concede in each phase of an innings, and each batter's record against each bowler. Players are
 // keyed by their Cricinfo id, which ESPN uses too, through Cricsheet's people register.
 //
-//   curl -L -o data/sport/cricsheet/people.csv https://cricsheet.org/register/people.csv
-//   node scripts/sport/cricket-players.mjs     # → src/lib/sport/cricket/players/{format}.json
+//   curl -L -o data/cricsheet/people.csv https://cricsheet.org/register/people.csv
+//   node scripts/cricket-players.mjs     # → src/lib/cricket/players/{format}.json
 //
 // Formats: t20 and odi (all 20- and 50-over cricket with six-ball overs, internationals and
 // leagues together, as each player's form is one thing), Tests, and first-class matches (fc).
@@ -23,9 +23,9 @@ import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const SRC = join(ROOT, 'data/sport/cricsheet');
-const OUT = join(ROOT, 'src/lib/sport/cricket/players');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const SRC = join(ROOT, 'data/cricsheet');
+const OUT = join(ROOT, 'src/lib/cricket/players');
 const DAY = 864e5;
 // The overs ending the powerplay and the middle overs; the rest is the death.
 const PHASES = { t20: [6, 15], odi: [10, 40] };

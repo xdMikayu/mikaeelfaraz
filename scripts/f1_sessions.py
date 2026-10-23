@@ -12,10 +12,10 @@ After each session it writes one small JSON file for the pages:
   - practice: one-lap pace and long runs (a rough guide to race pace);
 and index.json: what's there, with every team's colour and every driver's code.
 
-    python scripts/sport/f1_sessions.py --out DIR [--season 2026] [--round 17] [--force]
+    python scripts/f1_sessions.py --out DIR [--season 2026] [--round 17] [--force]
 
 The GitHub Action .github/workflows/f1-data.yml runs it every two hours over race weekends and
-pushes DIR to the f1-data branch; the site reads it through /api/sport/f1/data. FastF1 is
+pushes DIR to the f1-data branch; the site reads it through /api/f1/data. FastF1 is
 unofficial: F1 could change its archive, and then this stops until FastF1 catches up.
 """
 import argparse
@@ -406,7 +406,7 @@ def index(out_dir, season):
 def predict(out_dir, season, race_starts, now):
     """
     After qualifying and before the race starts: each driver's chance to win, reach the podium and
-    score, from scripts/sport/f1_model.py with the weights in f1-model.json. Never written once the
+    score, from scripts/f1_model.py with the weights in f1-model.json. Never written once the
     race is under way, so what the page shows afterwards is what it said beforehand.
     """
     from f1_model import features, simulate

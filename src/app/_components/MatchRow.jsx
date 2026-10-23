@@ -19,7 +19,7 @@ export default function MatchRow({ m, showDate = false, caption = null }) {
   const label = `${m.home.name} v ${m.away.name}`;
   return (
     <div className="sp-row">
-      <Link className="sp-row-link" href={`/sport/match?id=${m.id}`} aria-label={hidden ? `${label}, score hidden` : label} />
+      <Link className="sp-row-link" href={`/match?id=${m.id}`} aria-label={hidden ? `${label}, score hidden` : label} />
       <div className="sp-row-status">
         {showDate && <span className="sp-muted" style={{ fontWeight: 600 }}>{dayMonth(m.date)}</span>}
         {m.status.off ? (

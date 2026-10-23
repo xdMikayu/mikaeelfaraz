@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { makeKit } from '@/lib/sport/kit.mjs';
+import { makeKit } from '@/lib/kit.mjs';
 
-// The Premier League matchup data is built weekly into static files (scripts/sport/build-matchups.mjs)
+// The Premier League matchup data is built weekly into static files (scripts/build-matchups.mjs)
 // and served from the CDN like any image, so reading it costs nothing per visit.
-const BASE = '/sport/data/pl';
+const BASE = '/data/pl';
 const loads = {};
 
 function load(path) {
@@ -35,13 +35,13 @@ function useJson(path) {
 export const useMatchupIndex = () => useJson('index.json');
 /** Net xG inputs per FPL player: long-run, recent and per-opponent [minutes, xG, xA]. */
 export const useNetXgData = () => useJson('netxg.json');
-/** Learned Net xG weights and their test results (scripts/sport/fit-netxg.mjs). */
+/** Learned Net xG weights and their test results (scripts/fit-netxg.mjs). */
 export const useNetXgModel = () => useJson('netxg-model.json');
-/** Our graded record: projections saved before each deadline against what happened (scripts/sport/accuracy.mjs). */
+/** Our graded record: projections saved before each deadline against what happened (scripts/accuracy.mjs). */
 export const useAccuracy = () => useJson('accuracy.json');
 /** Every match row for one club's current players: { espnId: { n, rows } }. */
 export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam}.json` : null);
-/** Set pieces club by club, this season and last (src/lib/sport/setpieces.mjs). */
+/** Set pieces club by club, this season and last (src/lib/setpieces.mjs). */
 export const useSetPieces = () => useJson('setpieces.json');
 
 /** Team ratings and role factors from the index, ready for fpl.mjs withMatchups and match odds. */

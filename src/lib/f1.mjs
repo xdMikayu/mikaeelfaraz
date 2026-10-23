@@ -1,8 +1,8 @@
 // Formula 1 from Jolpica, which carries on the Ergast database: both championships, each race's
 // winner and a weekend's classifications (race, sprint, qualifying), in the small shapes the F1
 // pages use, plus the title maths. Pure, so they can be tested; the routes under
-// src/app/api/sport/f1 fetch. Session analysis (laps, tyres, pace) comes from FastF1 instead:
-// scripts/sport/f1_sessions.py.
+// src/app/api/f1 fetch. Session analysis (laps, tyres, pace) comes from FastF1 instead:
+// scripts/f1_sessions.py.
 
 export const RACE_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 export const SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1];

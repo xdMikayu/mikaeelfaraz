@@ -19,7 +19,7 @@ export default function MatchCard({ m, league }) {
   );
   return (
     <article className="sp-mcard">
-      <Link href={`/sport/match?id=${m.id}`} className="sp-row-link" aria-label={`${m.home.name} v ${m.away.name}`} />
+      <Link href={`/match?id=${m.id}`} className="sp-row-link" aria-label={`${m.home.name} v ${m.away.name}`} />
       {half(m.home, kits['--home'])}
       {half(m.away, kits['--away'])}
       <span className="sp-mcard-lg" style={{ color: inkOn(kits['--home']) }}>{league}</span>

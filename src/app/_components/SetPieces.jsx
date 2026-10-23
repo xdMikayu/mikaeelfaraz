@@ -3,10 +3,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Crest from './Crest';
 import { useDark } from './colors';
-import { fillOf, lineOf } from '@/lib/sport/kit-colors.mjs';
+import { fillOf, lineOf } from '@/lib/kit-colors.mjs';
 import { useSetPieces } from './matchupData';
 
-// Set pieces club by club, from public/sport/data/pl/setpieces.json (src/lib/sport/setpieces.mjs):
+// Set pieces club by club, from public/data/pl/setpieces.json (src/lib/setpieces.mjs):
 // who each club aims for at corners and free kicks into the box, in its own colour, as the share of
 // its attempts from them that each player had while he was on the pitch.
 
@@ -78,7 +78,7 @@ export function SetPieceGrid({ data, season, squad, extra }) {
         const top = t.targets.slice(0, 3).map(target);
         return (
           <div key={id} className="sp-spc">
-            <Link href={`/sport/team?id=${id}&l=eng.1`} className="sp-spc-head">
+            <Link href={`/team?id=${id}&l=eng.1`} className="sp-spc-head">
               <Crest src={logo(id)} size={22} />
               <b>{club.short ?? club.name}</b>
             </Link>

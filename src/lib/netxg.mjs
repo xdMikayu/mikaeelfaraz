@@ -1,10 +1,10 @@
 // Net xG: one number for how much xG a player should get in a gameweek.
 //
 // It starts from his usual xG per 90 and moves it with five factors. How much each factor counts
-// is learned, not chosen: scripts/sport/fit-netxg.mjs replays every Premier League match since
+// is learned, not chosen: scripts/fit-netxg.mjs replays every Premier League match since
 // 2024/25 with only what was known before each one, fits a Poisson regression on the logs of these
 // factors, and tests it on a season the fit never saw. The learned weights live in
-// public/sport/data/pl/netxg-model.json; a weight of 1 applies a factor in full, 0 ignores it.
+// public/data/pl/netxg-model.json; a weight of 1 applies a factor in full, 0 ignores it.
 //
 //   base     his xG per 90 over the last two years of match data, pulled towards his position's average
 //   form     his last five matches against that rate

@@ -1,10 +1,10 @@
 name: F1 data
 
 # After each F1 session, FastF1 reads F1's timing archive and writes small JSON files for the F1
-# pages (scripts/sport/f1_sessions.py): positions, gaps, tyres and pace for races and sprints,
+# pages (scripts/f1_sessions.py): positions, gaps, tyres and pace for races and sprints,
 # sectors and the two fastest laps' traces for qualifying, long runs for practice, and after
 # qualifying a race prediction. They go to the f1-data branch, which the site reads through
-# /api/sport/f1/data, so new data never rebuilds the site. Every two hours from Friday to Monday
+# /api/f1/data, so new data never rebuilds the site. Every two hours from Friday to Monday
 # (UTC), when sessions happen; a run with nothing new takes about a minute. FastF1 allows 500
 # requests an hour, about 50 sessions, so a long catch-up finishes over several runs.
 on:
@@ -41,10 +41,10 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: scripts/sport/f1-requirements.txt
-      - run: pip install -r scripts/sport/f1-requirements.txt
+          cache-dependency-path: scripts/f1-requirements.txt
+      - run: pip install -r scripts/f1-requirements.txt
       - name: Read new sessions
-        run: python scripts/sport/f1_sessions.py --out data-branch/f1 --cache "$RUNNER_TEMP/fastf1"
+        run: python scripts/f1_sessions.py --out data-branch/f1 --cache "$RUNNER_TEMP/fastf1"
       - name: Push them to f1-data
         run: |
           cd data-branch

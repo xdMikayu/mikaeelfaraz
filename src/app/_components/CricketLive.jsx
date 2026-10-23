@@ -8,9 +8,9 @@ import Link from 'next/link';
 import Crest from './Crest';
 import { useDark } from './colors';
 import { useScrolledPast, StickyBar, StickyTeam } from './Sticky';
-import { situation } from '@/lib/sport/cricket.mjs';
-import { matchKits } from '@/lib/sport/kit-colors.mjs';
-import { oversOf } from '@/lib/sport/cricket-form.mjs';
+import { situation } from '@/lib/cricket.mjs';
+import { matchKits } from '@/lib/kit-colors.mjs';
+import { oversOf } from '@/lib/cricket-form.mjs';
 import { kickoff, shortDate } from './time';
 
 const nth = (n) => `${n}${[11, 12, 13].includes(n % 100) ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
@@ -172,7 +172,7 @@ export function CricketCard({ m }) {
     </>
   );
   return m.league?.id ? (
-    <Link className="sp-csb sp-csb-card" href={`/sport/cricket/match?l=${m.league.id}&id=${m.id}`} aria-label={`${m.teams.map((t) => `${t.name} ${t.runs || ''}`.trim()).join(' v ')}: open the match`}>
+    <Link className="sp-csb sp-csb-card" href={`/cricket/match?l=${m.league.id}&id=${m.id}`} aria-label={`${m.teams.map((t) => `${t.name} ${t.runs || ''}`.trim()).join(' v ')}: open the match`}>
       {body}
     </Link>
   ) : (

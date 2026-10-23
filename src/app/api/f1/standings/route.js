@@ -1,8 +1,8 @@
-// GET /api/sport/f1/standings: both championships and who won each round so far (races and
+// GET /api/f1/standings: both championships and who won each round so far (races and
 // sprints), from Jolpica. Results land there a while after each session, so the CDN keeps the
 // answer for 15 minutes.
-import { standingsOf, winnersOf } from '@/lib/sport/f1.mjs';
-import { inTurn, cdn, failed } from '@/lib/sport/f1-server.mjs';
+import { standingsOf, winnersOf } from '@/lib/f1.mjs';
+import { inTurn, cdn, failed } from '@/lib/f1-server.mjs';
 
 export const dynamic = 'force-dynamic';
 

@@ -4,7 +4,7 @@
 //   - the running order, with gaps, laps and tyres;
 //   - the track status and the session clock;
 //   - race control's messages, and the stewards' incidents grouped from noted to decided.
-// Pure, so they can be tested. src/lib/sport/f1-live-server.mjs fetches.
+// Pure, so they can be tested. src/lib/f1-live-server.mjs fetches.
 
 import { lapSeconds } from './f1.mjs';
 

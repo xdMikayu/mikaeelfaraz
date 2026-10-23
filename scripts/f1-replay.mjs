@@ -4,7 +4,7 @@
 // topics the live view reads, applies their updates up to the moment asked for, and serves that
 // state the way the live route reads F1's.
 //
-//   node scripts/sport/f1-replay.mjs 2026/2026-10-11_Singapore_Grand_Prix/2026-10-11_Race --at 1:05:00 --speed 5
+//   node scripts/f1-replay.mjs 2026/2026-10-11_Singapore_Grand_Prix/2026-10-11_Race --at 1:05:00 --speed 5
 //   F1_LIVE_URL=http://127.0.0.1:8098/state npm run dev
 //
 //   --at     how far into the session to start: 1:05:00, or -10:00 for before it (default 0)
@@ -19,8 +19,8 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { merge, parseStream } from '../../src/lib/sport/f1-live.mjs';
-import { TOPICS } from '../../src/lib/sport/f1-live-server.mjs';
+import { merge, parseStream } from '../src/lib/f1-live.mjs';
+import { TOPICS } from '../src/lib/f1-live-server.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {

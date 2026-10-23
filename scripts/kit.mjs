@@ -2,12 +2,12 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { makeKit } from '../../src/lib/sport/kit.mjs';
+import { makeKit } from '../src/lib/kit.mjs';
 
-export { makeCtx } from '../../src/lib/sport/kit.mjs';
+export { makeCtx } from '../src/lib/kit.mjs';
 
-export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
-export const DATA = join(ROOT, 'public/sport/data/pl');
+export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+export const DATA = join(ROOT, 'public/data/pl');
 export const readJson = async (path, d = null) => {
   try {
     return JSON.parse(await readFile(path, 'utf8'));

@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FEATURES, FEATURE_GROUPS, findFeatures, fold } from './nav';
-import { LEAGUES } from '@/lib/sport/leagues.mjs';
-import { fetchTeams } from '@/lib/sport/espn.mjs';
+import { LEAGUES } from '@/lib/leagues.mjs';
+import { fetchTeams } from '@/lib/espn.mjs';
 import { usePrefs } from './prefs';
 import Crest from './Crest';
 import { CloseIcon, SearchIcon } from './glyphs';
@@ -33,7 +33,7 @@ function loadTeams(slugs) {
 
 let fplStatic = null;
 const loadFpl = () =>
-  (fplStatic ??= fetch('/api/sport/fpl/static')
+  (fplStatic ??= fetch('/api/fpl/static')
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`FPL ${r.status}`))))
     .catch((e) => {
       fplStatic = null;
@@ -231,9 +231,9 @@ export default function Find({ open, onClose }) {
   );
 }
 
-const teamHref = (t) => `/sport/team?id=${t.id}${t.slug ? `&l=${t.slug}` : ''}`;
-const playerHref = (e) => `/sport/fantasy?tab=players&view=compare&p=${e.id}`;
-const compHref = (l) => (l.table ? `/sport/table/${l.slug}` : '/sport');
+const teamHref = (t) => `/team?id=${t.id}${t.slug ? `&l=${t.slug}` : ''}`;
+const playerHref = (e) => `/fantasy?tab=players&view=compare&p=${e.id}`;
+const compHref = (l) => (l.table ? `/table/${l.slug}` : '/');
 
 function Group({ title, items, render }) {
   if (!items.length) return null;

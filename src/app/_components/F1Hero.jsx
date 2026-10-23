@@ -4,9 +4,9 @@
 // leading drivers as bars in their team colours, the stakes in one sentence.
 
 import Link from 'next/link';
-import CIRCUITS from '@/lib/sport/f1-circuits.json';
-import { sessionEnd } from '@/lib/sport/othersports.mjs';
-import { SESSION_KEY, titleRace, countdown } from '@/lib/sport/f1.mjs';
+import CIRCUITS from '@/lib/f1-circuits.json';
+import { sessionEnd } from '@/lib/othersports.mjs';
+import { SESSION_KEY, titleRace, countdown } from '@/lib/f1.mjs';
 import { inkOn } from './colors';
 import { kickoff, shortDate } from './time';
 
@@ -36,7 +36,7 @@ export function RaceHero({ race, total, season, now, compact = false, kicker = n
   const next = sessions.find((s) => Date.parse(s.at) > now);
   const started = sessions[0] && Date.parse(sessions[0].at) <= now;
   const over = raceS && sessionEnd(raceS) <= now;
-  const href = (s) => `/sport/f1/race?season=${season}&round=${race.round}&s=${SESSION_KEY[s.label]}`;
+  const href = (s) => `/f1/race?season=${season}&round=${race.round}&s=${SESSION_KEY[s.label]}`;
   // Before the weekend it counts down to the race; during it, to the next session.
   const target = !started ? raceS : next;
   const where = [race.circuit, race.place].filter((x, i, a) => x && !a.slice(0, i).some((y) => y?.includes(x))).join(', ');

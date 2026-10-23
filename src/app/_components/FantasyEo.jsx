@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { leagueLive, POS } from '@/lib/sport/fpl.mjs';
+import { leagueLive, POS } from '@/lib/fpl.mjs';
 import { useLive } from './useLive';
 import { Face } from './fplbits';
 
@@ -14,7 +14,7 @@ import { Face } from './fplbits';
 export const OVERALL = 314;
 
 async function api(path, signal) {
-  const res = await fetch(`/api/sport/fpl/${path}`, { signal });
+  const res = await fetch(`/api/fpl/${path}`, { signal });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `FPL ${res.status}`);
   return json;

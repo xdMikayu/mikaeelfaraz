@@ -56,7 +56,7 @@ function Tournament({ t }) {
 }
 
 function TennisNow() {
-  const { data, error } = useLive((signal) => getJson('/api/sport/tennis/now', signal), [], { every: 60000, live: (d) => d?.tournaments.some((t) => t.live) });
+  const { data, error } = useLive((signal) => getJson('/api/tennis/now', signal), [], { every: 60000, live: (d) => d?.tournaments.some((t) => t.live) });
   const age = useAge(data ? Date.parse(data.at) : null);
   const list = data?.tournaments ?? [];
   const rest = list.slice(6);

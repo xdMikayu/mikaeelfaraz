@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useRef, useState } from 'react';
-import { projectAhead, returnOdds, suggestTransfers, fixtureRates } from '@/lib/sport/fpl.mjs';
-import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
+import { projectAhead, returnOdds, suggestTransfers, fixtureRates } from '@/lib/fpl.mjs';
+import { ROLE_NAME } from '@/lib/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
 import Record from './FantasyRecord';
 import Advice from './FantasyAdvice';

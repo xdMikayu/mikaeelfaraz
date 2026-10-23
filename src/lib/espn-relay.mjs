@@ -1,4 +1,4 @@
-// The server half of the ESPN relay (/api/sport/espn): pages read ESPN directly from the browser
+// The server half of the ESPN relay (/api/espn): pages read ESPN directly from the browser
 // and come here only when that fails (ESPN's CDN turns some clients away, and its error responses
 // carry no CORS header). Limited to the read-only soccer paths the app uses.
 
@@ -11,7 +11,7 @@ const ALLOWED = [
 export async function relayEspn(u, { cacheable }) {
   if (!ALLOWED.some((re) => re.test(u))) return Response.json({ error: 'Not an allowed ESPN path' }, { status: 400 });
   try {
-    const res = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' }, cache: 'no-store' });
+    const res = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; matchday.mikaeelfaraz.com)' }, cache: 'no-store' });
     const body = await res.text();
     const fresh = u.includes('standings') || u.includes('schedule') ? 300 : 15;
     const v = `public, s-maxage=${fresh}, stale-while-revalidate=${fresh * 4}`;

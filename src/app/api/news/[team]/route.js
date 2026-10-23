@@ -1,6 +1,6 @@
-// GET /api/sport/news/<club>: the old form, for pages loaded before /api/sport/news/<club>/<gameweek>.
+// GET /api/news/<club>: the old form, for pages loaded before /api/news/<club>/<gameweek>.
 // Without the gameweek in the path the CDN could serve last week's news, so this isn't cached.
-import { newsResponse } from '@/lib/sport/news-route.mjs';
+import { newsResponse } from '@/lib/news-route.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

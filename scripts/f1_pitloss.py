@@ -3,12 +3,12 @@
 What a pit stop costs at each track under green flags, for the live view's "if they pit now"
 estimate. Reads the race and sprint files f1_sessions.py writes. A stop costs its in-lap and out-lap
 against the same driver's green-flag pace either side of it (up to three laps before and three
-after). Writes src/lib/sport/f1-pitloss.json: each event's median cost and how many stops it's from.
+after). Writes src/lib/f1-pitloss.json: each event's median cost and how many stops it's from.
 
 Stops under a safety car or virtual safety car cost less, by an amount that varies with when the
 safety car came out; there are too few of them to say how much, so the live view doesn't guess.
 
-    python scripts/sport/f1_pitloss.py --data DIR [DIR …]
+    python scripts/f1_pitloss.py --data DIR [DIR …]
 
 Each DIR holds a folder per season.
 """
@@ -18,7 +18,7 @@ import json
 import os
 from statistics import median
 
-OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'lib', 'sport', 'f1-pitloss.json')
+OUT = os.path.join(os.path.dirname(__file__), '..', 'src', 'lib', 'f1-pitloss.json')
 
 
 def stops(race):
@@ -59,7 +59,7 @@ def main():
             found.setdefault(event, []).append(lost)
 
     out = {event: {'loss': round(median(v), 1), 'stops': len(v)} for event, v in sorted(found.items()) if len(v) >= 5}
-    out['_note'] = f'From {len(files)} races and sprints, {seasons[0]}–{seasons[-1]}, by scripts/sport/f1_pitloss.py.'
+    out['_note'] = f'From {len(files)} races and sprints, {seasons[0]}–{seasons[-1]}, by scripts/f1_pitloss.py.'
     with open(args.out, 'w') as fh:
         json.dump(out, fh, indent=1, ensure_ascii=False)
     for event, row in out.items():

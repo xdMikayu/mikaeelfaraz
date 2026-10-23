@@ -17,20 +17,20 @@
 // the factor in full", 0 means "it predicts nothing". The small-sample shrinkage for form and
 // history is chosen by grid search on the training season.
 //
-//   node scripts/sport/fit-netxg.mjs        # writes public/sport/data/pl/netxg-model.json
+//   node scripts/fit-netxg.mjs        # writes public/data/pl/netxg-model.json
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { rateTeams } from '../../src/lib/sport/forecast.mjs';
-import { roleFactor, ROLES } from '../../src/lib/sport/matchups.mjs';
-import { rawFactors, designRow, FEATURES } from '../../src/lib/sport/netxg.mjs';
+import { rateTeams } from '../src/lib/forecast.mjs';
+import { roleFactor, ROLES } from '../src/lib/matchups.mjs';
+import { rawFactors, designRow, FEATURES } from '../src/lib/netxg.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const seasonOf = (d) => (Number(d.slice(5, 7)) >= 7 ? Number(d.slice(0, 4)) : Number(d.slice(0, 4)) - 1);
 const seasons = [2023, 2024, 2025, 2026];
 const matches = [];
 for (const s of seasons) {
-  const data = JSON.parse(await readFile(join(ROOT, `data/sport/pl-matches/${s}.json`), 'utf8').catch(() => '{}'));
+  const data = JSON.parse(await readFile(join(ROOT, `data/pl-matches/${s}.json`), 'utf8').catch(() => '{}'));
   for (const [id, m] of Object.entries(data)) matches.push({ id, ...m });
 }
 matches.sort((a, b) => a.d.localeCompare(b.d));
@@ -126,7 +126,7 @@ console.log(`${rows.length} player-matches with features (2024/25 on)`);
 
 /* ------------------------------------------------------------- features */
 
-// The same factor definitions the live page uses (src/lib/sport/netxg.mjs).
+// The same factor definitions the live page uses (src/lib/netxg.mjs).
 function features(x, kForm, kHist, which) {
   const xa = which === 'xa';
   return designRow(
@@ -282,6 +282,6 @@ model.summary = {
   xaGain: gain(report.xa.test),
   handSetWorse: report.xg.test.handSet.deviance > report.xg.test.usualRate.deviance,
 };
-await writeFile(join(ROOT, 'public/sport/data/pl/netxg-model.json'), JSON.stringify(model, null, 1));
+await writeFile(join(ROOT, 'public/data/pl/netxg-model.json'), JSON.stringify(model, null, 1));
 console.log(JSON.stringify(report, null, 1));
 console.log(JSON.stringify({ xg: model.xg.weights, xa: model.xa.weights, shrink: model.xg.shrink }, null, 1));

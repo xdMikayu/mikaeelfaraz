@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { DC_NEED } from '@/lib/sport/fpl.mjs';
-import { clubChances } from '@/lib/sport/chances.mjs';
-import { defconRows, pointsPerXgi, samePointsLevels, samePointsLine } from '@/lib/sport/defcon.mjs';
+import { DC_NEED } from '@/lib/fpl.mjs';
+import { clubChances } from '@/lib/chances.mjs';
+import { defconRows, pointsPerXgi, samePointsLevels, samePointsLine } from '@/lib/defcon.mjs';
 import Scatter from './Scatter';
 import { shirt } from './fplbits';
 
@@ -12,9 +12,9 @@ import { shirt } from './fplbits';
 // end, the chart that goes round FPL Twitter, in Opta's numbers.
 
 let chancesLoad = null;
-/** public/sport/data/pl/chances.json (scripts/sport/build-chances.mjs), once per visit. */
+/** public/data/pl/chances.json (scripts/build-chances.mjs), once per visit. */
 const chancesFor = () => {
-  chancesLoad ??= fetch('/sport/data/pl/chances.json').then((r) => (r.ok ? r.json() : Promise.reject(new Error(`chances ${r.status}`))));
+  chancesLoad ??= fetch('/data/pl/chances.json').then((r) => (r.ok ? r.json() : Promise.reject(new Error(`chances ${r.status}`))));
   chancesLoad.catch(() => (chancesLoad = null));
   return chancesLoad;
 };

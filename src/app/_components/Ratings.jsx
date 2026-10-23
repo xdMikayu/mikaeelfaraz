@@ -1,10 +1,10 @@
 'use client';
 import Link from 'next/link';
-import { band } from '@/lib/sport/ratings.mjs';
+import { band } from '@/lib/ratings.mjs';
 import { Ball, Boot, Card, Star } from './glyphs';
 import Disc from './PlayerDisc';
 
-// Player ratings on the match page (src/lib/sport/ratings.mjs): a pill coloured by band as FotMob does
+// Player ratings on the match page (src/lib/ratings.mjs): a pill coloured by band as FotMob does
 // it (green from 7, orange for an ordinary game, red under 6, blue from 9), black figures on every band,
 // and the best on the pitch blue with a star. Lists put each player's face (or shirt) first and line the
 // pills up on the right.
@@ -74,7 +74,7 @@ export function RatingsPanel({ ratings, lineups, names, colors, faces, onAll, li
       </div>
       <p className="sp-tiny sp-muted" style={{ margin: '10px 0 0' }}>
         Our ratings, out of 10, from the match’s own data{live ? ', and they move as it goes' : ''}.{' '}
-        <Link className="sp-link" href="/sport/settings#ratings">
+        <Link className="sp-link" href="/settings#ratings">
           How they’re worked out
         </Link>
       </p>

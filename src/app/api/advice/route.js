@@ -1,16 +1,16 @@
-// GET /api/sport/advice?id=<FPL team>&ft=<free transfers, optional>&stage=prep
+// GET /api/advice?id=<FPL team>&ft=<free transfers, optional>&stage=prep
 //   Which clubs' news matters for this team (doubts in the squad, the players the options move).
-// GET /api/sport/advice?id=<FPL team>&ft=<optional>&news=<club ids>&league=<mini-league, optional>
-//   Matchday AI's plan for the next deadline (src/lib/sport/advice.mjs), with those clubs' news
-//   from /api/sport/news/<club>/<gameweek> applied, and an honest verdict measured against the
+// GET /api/advice?id=<FPL team>&ft=<optional>&news=<club ids>&league=<mini-league, optional>
+//   Matchday AI's plan for the next deadline (src/lib/advice.mjs), with those clubs' news
+//   from /api/news/<club>/<gameweek> applied, and an honest verdict measured against the
 //   league. The page fetches the news in between, so each request stays inside the function time
 //   limit and every manager shares each club's news.
 // Never cached at the CDN: its cache key ignores query strings on this site, so one manager's
 // answer would be served to the next. The function keeps its own copy per team and news, and a
 // daily ceiling stops runaway use.
-import { getStatic, getFixtures, getEntry, getNextSquad, getLeague, getPoints } from '@/lib/sport/fpl-server.mjs';
-import { makeKit, makeCtx } from '@/lib/sport/kit.mjs';
-import { adviceEnabled, buildPacket, askModel, validate, newsClubs } from '@/lib/sport/advice.mjs';
+import { getStatic, getFixtures, getEntry, getNextSquad, getLeague, getPoints } from '@/lib/fpl-server.mjs';
+import { makeKit, makeCtx } from '@/lib/kit.mjs';
+import { adviceEnabled, buildPacket, askModel, validate, newsClubs } from '@/lib/advice.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,15 +25,15 @@ let used = 0;
 const json = (body, status) => Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 
 async function data(path, req) {
-  const res = await fetch(new URL(`/sport/data/pl/${path}`, req.url));
+  const res = await fetch(new URL(`/data/pl/${path}`, req.url));
   if (!res.ok) throw new Error(`Matchup data ${res.status}`);
   return res.json();
 }
 
-/** The bookmakers' expected goals the page is using (the CDN's copy of /api/sport/odds); none if it fails. */
+/** The bookmakers' expected goals the page is using (the CDN's copy of /api/odds); none if it fails. */
 async function bookmakers(req) {
   try {
-    const res = await fetch(new URL('/api/sport/odds', req.url), { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(new URL('/api/odds', req.url), { signal: AbortSignal.timeout(5000) });
     return res.ok ? ((await res.json()).fixtures ?? null) : null;
   } catch {
     return null;
@@ -44,7 +44,7 @@ async function bookmakers(req) {
 async function clubNews(teams, gw, req) {
   const got = await Promise.allSettled(
     teams.map(async (t) => {
-      const res = await fetch(new URL(`/api/sport/news/${t}/${gw}`, req.url), { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(new URL(`/api/news/${t}/${gw}`, req.url), { signal: AbortSignal.timeout(5000) });
       const body = await res.json();
       if (!res.ok) throw Object.assign(new Error(body.error || `News ${res.status}`), { code: body.code });
       // A report for another gameweek (cached before a deadline passed) doesn't apply.

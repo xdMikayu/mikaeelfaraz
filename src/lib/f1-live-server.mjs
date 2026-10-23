@@ -1,4 +1,4 @@
-// Reads F1's live timing for /api/sport/f1/live.
+// Reads F1's live timing for /api/f1/live.
 //
 // F1's feed (livetiming.formula1.com/signalrcore) gives out the timing without a login, but only
 // F1's own site may read it from a browser. So the route reads it: connect, subscribe, take the
@@ -6,14 +6,14 @@
 // for a few seconds, so F1 sees one connection every few seconds however many people are watching.
 //
 // Other sources:
-//   - F1_LIVE_URL reads a state from somewhere else instead: scripts/sport/f1-replay.mjs when testing.
+//   - F1_LIVE_URL reads a state from somewhere else instead: scripts/f1-replay.mjs when testing.
 //   - OpenF1 (f1-openf1.mjs) is the fallback when F1's feed fails, for anyone who sets up its paid tier.
 
 import { tower } from './f1-live.mjs';
 import { openF1Ready, fromOpenF1 } from './f1-openf1.mjs';
 
 const BASE = 'https://livetiming.formula1.com/signalrcore';
-const UA = { 'user-agent': 'Mozilla/5.0 (personal F1 pages; mikaeelfaraz.com)' };
+const UA = { 'user-agent': 'Mozilla/5.0 (personal F1 pages; matchday.mikaeelfaraz.com)' };
 const RS = '\x1e'; // ends each SignalR message
 
 /** The topics the live view reads. Car telemetry and positions need an F1 TV login, so they aren't here. */

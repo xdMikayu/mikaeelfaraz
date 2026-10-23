@@ -1,10 +1,10 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { lapText, gapText } from '@/lib/sport/f1.mjs';
+import { lapText, gapText } from '@/lib/f1.mjs';
 import { Mark } from './f1bits';
 import { heat } from './fplbits';
 
-// The F1 session charts, drawn from the session data (scripts/sport/f1_sessions.py): positions lap
+// The F1 session charts, drawn from the session data (scripts/f1_sessions.py): positions lap
 // by lap, tyre strategies, race pace, and two qualifying laps traced along the track. Team colours
 // only; a team's second driver is dashed where both are drawn.
 

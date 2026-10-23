@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.netlify/
+.env
+.env*.local
+.DS_Store
+npm-debug.log*
+
+# Cricsheet downloads and the cricket model's working files (see scripts/cricket-extract.mjs)
+/data/cricsheet/
+/data/cricket/
+
+# Python (the F1 data scripts), FastF1's download cache and the F1 replay's (scripts/f1-replay.mjs)
+__pycache__/
+.fastf1-cache/
+.f1-replay-cache/

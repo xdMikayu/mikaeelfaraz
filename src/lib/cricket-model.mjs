@@ -1,5 +1,5 @@
 // Matchday's cricket model at work: projected totals, win chances and par scores from the tables
-// scripts/sport/fit-cricket.mjs learns from Cricsheet's ball-by-ball history. Pure functions over
+// scripts/fit-cricket.mjs learns from Cricsheet's ball-by-ball history. Pure functions over
 // those tables, shared by the fit (to score itself on matches it never saw) and the site.
 //
 // One idea runs through it: from any point in an innings, how many more runs a side makes depends on

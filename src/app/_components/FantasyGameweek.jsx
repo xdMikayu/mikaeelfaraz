@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { fixtureRates } from '@/lib/sport/fpl.mjs';
-import { matchOdds } from '@/lib/sport/forecast.mjs';
+import { fixtureRates } from '@/lib/fpl.mjs';
+import { matchOdds } from '@/lib/forecast.mjs';
 import { shirt, heat } from './fplbits';
 import { kickoff } from './time';
 import Leaderboard from './FantasyLeaderboard';
@@ -17,7 +17,7 @@ const span = (vals) => {
   return (v) => (v != null && hi > lo ? (v - lo) / (hi - lo) : 0);
 };
 
-/** A match's numbers from the bookmakers' prices (see /api/sport/odds), or null where there are none. */
+/** A match's numbers from the bookmakers' prices (see /api/odds), or null where there are none. */
 function fromPrices(b) {
   if (!b) return null;
   return { provider: b.provider, r: { home: b.home, away: b.away }, o: { home: b.win[0], draw: b.win[1], away: b.win[2], csHome: b.csHome, csAway: b.csAway } };

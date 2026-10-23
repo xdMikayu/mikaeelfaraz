@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { crest } from '@/lib/sport/espn.mjs';
+import { crest } from '@/lib/espn.mjs';
 import { useDark } from './colors';
 
 /**

@@ -1,8 +1,8 @@
 'use client';
 import { useMemo } from 'react';
-import { allowedByRole, versus, ROLE_NAME, ROLE_ONE } from '@/lib/sport/matchups.mjs';
-import { rolling, slope } from '@/lib/sport/forecast.mjs';
-import { projectAhead } from '@/lib/sport/fpl.mjs';
+import { allowedByRole, versus, ROLE_NAME, ROLE_ONE } from '@/lib/matchups.mjs';
+import { rolling, slope } from '@/lib/forecast.mjs';
+import { projectAhead } from '@/lib/fpl.mjs';
 import { usePlayerLog } from './matchupData';
 import { one } from './fplbits';
 

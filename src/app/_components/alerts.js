@@ -35,10 +35,10 @@ export function useAlerts(matches) {
 
 function notify(title, body, id) {
   try {
-    const n = new Notification(title, { body, tag: `${id}-${title}`, icon: '/sport/icon-192.png' });
+    const n = new Notification(title, { body, tag: `${id}-${title}`, icon: '/icon-192.png' });
     n.onclick = () => {
       window.focus();
-      window.location.href = `/sport/match?id=${id}`;
+      window.location.href = `/match?id=${id}`;
     };
   } catch {}
 }

@@ -1,24 +1,24 @@
 #!/usr/bin/env node
-// Checks Matchday's player ratings (src/lib/sport/ratings.mjs) on this season's finished Premier
+// Checks Matchday's player ratings (src/lib/ratings.mjs) on this season's finished Premier
 // League matches, the only league with an outside measure to hold them against: FPL's bonus point
 // system (BPS), Opta's own per-player score. It prints how the ratings spread (starters by role,
 // substitutes, how many reach 8 and 9), how closely they follow BPS, how often the best-rated
 // player is among a match's top three for BPS, the season's best performances, and with --fit the
 // scale (SCALE.k and SCALE.base) that puts every role's starters on the target average and spread.
 //
-//   node scripts/sport/check-ratings.mjs                  # the report
-//   node scripts/sport/check-ratings.mjs --no-fpl         # as other leagues get them: no FPL numbers
-//   MEAN=6.8 SD=0.7 node scripts/sport/check-ratings.mjs --fit
+//   node scripts/check-ratings.mjs                  # the report
+//   node scripts/check-ratings.mjs --no-fpl         # as other leagues get them: no FPL numbers
+//   MEAN=6.8 SD=0.7 node scripts/check-ratings.mjs --fit
 import { join } from 'node:path';
-import { fetchMatch } from '../../src/lib/sport/espn.mjs';
-import { getStatic, getFixtures, getLive } from '../../src/lib/sport/fpl-server.mjs';
-import { fplFixtureFor, fplPlayersFor } from '../../src/lib/sport/fplmap.mjs';
-import { matchRatings } from '../../src/lib/sport/ratings.mjs';
+import { fetchMatch } from '../src/lib/espn.mjs';
+import { getStatic, getFixtures, getLive } from '../src/lib/fpl-server.mjs';
+import { fplFixtureFor, fplPlayersFor } from '../src/lib/fplmap.mjs';
+import { matchRatings } from '../src/lib/ratings.mjs';
 import { DATA, readJson } from './kit.mjs';
 
 const SITE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 const WEB = 'https://site.web.api.espn.com/apis/v2/sports/soccer';
-const UA = { 'user-agent': 'Mozilla/5.0 (Matchday ratings check; mikaeelfaraz.com)', accept: 'application/json' };
+const UA = { 'user-agent': 'Mozilla/5.0 (Matchday ratings check; matchday.mikaeelfaraz.com)', accept: 'application/json' };
 const noFpl = process.argv.includes('--no-fpl');
 const fit = process.argv.includes('--fit');
 const MEAN = Number(process.env.MEAN ?? 6.8);

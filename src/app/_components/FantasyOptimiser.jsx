@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { planTransfers, buildSquad, rotationPairs, bestXI, estimateFree } from '@/lib/sport/optimise.mjs';
+import { planTransfers, buildSquad, rotationPairs, bestXI, estimateFree } from '@/lib/optimise.mjs';
 import { one, heat, Face } from './fplbits';
 import { priceOutlook } from './FantasyPrices';
 

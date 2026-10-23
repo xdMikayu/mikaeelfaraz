@@ -1,10 +1,10 @@
-// GET /api/sport/cricket/week: internationals starting in the next week, from ESPN's per-day
+// GET /api/cricket/week: internationals starting in the next week, from ESPN's per-day
 // scorepanel (it has no date ranges, so one request a day), each with Matchday's pre-match read
 // (par and each side's chance from the ratings). Fixtures rarely move, so the CDN keeps the answer
 // for 3 hours; the page drops any that have started since.
-import { upcomingInternationals } from '@/lib/sport/cricket.mjs';
-import { readMatch } from '@/lib/sport/cricket-read.mjs';
-import { modelTables } from '@/lib/sport/cricket-data.mjs';
+import { upcomingInternationals } from '@/lib/cricket.mjs';
+import { readMatch } from '@/lib/cricket-read.mjs';
+import { modelTables } from '@/lib/cricket-data.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,7 @@ export async function GET() {
   const days = Array.from({ length: 8 }, (_, i) => ymd(Date.now() + i * 864e5));
   const got = await Promise.allSettled(
     days.map(async (d) => {
-      const res = await fetch(`${ESPN}?dates=${d}`, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; mikaeelfaraz.com)' }, cache: 'no-store' });
+      const res = await fetch(`${ESPN}?dates=${d}`, { headers: { 'user-agent': 'Mozilla/5.0 (personal score viewer; matchday.mikaeelfaraz.com)' }, cache: 'no-store' });
       if (!res.ok) throw new Error(`ESPN ${res.status}`);
       return res.json();
     }),

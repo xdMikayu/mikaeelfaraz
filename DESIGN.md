@@ -1,6 +1,6 @@
 # Matchday design rules: kit colours
 
-The sports app at `/sport` (football, cricket, F1, and tennis and wrestling to come), a product with its own look. The
+Matchday: football, cricket, F1, and tennis and wrestling to come, a product with its own look. The
 direction ("B: kit colours") was picked from three mockups. Check every screen against this file before it ships.
 
 ## The idea
@@ -33,7 +33,7 @@ two earlier versions of this app shipped them.
 | Black and white | Everything else |
 | Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions, F1 sectors): more ink means more. F1 tyres too: more ink is a softer compound, wet tyres outlined |
 
-- Every team colour goes through `src/lib/sport/kit-colors.mjs`, wherever it comes from:
+- Every team colour goes through `src/lib/kit-colors.mjs`, wherever it comes from:
   - ESPN's raw screen primaries become the colour of the real shirt: `#0000fa` a royal blue, `#ffff00` a kit yellow,
     neon greens a true green. Designed colours (Chelsea's blue, Villa's claret) pass unchanged.
   - One colour per team on a page: its block, its chart lines, its bars and its share of a forecast all match.
@@ -96,7 +96,7 @@ two earlier versions of this app shipped them.
   ("/" or Cmd-K opens it anywhere).
 - Search finds everything: with nothing typed it lists every feature, sport by sport, in a line each, so nothing
   is only reachable by knowing where it is; typing narrows it to features, competitions, clubs and FPL players.
-  Every tab, and every tab's own tabs, is in the address (`/sport/fantasy?tab=players&view=sets`), so search,
+  Every tab, and every tab's own tabs, is in the address (`/fantasy?tab=players&view=sets`), so search,
   links and the back button can open any of them. A new feature gets a line in `FEATURES` in `_components/nav.js`.
 - Nothing needs a team to be seen: without an FPL team ID, Fantasy's Gameweek, Players and Stats still work, and
   the team tab says what a team adds.
@@ -106,7 +106,7 @@ two earlier versions of this app shipped them.
 ## The mark
 
 "The fixture": two halves facing each other across a gap, home and away, or a ball about to be kicked off. A red
-half and an ink half on a white tile (`public/sport/icon.svg`), so it reads on any background, light or dark.
+half and an ink half on a white tile (`public/icon.svg`), so it reads on any background, light or dark.
 
 - It sits before the name everywhere the name appears: "◐ Matchday · Cricket" in the header, the menu and the
   sidebar.
@@ -122,7 +122,7 @@ Each sport is a pictogram drawn for the app (`SportGlyph` in `_components/glyphs
 - Balanced to carry about the same ink: a ball, a bat and ball, a tennis ball's seams (diagonal, so it doesn't read
   as a baseball), a chequered flag, a championship belt.
 - Words lead and the pictogram follows: the active sport gets weight and a 2 px ink rule, never a filled pill.
-- A sport page's browser-tab icon is its pictogram (`public/sport/marks/`); saved to the home screen, it's still
+- A sport page's browser-tab icon is its pictogram (`public/marks/`); saved to the home screen, it's still
   Matchday's mark.
 
 ## Team markers
@@ -147,9 +147,9 @@ outline for a play-off, red for the drop, and a line where one zone ends. No oth
 
 ## Player ratings
 
-Our own, worked out in `src/lib/sport/ratings.mjs` from the free data (ESPN's lineups and numbers, Opta's commentary
+Our own, worked out in `src/lib/ratings.mjs` from the free data (ESPN's lineups and numbers, Opta's commentary
 with our xG, and FPL's Opta numbers in the Premier League) and checked against FPL's bonus points by
-`scripts/sport/check-ratings.mjs`. Settings › About the data explains them in plain words; keep that page true when
+`scripts/check-ratings.mjs`. Settings › About the data explains them in plain words; keep that page true when
 the weights or the scale change.
 
 - A pill, one decimal, black figures on every band (`--sp-rt-*`), FotMob's scale: green (#33c771) from 7, orange from 6,
@@ -186,7 +186,7 @@ Built to be followed at a glance (`_components/CricketLive.jsx`):
 ## Set pieces
 
 Who each Premier League club aims for at corners and free kicks into the box (`_components/SetPieces.jsx`,
-built into `public/sport/data/pl/setpieces.json` by `scripts/sport/build-matchups.mjs`):
+built into `public/data/pl/setpieces.json` by `scripts/build-matchups.mjs`):
 
 - Counted from Opta's commentary on ESPN: every shot or header that "followed a corner" or "a set piece
   situation". A player's share is of his club's attempts while he was on the pitch. A flick-on, or a header
@@ -227,7 +227,7 @@ Flashscore, LiveScore, 365Scores, the Premier League's site, user reviews and fo
 
 ## DEFCON, live
 
-In Fantasy › Team (`_components/FantasyDefcon.jsx`, `src/lib/sport/fpl.mjs` `defconFixture`): every outfield
+In Fantasy › Team (`_components/FantasyDefcon.jsx`, `src/lib/fpl.mjs` `defconFixture`): every outfield
 player who counts this gameweek against FPL's defensive-contribution line, 10 for a defender and 12 for a
 midfielder or forward.
 
@@ -253,7 +253,7 @@ managers, against your mini-league or the world's top 50 (the first page of FPL'
 
 ## Ask Matchday AI
 
-A chat under Planner › Transfers (`_components/FantasyChat.jsx`, `src/lib/sport/chat.mjs`) for the question the
+A chat under Planner › Transfers (`_components/FantasyChat.jsx`, `src/lib/chat.mjs`) for the question the
 planner can't answer on its own: why this player and not the one I want?
 
 - The server does the arithmetic, the model the explaining. Its tools give a player's full report (minutes, threat,
@@ -278,13 +278,13 @@ Two charts sit among them, scatters drawn at their real width (`_components/Scat
 fit, never over a shirt, a point that matters or another label; every point has a hover or tap card; a table
 stands behind each; one sentence under each says what it shows.
 
-- **DEFCON and goal threat** (`_components/FantasyCharts.jsx`, `src/lib/sport/defcon.mjs`): defensive
+- **DEFCON and goal threat** (`_components/FantasyCharts.jsx`, `src/lib/defcon.mjs`): defensive
   contributions per 90 against xGI per 90, for defenders or midfielders. FPL's line for 2 points is drawn, and
   curves join the players worth the same per 90 from the two together, by FPL's scoring and the projections'
   own model for reaching the line. The manager's players are in ink and named; everyone else is grey, the best
   six named.
 - **Club chances**: every club's non-penalty xG and big chances a match, conceded or created, in Opta's numbers
-  (`public/sport/data/pl/chances.json`, built twice a week by `scripts/sport/build-chances.mjs`). Shirts are
+  (`public/data/pl/chances.json`, built twice a week by `scripts/build-chances.mjs`). Shirts are
   the markers and the league's averages the lines; "Better" and "Worse" name the corners in words, never a
   red-to-green wash behind them.
 
@@ -298,7 +298,7 @@ What following cricket live taught, applied to football and F1 too:
 - **One sentence says what it means**, in an ink band under the scoreboard, its numbers big:
   - Football, in a league: "As it stands: **Liverpool** go up to **6th** · **LASK** stay **27th**", with every match
     in the league being played counted as if it ended now, and finished ones until ESPN's table has them
-    (`src/lib/sport/as-it-stands.mjs`); before kick-off, where a win would take each side; after the whistle,
+    (`src/lib/as-it-stands.mjs`); before kick-off, where a win would take each side; after the whistle,
     "In the table", for the rest of the day. In the second leg of a tie, the aggregate.
   - F1: "**Verstappen** leads by **4.2 s**, 12 laps to go"; in qualifying, who's out as it stands; "provisional
     pole"; in practice, the fastest.
@@ -319,8 +319,8 @@ What following cricket live taught, applied to football and F1 too:
 The F1 pages open on the race weekend as a title card (`_components/F1Hero.jsx`), in ink:
 
 - **The circuit, drawn large**, in white. Outlines from Tomislav Bacinger's f1-circuits (MIT licence; notice in
-  `src/lib/sport/f1-circuits.LICENSE.md`), built into `src/lib/sport/f1-circuits.json` by
-  `scripts/sport/f1-circuits.mjs`.
+  `src/lib/f1-circuits.LICENSE.md`), built into `src/lib/f1-circuits.json` by
+  `scripts/f1-circuits.mjs`.
 - **The race in the scoreboard's type**, and under it the one thing that matters now, in big numerals: "Lights out
   in **11** days" before the weekend, "Qualifying in **3** h **12** min" during it, "On now: **Qualifying**" with a
   link to the timing, or the winner once it's over (not while spoilers are hidden).

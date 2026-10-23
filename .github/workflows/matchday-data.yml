@@ -31,18 +31,18 @@ jobs:
         with:
           node-version: 22
       # The script uses only Node's built-ins and the app's own modules, so no npm install.
-      - run: node scripts/sport/build-matchups.mjs
+      - run: node scripts/build-matchups.mjs
       # Every club's chances at both ends in Opta's numbers: xG from FPL's players, big chances from the
       # Premier League's match stats. Either can turn cloud machines away; the chart then waits a run.
-      - run: node scripts/sport/build-chances.mjs || echo "FPL or the Premier League unavailable; chances not updated this run"
+      - run: node scripts/build-chances.mjs || echo "FPL or the Premier League unavailable; chances not updated this run"
       # Relearn the Net xG weights with the new matches and re-test them (a few seconds).
-      - run: node scripts/sport/fit-netxg.mjs
+      - run: node scripts/fit-netxg.mjs
       # Save this gameweek's projections before the deadline, and grade finished gameweeks.
       # FPL sometimes turns cloud machines away; the record then waits for the next run.
-      - run: node scripts/sport/accuracy.mjs || echo "FPL unavailable; track record not updated this run"
+      - run: node scripts/accuracy.mjs || echo "FPL unavailable; track record not updated this run"
       - name: Commit if anything changed
         run: |
-          git add data/sport public/sport/data
+          git add data public/data
           if git diff --cached --quiet; then
             echo "No new matches."
             exit 0

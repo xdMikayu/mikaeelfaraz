@@ -1,13 +1,13 @@
-// POST /api/sport/chat  { id, horizon?, ft?, league?, messages: [{ role, content }] }
-//   Matchday AI's transfer chat (src/lib/sport/chat.mjs): answers the manager's latest message
+// POST /api/chat  { id, horizon?, ft?, league?, messages: [{ role, content }] }
+//   Matchday AI's transfer chat (src/lib/chat.mjs): answers the manager's latest message
 //   from our numbers. The answer streams as lines of JSON: { t: 'status', text } while it looks
 //   things up, { t: 'text', d } for each piece of it, then { t: 'done' } or { t: 'error', error }.
 // Never cached at the CDN: it's a POST, and every answer is one manager's. Each manager's numbers
 // are kept here for five minutes, so a conversation sees the same ones (and the model's prompt
 // cache holds); a daily ceiling stops runaway use.
-import { getStatic, getFixtures, getEntry, getNextSquad } from '@/lib/sport/fpl-server.mjs';
-import { makeKit, makeCtx } from '@/lib/sport/kit.mjs';
-import { chatEnabled, chatWorld, chatTurns, runChat, chatError } from '@/lib/sport/chat.mjs';
+import { getStatic, getFixtures, getEntry, getNextSquad } from '@/lib/fpl-server.mjs';
+import { makeKit, makeCtx } from '@/lib/kit.mjs';
+import { chatEnabled, chatWorld, chatTurns, runChat, chatError } from '@/lib/chat.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,7 @@ const json = (body, status) => Response.json(body, { status, headers: { 'cache-c
 const id10 = (v) => (Number.isInteger(v) && v > 0 && v < 1e10 ? v : null);
 
 async function data(path, req) {
-  const res = await fetch(new URL(`/sport/data/pl/${path}`, req.url));
+  const res = await fetch(new URL(`/data/pl/${path}`, req.url));
   if (!res.ok) throw new Error(`Matchup data ${res.status}`);
   return res.json();
 }
@@ -71,14 +71,14 @@ export async function POST(req) {
         getEntry(id, st.current),
         data('index.json', req),
         data('netxg-model.json', req),
-        cached('/api/sport/odds', req),
-        cached('/api/sport/fpl/season', req),
+        cached('/api/odds', req),
+        cached('/api/fpl/season', req),
         data('setpieces.json', req).catch(() => null),
       ]);
       if (!entry?.gw) return json({ error: `FPL has no picks for team ${id} yet` }, 404);
       // Only a league the team is in, from the same cached route the League tab reads.
       const leagueId = leagueAsked && entry.leagues.some((l) => l.id === leagueAsked) ? leagueAsked : null;
-      const [next, league] = await Promise.all([getNextSquad(id, entry, st.current), leagueId ? cached(`/api/sport/fpl/league/${leagueId}/${st.current}`, req) : null]);
+      const [next, league] = await Promise.all([getNextSquad(id, entry, st.current), leagueId ? cached(`/api/fpl/league/${leagueId}/${st.current}`, req) : null]);
       const kit = makeKit(ix, learned);
       const ctx = makeCtx(st, kit, undefined, odds?.fixtures ?? null);
       world = chatWorld({ st, fixtures, entry, next, ctx, ix, season, setpieces, league, horizon, free: ft, load: (path) => data(path, req) });
