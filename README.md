@@ -17,6 +17,21 @@ npm run lint
 Copy `.env.example` to `.env.local` to switch on Matchday AI (advice, the transfer chat, news
 checks). Without a key everything else works.
 
+## How it runs
+
+The pages are static; the numbers come in from the browser:
+
+```
+Browser ─ ESPN's public API ─► scores, events, lineups, stats, commentary, shots
+   │        └─ if that fails ─► /api/espn (allow-listed relay, cached at the CDN)
+   ├──── /api/fpl ─► FPL (no CORS), trimmed, cached at the CDN (live points: 20 s)
+   ├──── /api/odds, /api/cricket, /api/tennis, /api/f1 ─► bookmakers' prices, ESPN, Jolpica, F1 live timing
+   └──── /api/advice, /api/chat, /api/news ─► Matchday AI (Claude), with daily limits
+```
+
+Nothing is stored on the server, the CDN shares one upstream call between viewers per window, and
+pages poll only while something is live and the tab is visible.
+
 ## Where things are
 
 - `src/app`: the pages (football at `/`, then `/fantasy`, `/cricket`, `/f1`, …), and in
