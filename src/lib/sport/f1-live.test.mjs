@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { merge, parseStream, gapOf, kindOf, startOf, sameSession, rejoin, messageKind, incidents, plain, tower } from './f1-live.mjs';
+import { merge, parseStream, gapOf, kindOf, startOf, sameSession, rejoin, messageKind, incidents, plain, tower, phaseOf, paceOf } from './f1-live.mjs';
 
 // Shapes copied from F1's feed for the 2026 Singapore weekend.
 const msg = (Lap, Message, extra = {}) => ({ Utc: '2026-10-11T13:00:00', Lap, Category: 'Other', Message, ...extra });
@@ -263,6 +263,90 @@ test('qualifying: the part, the cut and each part’s best', () => {
   // Between the parts F1 says "Inactive" again.
   const gap = tower({ ...q, SessionStatus: { Status: 'Inactive', Started: 'Finished' } });
   assert.equal(gap.session.status, 'break');
+});
+
+// Mini-sectors as F1 sends them, from letters: "." not reached, y slower, g personal best, p best of anyone, b pit lane.
+const CODE = { '.': 0, y: 2048, g: 2049, p: 2051, b: 2064 };
+const sector = (segs, Value = '', extra = {}) => ({ Value, PersonalFastest: false, OverallFastest: false, Segments: [...segs].map((c) => ({ Status: CODE[c] })), ...extra });
+// The best of anyone in each sector, in the 2026 United States Grand Prix's second part.
+const COTA = [25.28, 37.575, 31.454];
+
+test('where a car is in its lap: the pits, out laps, in laps and the flag', () => {
+  assert.equal(phaseOf({ inPit: true, segs: ['yyyyyy', 'yyyyyyyy', 'yyyyybbb'] }), 'pit');
+  assert.equal(phaseOf({ status: 80 }), 'pit');
+  // F1 marks an out lap, and it begins in the pit lane.
+  assert.equal(phaseOf({ status: 576, segs: ['bbyyyy', 'yy......', '........'], best: COTA }), 'out');
+  assert.equal(phaseOf({ status: 64, segs: ['bbyyyy', 'yyyyyyyy', 'yyyyyy..'], best: COTA }), 'out');
+  assert.equal(phaseOf({ pitOut: true, segs: [] }), 'out');
+  assert.equal(phaseOf({ status: 64, segs: ['yyyyyy', 'yyyyyyyy', 'yyyyy..b'], best: COTA }), 'in');
+  // Over the line after the chequered flag.
+  assert.equal(phaseOf({ status: 1088, segs: ['gygygg', 'yyggggpg', 'ggggyyyy'], now: [25.622, 37.898, 32.449], best: COTA }), 'done');
+});
+
+test('flying laps and slow ones', () => {
+  assert.equal(phaseOf({ status: 64, segs: ['gg....', '........', '........'], best: COTA }), 'push');
+  // Within 7% of the best of anyone is a flying lap, even in yellow.
+  assert.equal(phaseOf({ status: 64, segs: ['yyyyyy', 'yyy.....', '........'], now: [25.9, null, null], best: COTA }), 'push');
+  assert.equal(phaseOf({ status: 64, segs: ['yyyyyy', 'y.......', '........'], now: [32.115, null, null], best: COTA }), 'slow');
+  // Three mini-sectors and not one of them a best.
+  assert.equal(phaseOf({ status: 64, segs: ['yyy...', '........', '........'], best: COTA }), 'slow');
+  // Just over the line: a flying lap follows a slow one, a slow one follows a flying one.
+  assert.equal(phaseOf({ status: 64, segs: ['y.....', '........', '........'], prev: [40.2, 44.6, 41.7], best: COTA }), 'push');
+  assert.equal(phaseOf({ status: 64, segs: ['y.....', '........', '........'], prev: [25.5, 37.9, 31.9], best: COTA }), 'slow');
+  assert.equal(phaseOf({ status: 64, segs: ['......', '........', '........'] }), 'track');
+});
+
+test('where a flying lap is heading, from two sectors', () => {
+  const best = [25, 37.5, 31.5];
+  assert.equal(paceOf([25.5, null, null], best), null);
+  // 2% off the best over two sectors: the third at 2% off too.
+  assert.ok(Math.abs(paceOf([25.5, 38.25, null], best) - (25.5 + 38.25 + 31.5 * 1.02)) < 1e-9);
+  assert.equal(paceOf([25.5, 38.25, 32.1], best), 25.5 + 38.25 + 32.1);
+  assert.equal(paceOf([25.5, 38.25, null], [25, null, 31.5]), null);
+});
+
+test('qualifying lap by lap: mini-sectors, this lap’s sectors, the phase and where it’s heading', () => {
+  const q = {
+    SessionInfo: { Type: 'Qualifying', Name: 'Qualifying', StartDate: '2026-10-24T16:00:00', GmtOffset: '-05:00:00' },
+    SessionStatus: { Status: 'Started', Started: 'Started' },
+    TrackStatus: { Status: '1' },
+    DriverList: { 1: who('1', 'NOR', 'Lando', 'Norris', 'McLaren', 'F47600'), 41: who('41', 'LIN', 'Arvid', 'Lindblad', 'Racing Bulls', '6C98FF'), 3: who('3', 'VER', 'Max', 'Verstappen', 'Red Bull Racing', '4781D7') },
+    TimingData: {
+      NoEntries: [22, 16, 10],
+      SessionPart: 2,
+      Lines: {
+        3: line('3', 1, { Status: 80, InPit: true, BestLapTimes: [{ Value: '1:35.215' }, { Value: '1:34.471' }, {}], Stats: [{}, {}, {}], Sectors: [sector('yyyyyy', '35.100'), sector('yyyyyyyy', '48.200'), sector('yyyyybbb', '42.100')] }),
+        // A slow lap's first sector is done, but its time hasn't come: the last lap's is still up.
+        41: line('41', 7, { Status: 64, BestLapTimes: [{ Value: '1:35.755' }, { Value: '1:35.494' }, {}], Stats: [{}, {}, {}], Sectors: [sector('yyyyyy', '25.640'), sector('........', '37.916'), sector('........', '31.938')] }),
+        // Into the third sector of a flying lap, with no time yet in this part.
+        1: line('1', 9, { Status: 64, BestLapTimes: [{ Value: '1:35.029' }, {}, {}], Stats: [{}, {}, {}], Sectors: [sector('gggggg', '25.300', { PersonalFastest: true }), sector('gggpgggg', '37.575', { PersonalFastest: true, OverallFastest: true }), sector('g.......')] }),
+      },
+    },
+    TimingStats: { Lines: { 1: { BestSectors: [{ Value: '25.300' }, { Value: '37.575' }, { Value: '31.700' }] }, 3: { BestSectors: [{ Value: '25.280' }, { Value: '37.700' }, { Value: '31.454' }] } } },
+  };
+  const t = tower(q);
+  assert.deepEqual(t.best, COTA);
+  const [ver, lin, nor] = t.drivers;
+  assert.equal(ver.lap.phase, 'pit');
+  assert.deepEqual(lin.lap.sectors, [null, null, null]);
+  assert.equal(lin.lap.phase, 'slow');
+  assert.equal(lin.lap.pace, null);
+  assert.deepEqual(nor.lap.segs, ['gggggg', 'gggpgggg', 'g.......']);
+  assert.deepEqual(nor.lap.sectors.map((x) => x?.s ?? null), [25.3, 37.575, null]);
+  assert.equal(nor.lap.sectors[1].fastest, true);
+  assert.equal(nor.lap.phase, 'push');
+  const ratio = (25.3 + 37.575) / (25.28 + 37.575);
+  assert.ok(Math.abs(nor.lap.pace.s - (25.3 + 37.575 + 31.454 * ratio)) < 1e-9);
+  // About 1:34.34 against Verstappen's 1:34.471 and Lindblad's 1:35.494: first, and quicker than nothing.
+  assert.equal(nor.lap.pace.pos, 1);
+  assert.equal(nor.lap.pace.better, true);
+  assert.equal(nor.lap.pace.done, false);
+  // Without mini-sectors (OpenF1) only the pits and out laps can be told.
+  const bare = structuredClone(q);
+  for (const l of Object.values(bare.TimingData.Lines)) for (const x of l.Sectors) delete x.Segments;
+  bare.TimingData.Lines[1].PitOut = true;
+  const b = tower(bare);
+  assert.deepEqual(b.drivers.map((d) => d.lap?.phase ?? null), ['pit', null, 'out']);
 });
 
 test('race control in plain words', () => {

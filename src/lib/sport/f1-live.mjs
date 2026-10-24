@@ -320,6 +320,93 @@ function trackOf(raw, status, messages) {
 
 const timeOf = (t) => (t && (t.Value ?? '') !== '' ? { s: lapSeconds(t.Value), pb: yes(t.PersonalFastest), fastest: yes(t.OverallFastest) } : null);
 
+// F1's mini-sectors: each sector is cut into six to ten, and each turns a colour as a car passes it.
+// As letters: "." not reached yet this lap, "y" slower than the driver's best there, "g" the driver's
+// best, "p" the best of anyone, "b" the pit lane.
+const SEG = { 0: '.', 2048: 'y', 2049: 'g', 2051: 'p', 2064: 'b' };
+const segOf = (g) => SEG[num(g?.Status) ?? 0] ?? 'y';
+// F1's status bits for a car (TimingData's Status): in the pits, on an out lap, has taken the flag.
+const IN_PIT = 16;
+const OUT_LAP = 512;
+const FLAG = 1024;
+// A sector this much slower than the best of anyone isn't a flying lap.
+const SLOW = 1.07;
+
+/**
+ * Where a car is in its lap, for qualifying and practice. `status` is F1's status for the car,
+ * `inPit` and `pitOut` its flags, `segs` this lap's mini-sectors by sector, `now` the sectors done
+ * this lap (seconds or null), `prev` the last lap's (the sectors not reached yet still show them),
+ * `best` the best of anyone in each sector.
+ *   pit    in the pit lane or the garage;
+ *   out    an out lap: F1 marks it, and the lap began in the pit lane;
+ *   in     heading into the pits: the lap has reached the pit lane;
+ *   push   a flying lap: a best mini-sector, sectors within 7% of the best of anyone, or, before
+ *          it has shown either, the lap after a slow one;
+ *   slow   a slow lap: cooling the tyres, or a lap given up;
+ *   done   has taken the chequered flag;
+ *   track  on track, not yet clear which (just over the line after a flying lap).
+ */
+export function phaseOf({ status = 0, inPit = false, pitOut = false, segs = [], now = [], prev = [], best = [] }) {
+  if (inPit || status & IN_PIT) return 'pit';
+  const flat = segs.join('');
+  if (pitOut || status & OUT_LAP || flat.startsWith('b')) return 'out';
+  if (segs[2]?.includes('b')) return 'in';
+  if (status & FLAG) return 'done';
+  const slow = (x, i) => x != null && best[i] != null && x > best[i] * SLOW;
+  if (now.some(slow)) return 'slow';
+  if (now.some((x, i) => x != null && best[i] != null)) return 'push';
+  if (/[gp]/.test(flat)) return 'push';
+  // Three mini-sectors and not one of them a best: not pushing.
+  if (flat.replace(/\./g, '').length >= 3) return 'slow';
+  // Just over the line: after a slow lap (out, or cooling down) comes a flying one; after a flying
+  // one, a slow one. The last lap shows in the sectors this one hasn't reached.
+  for (let i = prev.length - 1; i >= 0; i--) if (prev[i] != null && best[i] != null) return slow(prev[i], i) ? 'push' : 'slow';
+  return 'track';
+}
+
+/**
+ * A car's lap so far, in qualifying and practice: its mini-sectors ("ygg…" by sector), the sectors
+ * done this lap, what kind of lap it is (phaseOf) and, on a flying lap, the time it's heading for
+ * (paceOf). Without mini-sectors (OpenF1 sends none) only the pits and out laps can be told.
+ */
+function lapOf(l, best) {
+  const secs = list(l.Sectors);
+  const segs = secs.map((s) => list(s?.Segments).map(segOf).join(''));
+  if (!segs.some(Boolean)) return yes(l.InPit) ? { phase: 'pit' } : yes(l.PitOut) ? { phase: 'out' } : null;
+  // F1 keeps the last lap's sector times on the board into the next lap: the first sector's stays until
+  // this lap's arrives, which is when the second's and third's are cleared. So a sector is done this
+  // lap once its mini-sectors are and the third sector has been cleared, or the whole lap is done.
+  const full = segs.map((x) => x.length > 0 && !x.includes('.'));
+  const vals = secs.map((s) => lapSeconds(s?.Value));
+  const fresh = full.every(Boolean) || vals[2] == null;
+  const now = vals.map((x, i) => (full[i] && fresh ? x : null));
+  const prev = secs.map((s, i) => (now[i] != null ? null : (vals[i] ?? lapSeconds(s?.PreviousValue))));
+  const phase = phaseOf({ status: num(l.Status) ?? 0, inPit: yes(l.InPit), pitOut: yes(l.PitOut), segs, now, prev, best });
+  return {
+    phase,
+    segs,
+    sectors: now.map((x, i) => (x == null ? null : { s: x, pb: yes(secs[i].PersonalFastest), fastest: yes(secs[i].OverallFastest) })),
+    pace: phase === 'push' ? paceOf(now, best) : null,
+  };
+}
+
+/**
+ * Where a flying lap is heading: the sectors done so far, and the rest at the same pace against the
+ * best of anyone (the ratio of this lap's sectors to the best ones, applied to the sector left).
+ * Only from two sectors: on the 2026 United States and Singapore qualifying sessions it was then a
+ * median 0.2 s and one place out, where after one sector it was two to three places out.
+ * → seconds, or null.
+ */
+export function paceOf(now, best) {
+  if (best.length < 3 || best.some((b) => b == null)) return null;
+  const done = now.map((x, i) => (x != null ? i : null)).filter((i) => i != null);
+  if (done.length < 2) return null;
+  const took = done.reduce((t, i) => t + now[i], 0);
+  if (done.length === 3) return took;
+  const ratio = took / done.reduce((t, i) => t + best[i], 0);
+  return took + ratio * best.reduce((t, b, i) => (done.includes(i) ? t : t + b), 0);
+}
+
 /**
  * One state of F1's feed as the live view's data. `at` is when the state was read (milliseconds),
  * so the session clock can be worked out.
@@ -338,6 +425,14 @@ export function tower(raw, { at = Date.now(), source = 'f1' } = {}) {
   const part = kind === 'quali' ? num(td.SessionPart) || null : null;
   const entries = list(td.NoEntries).map(num);
   const limits = kind === 'race' ? limitsOf(messages) : {};
+  // The best of anyone in each sector: F1's own record (TimingStats) when it's there, else the
+  // quickest sector on the board.
+  const best = [0, 1, 2].map((i) => {
+    const kept = Object.values(raw.TimingStats?.Lines ?? {}).map((x) => lapSeconds(list(x?.BestSectors)[i]?.Value));
+    const board = Object.values(td.Lines ?? {}).flatMap((l) => [list(l?.Sectors)[i]?.Value, list(l?.Sectors)[i]?.PreviousValue].map(lapSeconds));
+    const xs = (kept.some((x) => x > 0) ? kept : board).filter((x) => x > 0);
+    return xs.length ? Math.min(...xs) : null;
+  });
 
   const drivers = Object.entries(td.Lines ?? {})
     .filter(([, l]) => l && typeof l === 'object')
@@ -378,9 +473,23 @@ export function tower(raw, { at = Date.now(), source = 'f1' } = {}) {
         d.knockedOut = yes(l.KnockedOut);
         d.cutoff = yes(l.Cutoff);
       }
+      if (kind !== 'race') d.lap = lapOf(l, best);
       return d;
     })
     .sort((x, y) => x.pos - y.pos);
+
+  // Where each flying lap would put the car: against everyone else's time in this part (practice:
+  // the session), and whether it beats the car's own.
+  if (kind !== 'race') {
+    const timeIn = (d) => (part ? d.q?.[part - 1] : d.bestLap?.s) ?? null;
+    for (const d of drivers) {
+      const s = d.lap?.pace;
+      if (s == null) continue;
+      const field = drivers.filter((x) => x.n !== d.n && !x.knockedOut && timeIn(x) != null);
+      // A finished lap is the time on the board, so it counts as one that improved.
+      d.lap.pace = { s, pos: 1 + field.filter((x) => timeIn(x) < s).length, better: timeIn(d) == null || s <= timeIn(d) + 0.0005, done: d.lap.sectors.every(Boolean) };
+    }
+  }
 
   let fastest = null;
   for (const d of drivers) if (d.bestLap?.s && (!fastest || d.bestLap.s < fastest.s)) fastest = { n: d.n, s: d.bestLap.s, lap: d.bestLap.lap };
@@ -414,6 +523,8 @@ export function tower(raw, { at = Date.now(), source = 'f1' } = {}) {
     // How many go through from this part, and how many started each part.
     part: part ? { now: part, of: 3, cut: part < 3 ? (entries[part] ?? null) : null, entries } : null,
     clock,
+    // The best of anyone in each sector, in seconds.
+    best: kind === 'race' ? null : best,
     track: trackOf(raw, status, messages),
     weather: w ? { air: num(w.AirTemp), track: num(w.TrackTemp), rain: Number(w.Rainfall) > 0, wind: num(w.WindSpeed), humidity: num(w.Humidity) } : null,
     fastest,
