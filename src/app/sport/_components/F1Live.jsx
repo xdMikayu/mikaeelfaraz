@@ -4,9 +4,8 @@ import { lapText } from '@/lib/sport/f1.mjs';
 import { plain, rejoin, sameSession } from '@/lib/sport/f1-live.mjs';
 import PITLOSS from '@/lib/sport/f1-pitloss.json';
 import { kickoff } from './time';
-import { heat } from './fplbits';
 import { Mark, Reveal } from './f1bits';
-import { COMPOUND, SHADE } from './F1Charts';
+import { TimedSession, Tyre, TYRE } from './F1Timing';
 import { useScrolledPast, StickyBar } from './Sticky';
 
 // Live timing for one session, from /api/sport/f1/live every 3 seconds. Every answer is kept for
@@ -27,7 +26,6 @@ const FLAG = {
   red: 'Red flag',
   chequered: 'Chequered flag',
 };
-const TYRE = { SOFT: 'soft', MEDIUM: 'medium', HARD: 'hard', INTERMEDIATE: 'intermediate', WET: 'wet' };
 
 /** Re-renders every `every` ms. */
 function useTick(every) {
@@ -118,21 +116,6 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 function Time({ t, fastest = t?.fastest }) {
   if (!t?.s) return <span className="sp-muted">–</span>;
   return <span className={fastest ? 'sp-f1-fastest' : t.pb ? 'sp-f1-pb' : undefined}>{lapText(t.s)}</span>;
-}
-
-/** The tyre: its compound in ink (more for softer, wet ones outlined) and the laps it has done. */
-function Tyre({ tyre }) {
-  if (!tyre) return <span className="sp-muted">–</span>;
-  const wet = tyre.c === 'INTERMEDIATE' || tyre.c === 'WET';
-  return (
-    <span className="sp-f1-tyre-now" title={`${cap(TYRE[tyre.c] ?? tyre.c)}, ${tyre.new ? 'new' : 'used'} set, ${laps(tyre.age)}`}>
-      <i style={wet ? { boxShadow: 'inset 0 0 0 1.5px var(--sp-ink)' } : heat(SHADE[tyre.c] ?? 0)}>{COMPOUND[tyre.c] ?? '?'}</i>
-      <span className="sp-num">
-        {tyre.age}
-        {tyre.new ? '' : '*'}
-      </span>
-    </span>
-  );
 }
 
 /** Places gained or lost since the start: "▲3", "▼2". */
@@ -227,6 +210,7 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
   const followed = t.drivers.find((d) => d.n === follow);
   const loss = PITLOSS[t.session.meeting] ?? null;
   const live = ['running', 'suspended'].includes(t.session.status);
+  const q = /sprint/i.test(t.session.name ?? '') ? 'SQ' : 'Q';
 
   return (
     <>
@@ -234,8 +218,14 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
         <Status t={t} left={left} minutes={s.minutes} age={delay ? null : age} delay={delay} tv={tv} names={names} follow={follow} cardRef={statusRef} />
       </section>
       <StickyStatus t={t} left={left} names={names} follow={follow} shown={statusPast} />
-      {followed && <Following d={followed} t={t} loss={loss} names={names} onStop={() => setFollow(null)} />}
-      <Tower t={t} mode={mode} setMode={setMode} open={open} setOpen={setOpen} follow={follow} setFollow={setFollow} loss={loss} names={names} />
+      {t.session.kind === 'race' ? (
+        <>
+          {followed && <Following d={followed} t={t} loss={loss} names={names} onStop={() => setFollow(null)} />}
+          <Tower t={t} mode={mode} setMode={setMode} open={open} setOpen={setOpen} follow={follow} setFollow={setFollow} loss={loss} names={names} />
+        </>
+      ) : (
+        <TimedSession t={t} follow={follow} setFollow={setFollow} open={open} setOpen={setOpen} renderDetails={(d) => <Details d={d} t={t} q={q} follow={follow} loss={loss} names={names} />} />
+      )}
       {t.session.kind === 'race' && live && <Strategy t={t} names={names} history={history.current} />}
       {t.incidents.length > 0 && <Stewards list={t.incidents} names={names} />}
       {t.messages.length > 0 && <RaceControl t={t} names={names} />}
@@ -482,24 +472,19 @@ function pitNow(t, d, loss, names) {
   };
 }
 
-/** The driver the viewer follows, in a sentence, with a pit estimate. */
+/** The driver the viewer follows in a race, in a sentence, with a pit estimate. */
 function Following({ d, t, loss, names, onStop }) {
   const i = t.drivers.indexOf(d);
   const ahead = t.drivers[i - 1];
   const behind = t.drivers[i + 1];
   const bits = [];
   if (d.out) bits.push(d.out === 'retired' ? 'out of the race' : 'stopped');
-  else if (t.session.kind === 'race') {
+  else {
     bits.push(`${ordinal(d.pos)}${d.grid ? ` (started ${ordinal(d.grid)})` : ''}`);
     if (d.pit === 'in') bits.push('in the pits');
     else if (ahead && d.int?.s != null) bits.push(`${d.int.s.toFixed(1)} s behind ${ahead.last}`);
     if (behind && !behind.out && behind.int?.s != null && !behind.pit) bits.push(`${behind.int.s.toFixed(1)} s ahead of ${behind.last}`);
     if (d.tyre) bits.push(`${TYRE[d.tyre.c] ?? d.tyre.c}s, ${laps(d.tyre.age)} old`);
-  } else {
-    bits.push(d.shown ? ordinal(d.pos) : 'no time yet');
-    if (d.bestLap) bits.push(`best ${lapText(d.bestLap.s)}`);
-    if (d.gap?.s) bits.push(`${d.gap.s.toFixed(3)} s off the top`);
-    if (d.pit === 'in') bits.push('in the pits');
   }
   const p = pitNow(t, d, loss, names);
   return (
@@ -526,34 +511,16 @@ function Following({ d, t, loss, names, onStop }) {
   );
 }
 
-/** The running order. Race: gap to the car ahead (or the leader), last lap, tyres. Qualifying: this part's times and the cut. */
+/** The race's running order: gap to the car ahead (or the leader), last lap, tyres, stops, best lap. */
 function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, loss, names }) {
-  const kind = t.session.kind;
-  const q = /sprint/i.test(t.session.name ?? '') ? 'SQ' : 'Q';
-  const cols = kind === 'race' ? 7 : 6;
-  let rows = t.drivers;
-  let cutAfter = null;
-  const outIn = {};
-  if (kind === 'quali' && t.part) {
-    const going = rows.filter((d) => !d.knockedOut);
-    const out = rows.filter((d) => d.knockedOut);
-    for (const d of out) outIn[d.n] = t.part.entries?.[1] && d.pos > t.part.entries[1] ? 1 : 2;
-    rows = [...going, ...out];
-    if (t.part.cut && going.length > t.part.cut && !['final', 'finished'].includes(t.session.status)) cutAfter = going[t.part.cut - 1]?.n;
-  }
-  const qTime = (d) => (kind === 'quali' && t.part ? d.q?.[(outIn[d.n] ?? t.part.now) - 1] : d.bestLap?.s);
-  // The best time of anyone: in this part of qualifying, or the session.
-  const top = Math.min(...rows.filter((d) => !outIn[d.n]).map((d) => qTime(d) ?? Infinity));
-  const lap1 = kind === 'race' && t.session.status === 'running' && t.lap?.now <= 1;
-
+  const lap1 = t.session.status === 'running' && t.lap?.now <= 1;
   return (
     <section className="sp-section">
-      {kind === 'race' && t.session.status === 'waiting' && (
+      {t.session.status === 'waiting' ? (
         <div className="sp-pad sp-section-head">
           <h2 className="sp-h2">The grid</h2>
         </div>
-      )}
-      {kind === 'race' && t.session.status !== 'waiting' && (
+      ) : (
         <div className="sp-pad sp-f1-tower-head">
           <div className="sp-tabs" role="radiogroup" aria-label="Gaps">
             <button role="radio" aria-checked={mode === 'int'} onClick={() => setMode('int')}>
@@ -570,43 +537,26 @@ function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, loss, names
           <tr>
             <th className="l" style={{ paddingLeft: 16 }}>#</th>
             <th className="l">Driver</th>
-            {kind === 'race' ? <th>Gap</th> : <th>{kind === 'quali' && t.part ? `${q}${t.part.now}` : 'Best'}</th>}
-            <th>{kind === 'race' ? 'Last lap' : 'Gap'}</th>
+            <th>Gap</th>
+            <th>Last lap</th>
             <th>Tyre</th>
-            {kind === 'race' ? (
-              <>
-                <th className="sp-hide-sm">Stops</th>
-                <th className="sp-hide-sm" style={{ paddingRight: 16 }}>
-                  Best
-                </th>
-              </>
-            ) : (
-              <th className="sp-hide-sm" style={{ paddingRight: 16 }}>
-                Laps
-              </th>
-            )}
+            <th className="sp-hide-sm">Stops</th>
+            <th className="sp-hide-sm" style={{ paddingRight: 16 }}>
+              Best
+            </th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((d, i) => {
-            const prev = rows[i - 1];
-            const label = outIn[d.n] && outIn[d.n] !== outIn[prev?.n] ? `Out in ${q}${outIn[d.n]}` : null;
+          {t.drivers.map((d, i) => {
             const isOpen = open === d.n;
-            const cls = [d.n === follow ? 'sp-mine' : '', d.out || outIn[d.n] ? 'sp-f1-gone' : '', isOpen ? 'sp-f1-open' : ''].filter(Boolean).join(' ');
+            const cls = [d.n === follow ? 'sp-mine' : '', d.out ? 'sp-f1-gone' : '', isOpen ? 'sp-f1-open' : ''].filter(Boolean).join(' ');
             return (
               <Fragment key={d.n}>
-                {label && (
-                  <tr className="sp-f1-cut">
-                    <td colSpan={cols} style={{ paddingLeft: 16 }}>
-                      {label}
-                    </td>
-                  </tr>
-                )}
                 <tr className={cls || undefined} onClick={() => setOpen(isOpen ? null : d.n)}>
                   <td className="l sp-pos" style={{ paddingLeft: 16 }}>
                     <span className="sp-f1-pos">
-                      {d.out ? 'Out' : d.shown || kind === 'race' ? d.pos : '–'}
-                      {kind === 'race' && !d.out && <Moved grid={d.grid} pos={d.pos} />}
+                      {d.out ? 'Out' : d.pos}
+                      {!d.out && <Moved grid={d.grid} pos={d.pos} />}
                     </span>
                   </td>
                   <td className="l">
@@ -618,53 +568,27 @@ function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, loss, names
                           ★
                         </span>
                       )}
-                      {d.pit === 'in' && kind !== 'race' && <small className="sp-f1-tag">Pit</small>}
-                      {d.pit === 'out' && kind !== 'race' && <small className="sp-f1-tag">Out lap</small>}
                     </button>
                   </td>
-                  {kind === 'race' ? (
-                    <>
-                      <td className="sp-num">{t.session.status === 'waiting' ? null : raceGap(d, i, mode)}</td>
-                      <td className="sp-num">
-                        <Time t={d.lastLap} />
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="sp-num">{qTime(d) ? <span className={qTime(d) === top && !outIn[d.n] ? 'sp-f1-fastest' : undefined}>{lapText(qTime(d))}</span> : <span className="sp-muted">–</span>}</td>
-                      <td className="sp-num sp-muted">{!outIn[d.n] && d.gap?.s ? secs(d.gap.s) : ''}</td>
-                    </>
-                  )}
+                  <td className="sp-num">{t.session.status === 'waiting' ? null : raceGap(d, i, mode)}</td>
+                  <td className="sp-num">
+                    <Time t={d.lastLap} />
+                  </td>
                   <td>
                     <Tyre tyre={d.tyre} />
                   </td>
-                  {kind === 'race' ? (
-                    <>
-                      <td className="sp-num sp-hide-sm">{d.stops}</td>
-                      <td className="sp-num sp-hide-sm" style={{ paddingRight: 16 }}>
-                        <Time t={d.bestLap} fastest={t.fastest?.n === d.n} />
-                      </td>
-                    </>
-                  ) : (
-                    <td className="sp-num sp-hide-sm" style={{ paddingRight: 16 }}>
-                      {d.laps ?? 0}
-                    </td>
-                  )}
+                  <td className="sp-num sp-hide-sm">{d.stops}</td>
+                  <td className="sp-num sp-hide-sm" style={{ paddingRight: 16 }}>
+                    <Time t={d.bestLap} fastest={t.fastest?.n === d.n} />
+                  </td>
                 </tr>
                 {isOpen && (
                   <tr className="sp-f1-more">
-                    <td colSpan={cols}>
-                      <Details d={d} t={t} q={q} follow={follow} loss={loss} names={names} />
+                    <td colSpan={7}>
+                      <Details d={d} t={t} q="Q" follow={follow} loss={loss} names={names} />
                       <button className="sp-btn sp-f1-follow" aria-pressed={follow === d.n} onClick={() => setFollow(follow === d.n ? null : d.n)}>
                         {follow === d.n ? `★ Following ${d.last}` : `☆ Follow ${d.last}`}
                       </button>
-                    </td>
-                  </tr>
-                )}
-                {cutAfter === d.n && (
-                  <tr className="sp-f1-cut sp-f1-zone">
-                    <td colSpan={cols} style={{ paddingLeft: 16 }}>
-                      The drop zone: out if it ended now
                     </td>
                   </tr>
                 )}
@@ -674,9 +598,7 @@ function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, loss, names
         </tbody>
       </table>
       <p className="sp-tiny sp-muted sp-pad" style={{ margin: '6px 0 0' }}>
-        {lap1 ? 'Lap 1: the order firms up as the cars pass the timing points. ' : ''}
-        {kind === 'race' ? '▲▼ under a position: places gained or lost since the start. ' : ''}Tyres: the compound and the laps on that set (* used). Bold: a personal best; black: the best of anyone. Tap a driver for
-        more.
+        {lap1 ? 'Lap 1: the order firms up as the cars pass the timing points. ' : ''}▲▼ under a position: places gained or lost since the start. Tyres: the compound and the laps on that set (* used). Bold: a personal best; black: the best of anyone. Tap a driver for more.
       </p>
     </section>
   );
