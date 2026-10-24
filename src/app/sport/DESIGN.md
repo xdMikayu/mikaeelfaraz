@@ -31,7 +31,8 @@ two earlier versions of this app shipped them.
 | Green | Points gained; players who help you in your league |
 | Grass green | Pitches |
 | Black and white | Everything else |
-| Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions, F1 sectors): more ink means more. F1 tyres too: more ink is a softer compound, wet tyres outlined |
+| Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions, F1 sectors in the session analysis): more ink means more. F1 tyres too: more ink is a softer compound, wet tyres outlined |
+| F1's purple, green and yellow | Live timing only: each mini-sector and sector of a lap as F1 colours it (the best of anyone, the driver's best, slower; blue for the pit lane), drawn on black as F1 draws it. Every fan reads them at a glance; nowhere else uses them |
 
 - Every team colour goes through `src/lib/sport/kit-colors.mjs`, wherever it comes from:
   - ESPN's raw screen primaries become the colour of the real shirt: `#0000fa` a royal blue, `#ffff00` a kit yellow,
@@ -329,10 +330,28 @@ The F1 pages open on the race weekend as a title card (`_components/F1Hero.jsx`)
   stake: "**Antonelli** leads Russell by **102** points, with up to **150** still to win. 6 drivers can still take
   it."
 
+## F1 live timing, qualifying and practice
+
+What a timing screen of numbers hides, drawn (`_components/F1Timing.jsx`, `src/lib/sport/f1-live.mjs`):
+
+- **Each car's lap as it goes**: a strip of its mini-sectors under its row, lit in F1's colours as the car passes
+  them, dimmed on laps that don't count. Only cars on track have one, so the tower shows who's running.
+- **What kind of lap**, in words beside the strip: out lap, flying lap, slow lap, in lap. F1 marks out laps and the
+  pit lane; flying and slow laps are told from the mini-sectors (a best one means pushing, three without one means
+  not) and the sectors (within 7% of the best of anyone). Above the tower the cars on track are grouped the same
+  way, and a tap on one follows it.
+- **Where a flying lap is heading** ("P3 pace") once two sectors are done: the last at the same pace against the
+  best of anyone. Checked on two qualifying sessions: a median 0.2 s and one place out. Not after one sector,
+  where it was two to three places out.
+- **The order moves as it changes**: rows slide to their new places; a car that gains places says so (▲6) for half
+  a minute, and its new time lights once. The driver followed gets the bigger version: the card says "Up to 10th
+  from 16th with 1:35.755" and shows the lap that did it, sector by sector.
+
 ## Motion
 
 - A new goal flashes the score once.
-- Live timing is calm: no flashing rows, no pulsing dots.
+- Live timing moves only when the order does: rows slide to their new places, a new time lights once, places
+  gained show for half a minute. Nothing loops or pulses, and none of it with reduced motion.
 - Nothing else moves except the page and the drawer.
 
 ## Words

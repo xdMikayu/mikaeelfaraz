@@ -17,7 +17,7 @@ const UA = { 'user-agent': 'Mozilla/5.0 (personal F1 pages; mikaeelfaraz.com)' }
 const RS = '\x1e'; // ends each SignalR message
 
 /** The topics the live view reads. Car telemetry and positions need an F1 TV login, so they aren't here. */
-export const TOPICS = ['SessionInfo', 'SessionStatus', 'SessionData', 'TrackStatus', 'LapCount', 'DriverList', 'TimingData', 'TimingAppData', 'RaceControlMessages', 'ExtrapolatedClock', 'WeatherData'];
+export const TOPICS = ['SessionInfo', 'SessionStatus', 'SessionData', 'TrackStatus', 'LapCount', 'DriverList', 'TimingData', 'TimingAppData', 'TimingStats', 'RaceControlMessages', 'ExtrapolatedClock', 'WeatherData'];
 
 /** One full state of F1's feed, by SignalR's long-polling transport, which plain HTTP requests can do. */
 export async function fromF1({ timeout = 8000 } = {}) {
