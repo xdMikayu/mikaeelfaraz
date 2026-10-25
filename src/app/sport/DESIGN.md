@@ -32,7 +32,7 @@ two earlier versions of this app shipped them.
 | Grass green | Pitches |
 | Black and white | Everything else |
 | Ink at varying strength | Heat maps (projected points, fixture tickers, finishing positions, F1 sectors in the session analysis): more ink means more. F1 tyres too: more ink is a softer compound, wet tyres outlined |
-| F1's purple, green and yellow | Live timing only: each mini-sector and sector of a lap as F1 colours it (the best of anyone, the driver's best, slower; blue for the pit lane), drawn on black as F1 draws it. Every fan reads them at a glance; nowhere else uses them |
+| F1's purple, green and yellow | Live timing only: each mini-sector and sector of a lap as F1 colours it (the best of anyone, the driver's best, slower; blue for the pit lane), drawn on black as F1 draws it, and in the race the lap times (purple for the fastest of the race, green for the driver's best). Every fan reads them at a glance; nowhere else uses them |
 
 - Every team colour goes through `src/lib/sport/kit-colors.mjs`, wherever it comes from:
   - ESPN's raw screen primaries become the colour of the real shirt: `#0000fa` a royal blue, `#ffff00` a kit yellow,
@@ -347,11 +347,31 @@ What a timing screen of numbers hides, drawn (`_components/F1Timing.jsx`, `src/l
   a minute, and its new time lights once. The driver followed gets the bigger version: the card says "Up to 10th
   from 16th with 1:35.755" and shows the lap that did it, sector by sector.
 
+## F1 live timing, the race
+
+The same tower, for wheel-to-wheel (`_components/F1Race.jsx`):
+
+- **The order moves as it changes**: rows slide on passes and stops. Under each position, the places gained or lost
+  since the start in grey; for 20 seconds after a move, the move itself in bold instead (▲1 in green, ▼4 in red).
+- **A pass counts once it stands.** F1's order flickers between cars a few tenths apart, so two cars that swap
+  places count as a pass only if they're still that way round in the next state, neither in the pits or on an out
+  lap, under green or yellow flags, from lap 2. Replayed, the 2026 Singapore Grand Prix gave 47 passes, 26 stops
+  and 4 retirements.
+- **Latest moves**, newest first, since the page was opened (and held back with the TV delay): passes, stops (from
+  what place, where back out and on what tyres once F1 names them, which can be a minute or more after the car
+  rejoins), retirements and each new fastest lap from lap 3.
+- **The driver followed**: what just happened to them for 20 seconds ("Passed Hamilton for 2nd.", "Pitted from
+  2nd: back out 6th on mediums."), the gaps to the cars either side in big numerals with whether they're closing,
+  the lap under way as a strip, the tyres and stops, and where a stop now would put them.
+- **Laps as racing laps**: no flying or slow laps in a race; only the pits and out laps are marked ("Out", explained
+  under the tower). A car out of the race has a dash for a position and "Retired" or "Stopped" for a gap.
+
 ## Motion
 
 - A new goal flashes the score once.
 - Live timing moves only when the order does: rows slide to their new places, a new time lights once, places
-  gained show for half a minute. Nothing loops or pulses, and none of it with reduced motion.
+  gained (or in a race, lost) show for a while: half a minute in qualifying, 20 seconds in a race, where moves come
+  quicker. Nothing loops or pulses, and none of it with reduced motion.
 - Nothing else moves except the page and the drawer.
 
 ## Words

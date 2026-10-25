@@ -52,7 +52,8 @@ async function stream(topic) {
   const file = path.join(cache, `${topic}.jsonStream`);
   if (!fs.existsSync(file)) {
     const res = await fetch(`https://livetiming.formula1.com/static/${session}${topic}.jsonStream`);
-    if (res.status === 404 || res.status === 403) return [];
+    // Not archived, or (since 2026) behind F1's login: play what there is.
+    if ([401, 403, 404].includes(res.status)) return [];
     if (!res.ok) throw new Error(`${topic}: ${res.status}`);
     fs.mkdirSync(cache, { recursive: true });
     fs.writeFileSync(file, await res.text());
