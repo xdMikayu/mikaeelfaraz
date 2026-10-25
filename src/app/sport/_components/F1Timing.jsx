@@ -124,7 +124,7 @@ const recent = (events, n, t, within) => events.find((e) => e.n === n && ageOf(e
  * old place, let the row move, animate it back from there). Those moving up pass over the others.
  * Returns a ref for each row by key.
  */
-function useSlide() {
+export function useSlide() {
   const els = useRef(new Map());
   const tops = useRef(new Map());
   const refs = useRef(new Map());

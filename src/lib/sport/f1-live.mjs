@@ -365,14 +365,17 @@ export function phaseOf({ status = 0, inPit = false, pitOut = false, segs = [], 
 }
 
 /**
- * A car's lap so far, in qualifying and practice: its mini-sectors ("ygg…" by sector), the sectors
- * done this lap, what kind of lap it is (phaseOf) and, on a flying lap, the time it's heading for
- * (paceOf). Without mini-sectors (OpenF1 sends none) only the pits and out laps can be told.
+ * A car's lap so far: its mini-sectors ("ygg…" by sector), the sectors done this lap, what kind of
+ * lap it is (phaseOf) and, on a flying lap, the time it's heading for (paceOf). In a race every lap
+ * is a racing one, so only the pits and out laps are told. Without mini-sectors (OpenF1 sends none)
+ * likewise.
  */
-function lapOf(l, best) {
+function lapOf(l, best, race = false) {
   const secs = list(l.Sectors);
   const segs = secs.map((s) => list(s?.Segments).map(segOf).join(''));
-  if (!segs.some(Boolean)) return yes(l.InPit) ? { phase: 'pit' } : yes(l.PitOut) ? { phase: 'out' } : null;
+  const status = num(l.Status) ?? 0;
+  const simple = yes(l.InPit) || status & IN_PIT ? 'pit' : yes(l.PitOut) || status & OUT_LAP || segs.join('').startsWith('b') ? 'out' : null;
+  if (!segs.some(Boolean)) return simple ? { phase: simple } : null;
   // F1 keeps the last lap's sector times on the board into the next lap: the first sector's stays until
   // this lap's arrives, which is when the second's and third's are cleared. So a sector is done this
   // lap once its mini-sectors are and the third sector has been cleared, or the whole lap is done.
@@ -381,7 +384,7 @@ function lapOf(l, best) {
   const fresh = full.every(Boolean) || vals[2] == null;
   const now = vals.map((x, i) => (full[i] && fresh ? x : null));
   const prev = secs.map((s, i) => (now[i] != null ? null : (vals[i] ?? lapSeconds(s?.PreviousValue))));
-  const phase = phaseOf({ status: num(l.Status) ?? 0, inPit: yes(l.InPit), pitOut: yes(l.PitOut), segs, now, prev, best });
+  const phase = race ? simple : phaseOf({ status, inPit: yes(l.InPit), pitOut: yes(l.PitOut), segs, now, prev, best });
   return {
     phase,
     segs,
@@ -473,7 +476,7 @@ export function tower(raw, { at = Date.now(), source = 'f1' } = {}) {
         d.knockedOut = yes(l.KnockedOut);
         d.cutoff = yes(l.Cutoff);
       }
-      if (kind !== 'race') d.lap = lapOf(l, best);
+      d.lap = lapOf(l, best, kind === 'race');
       return d;
     })
     .sort((x, y) => x.pos - y.pos);

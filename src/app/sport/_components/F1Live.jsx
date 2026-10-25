@@ -5,7 +5,8 @@ import { plain, rejoin, sameSession } from '@/lib/sport/f1-live.mjs';
 import PITLOSS from '@/lib/sport/f1-pitloss.json';
 import { kickoff } from './time';
 import { Mark, Reveal } from './f1bits';
-import { TimedSession, Tyre, TYRE } from './F1Timing';
+import { TimedSession, TYRE } from './F1Timing';
+import { RaceSession, LapTime } from './F1Race';
 import { useScrolledPast, StickyBar } from './Sticky';
 
 // Live timing for one session, from /api/sport/f1/live every 3 seconds. Every answer is kept for
@@ -106,29 +107,10 @@ const clockText = (s) => {
   const sec = String(t % 60).padStart(2, '0');
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
-const secs = (x, digits = 3) => `+${x.toFixed(digits)}`;
 const andList = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : (xs[0] ?? ''));
 const ordinal = (n) => `${n}${n % 100 > 10 && n % 100 < 14 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[n % 10] ?? 'th'}`;
 const laps = (n) => `${n} ${n === 1 ? 'lap' : 'laps'}`;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** A lap time: bold for the driver's best so far, inked for the best of anyone. */
-function Time({ t, fastest = t?.fastest }) {
-  if (!t?.s) return <span className="sp-muted">–</span>;
-  return <span className={fastest ? 'sp-f1-fastest' : t.pb ? 'sp-f1-pb' : undefined}>{lapText(t.s)}</span>;
-}
-
-/** Places gained or lost since the start: "▲3", "▼2". */
-function Moved({ grid, pos }) {
-  if (!grid || !pos || grid === pos) return null;
-  const up = grid > pos;
-  return (
-    <small className="sp-num sp-f1-moved" style={{ color: up ? 'var(--sp-win)' : 'var(--sp-muted)' }}>
-      {up ? '▲' : '▼'}
-      {Math.abs(grid - pos)}
-    </small>
-  );
-}
 
 /**
  * One session's live timing. `s` is the calendar's session: the view only shows F1's feed when the
@@ -219,10 +201,18 @@ export default function F1Live({ s, hidden, reveal, before = null }) {
       </section>
       <StickyStatus t={t} left={left} names={names} follow={follow} shown={statusPast} />
       {t.session.kind === 'race' ? (
-        <>
-          {followed && <Following d={followed} t={t} loss={loss} names={names} onStop={() => setFollow(null)} />}
-          <Tower t={t} mode={mode} setMode={setMode} open={open} setOpen={setOpen} follow={follow} setFollow={setFollow} loss={loss} names={names} />
-        </>
+        <RaceSession
+          t={t}
+          follow={follow}
+          setFollow={setFollow}
+          open={open}
+          setOpen={setOpen}
+          mode={mode}
+          setMode={setMode}
+          renderDetails={(d) => <Details d={d} t={t} q={q} follow={follow} loss={loss} names={names} />}
+          pit={(d) => pitNow(t, d, loss, names)}
+          trend={(n) => change(history.current, t, n, 3)?.perLap ?? null}
+        />
       ) : (
         <TimedSession t={t} follow={follow} setFollow={setFollow} open={open} setOpen={setOpen} renderDetails={(d) => <Details d={d} t={t} q={q} follow={follow} loss={loss} names={names} />} />
       )}
@@ -472,150 +462,6 @@ function pitNow(t, d, loss, names) {
   };
 }
 
-/** The driver the viewer follows in a race, in a sentence, with a pit estimate. */
-function Following({ d, t, loss, names, onStop }) {
-  const i = t.drivers.indexOf(d);
-  const ahead = t.drivers[i - 1];
-  const behind = t.drivers[i + 1];
-  const bits = [];
-  if (d.out) bits.push(d.out === 'retired' ? 'out of the race' : 'stopped');
-  else {
-    bits.push(`${ordinal(d.pos)}${d.grid ? ` (started ${ordinal(d.grid)})` : ''}`);
-    if (d.pit === 'in') bits.push('in the pits');
-    else if (ahead && d.int?.s != null) bits.push(`${d.int.s.toFixed(1)} s behind ${ahead.last}`);
-    if (behind && !behind.out && behind.int?.s != null && !behind.pit) bits.push(`${behind.int.s.toFixed(1)} s ahead of ${behind.last}`);
-    if (d.tyre) bits.push(`${TYRE[d.tyre.c] ?? d.tyre.c}s, ${laps(d.tyre.age)} old`);
-  }
-  const p = pitNow(t, d, loss, names);
-  return (
-    <section className="sp-pad" style={{ marginTop: 12 }}>
-      <div className="sp-f1-follow-card" style={{ '--team': d.color ?? 'var(--sp-rule-2)' }}>
-        <div>
-          <p className="sp-small" style={{ margin: 0 }}>
-            <span className="sp-f1-star" aria-hidden="true">
-              ★
-            </span>{' '}
-            <b className="sp-f1-strong">{d.last}</b> <span className="sp-ink2">{bits.join(', ')}.</span>
-          </p>
-          {p && (
-            <p className="sp-tiny sp-ink2" style={{ margin: '4px 0 0' }}>
-              {p.text}
-            </p>
-          )}
-        </div>
-        <button className="sp-btn sp-btn-quiet sp-f1-unfollow" onClick={onStop} aria-label={`Stop following ${d.last}`}>
-          ×
-        </button>
-      </div>
-    </section>
-  );
-}
-
-/** The race's running order: gap to the car ahead (or the leader), last lap, tyres, stops, best lap. */
-function Tower({ t, mode, setMode, open, setOpen, follow, setFollow, loss, names }) {
-  const lap1 = t.session.status === 'running' && t.lap?.now <= 1;
-  return (
-    <section className="sp-section">
-      {t.session.status === 'waiting' ? (
-        <div className="sp-pad sp-section-head">
-          <h2 className="sp-h2">The grid</h2>
-        </div>
-      ) : (
-        <div className="sp-pad sp-f1-tower-head">
-          <div className="sp-tabs" role="radiogroup" aria-label="Gaps">
-            <button role="radio" aria-checked={mode === 'int'} onClick={() => setMode('int')}>
-              Gap to the car ahead
-            </button>
-            <button role="radio" aria-checked={mode === 'gap'} onClick={() => setMode('gap')}>
-              Gap to the leader
-            </button>
-          </div>
-        </div>
-      )}
-      <table className="sp-table sp-f1-table sp-f1-tower">
-        <thead>
-          <tr>
-            <th className="l" style={{ paddingLeft: 16 }}>#</th>
-            <th className="l">Driver</th>
-            <th>Gap</th>
-            <th>Last lap</th>
-            <th>Tyre</th>
-            <th className="sp-hide-sm">Stops</th>
-            <th className="sp-hide-sm" style={{ paddingRight: 16 }}>
-              Best
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {t.drivers.map((d, i) => {
-            const isOpen = open === d.n;
-            const cls = [d.n === follow ? 'sp-mine' : '', d.out ? 'sp-f1-gone' : '', isOpen ? 'sp-f1-open' : ''].filter(Boolean).join(' ');
-            return (
-              <Fragment key={d.n}>
-                <tr className={cls || undefined} onClick={() => setOpen(isOpen ? null : d.n)}>
-                  <td className="l sp-pos" style={{ paddingLeft: 16 }}>
-                    <span className="sp-f1-pos">
-                      {d.out ? 'Out' : d.pos}
-                      {!d.out && <Moved grid={d.grid} pos={d.pos} />}
-                    </span>
-                  </td>
-                  <td className="l">
-                    <button className="sp-f1-who" aria-expanded={isOpen} title={`${d.first} ${d.last}${d.team ? `, ${d.team}` : ''}`}>
-                      <Mark color={d.color} />
-                      <b>{d.last}</b>
-                      {d.n === follow && (
-                        <span className="sp-f1-star" aria-label="Following">
-                          ★
-                        </span>
-                      )}
-                    </button>
-                  </td>
-                  <td className="sp-num">{t.session.status === 'waiting' ? null : raceGap(d, i, mode)}</td>
-                  <td className="sp-num">
-                    <Time t={d.lastLap} />
-                  </td>
-                  <td>
-                    <Tyre tyre={d.tyre} />
-                  </td>
-                  <td className="sp-num sp-hide-sm">{d.stops}</td>
-                  <td className="sp-num sp-hide-sm" style={{ paddingRight: 16 }}>
-                    <Time t={d.bestLap} fastest={t.fastest?.n === d.n} />
-                  </td>
-                </tr>
-                {isOpen && (
-                  <tr className="sp-f1-more">
-                    <td colSpan={7}>
-                      <Details d={d} t={t} q="Q" follow={follow} loss={loss} names={names} />
-                      <button className="sp-btn sp-f1-follow" aria-pressed={follow === d.n} onClick={() => setFollow(follow === d.n ? null : d.n)}>
-                        {follow === d.n ? `★ Following ${d.last}` : `☆ Follow ${d.last}`}
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-      <p className="sp-tiny sp-muted sp-pad" style={{ margin: '6px 0 0' }}>
-        {lap1 ? 'Lap 1: the order firms up as the cars pass the timing points. ' : ''}▲▼ under a position: places gained or lost since the start. Tyres: the compound and the laps on that set (* used). Bold: a personal best; black: the best of anyone. Tap a driver for more.
-      </p>
-    </section>
-  );
-}
-
-/** The race tower's gap column: to the car ahead, or to the leader. */
-function raceGap(d, i, mode) {
-  if (d.out) return <span className="sp-muted">{d.out === 'retired' ? 'Retired' : 'Stopped'}</span>;
-  if (d.pit === 'in') return <span className="sp-f1-tag">In pit</span>;
-  if (d.pit === 'out') return <span className="sp-f1-tag">Out lap</span>;
-  if (i === 0) return <span className="sp-muted">Leader</span>;
-  const g = mode === 'int' ? d.int : d.gap;
-  if (!g) return <span className="sp-muted">–</span>;
-  if (g.laps) return `+${g.laps} ${g.laps === 1 ? 'lap' : 'laps'}`;
-  return <span className={mode === 'int' && g.s < 1 ? 'sp-f1-close' : undefined}>{secs(g.s)}</span>;
-}
-
 /** What a tap on a driver shows: sectors, best lap, tyres so far, track limits, a pit estimate. */
 function Details({ d, t, q, follow, loss, names }) {
   const rows = [];
@@ -625,7 +471,7 @@ function Details({ d, t, q, follow, loss, names }) {
       d.sectors.map((x, k) => (
         <Fragment key={k}>
           {k ? ' · ' : ''}
-          <Time t={x} />
+          <LapTime t={x} />
         </Fragment>
       )),
     ]);

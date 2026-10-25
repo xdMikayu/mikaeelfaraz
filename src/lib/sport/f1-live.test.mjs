@@ -349,6 +349,20 @@ test('qualifying lap by lap: mini-sectors, this lap’s sectors, the phase and w
   assert.deepEqual(b.drivers.map((d) => d.lap?.phase ?? null), ['pit', null, 'out']);
 });
 
+test('race laps: the mini-sectors, with only the pits and out laps told', () => {
+  const r = structuredClone(race);
+  // Verstappen into the third sector; Leclerc just back out, his lap begun in the pit lane.
+  r.TimingData.Lines[3].Sectors = [sector('gyyyyy', '28.631'), sector('yyyyyyyy', '41.122'), sector('yy......')];
+  r.TimingData.Lines[16].Sectors = [sector('bbyyyy', '30.112'), sector('y.......', '44.020'), sector('........', '33.900')];
+  const [ver, lec, nor] = tower(r, { at: Date.parse('2026-10-11T13:03:00Z') }).drivers;
+  assert.deepEqual(ver.lap.segs, ['gyyyyy', 'yyyyyyyy', 'yy......']);
+  // Every race lap is a racing one: no flying or slow laps, and no time it's heading for.
+  assert.equal(ver.lap.phase, null);
+  assert.equal(ver.lap.pace, null);
+  assert.equal(lec.lap.phase, 'out');
+  assert.equal(nor.lap.phase, 'pit');
+});
+
 test('race control in plain words', () => {
   const names = { 31: 'Ocon', 6: 'Hadjar', 12: 'Antonelli', 44: 'Hamilton', 87: 'Bearman', 4: 'Norris', 1: 'Verstappen', 18: 'Stroll' };
   const cases = [
