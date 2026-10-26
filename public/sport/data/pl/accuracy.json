@@ -1,11 +1,17 @@
 {
- "built": "2026-10-23T13:34:30.643Z",
+ "built": "2026-10-26T11:12:37.984Z",
  "firstWeek": 7,
  "pending": {
-  "gw": 8,
-  "deadline": "2026-10-23T17:30:00Z"
+  "gw": 9,
+  "deadline": "2026-10-31T11:00:00Z"
  },
- "awaiting": [],
+ "awaiting": [
+  {
+   "gw": 8,
+   "deadline": "2026-10-23T17:30:00Z",
+   "savedAt": "2026-10-23T13:34:30.594Z"
+  }
+ ],
  "season": {
   "weeks": 1,
   "maeOurs": 2.2575688073394495,
