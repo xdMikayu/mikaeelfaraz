@@ -4,10 +4,12 @@ name: Matchday data
 # player match logs) and the clubs' chances, refits the Net xG weights, saves and grades the weekly projections, and
 # commits it, which redeploys the site. Mondays catch the weekend round, Thursdays the midweek one,
 # Fridays save the weekend's projections before the deadline. A run takes about a minute.
+# GitHub starts scheduled runs hours late, so the site doesn't wait for this to grade a gameweek:
+# /api/sport/fpl/record grades it from the saved projections as soon as its last match is over.
 on:
   schedule:
     - cron: '23 5 * * 1'
-    # Tuesday morning: a gameweek that ends on Monday night is graded the next day, not on Thursday.
+    # Tuesday morning: a gameweek that ends on Monday night is committed the next day, not on Thursday.
     - cron: '23 5 * * 2'
     - cron: '23 5 * * 4'
     # Friday morning, before the weekend deadline: save the gameweek's projections with the latest news.
@@ -37,7 +39,7 @@ jobs:
       - run: node scripts/sport/build-chances.mjs || echo "FPL or the Premier League unavailable; chances not updated this run"
       # Relearn the Net xG weights with the new matches and re-test them (a few seconds).
       - run: node scripts/sport/fit-netxg.mjs
-      # Save this gameweek's projections before the deadline, and grade finished gameweeks.
+      # Save this gameweek's projections before the deadline, and grade the gameweeks played.
       # FPL sometimes turns cloud machines away; the record then waits for the next run.
       - run: node scripts/sport/accuracy.mjs || echo "FPL unavailable; track record not updated this run"
       - name: Commit if anything changed

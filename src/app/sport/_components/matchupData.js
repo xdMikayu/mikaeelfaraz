@@ -8,7 +8,7 @@ const BASE = '/sport/data/pl';
 const loads = {};
 
 function load(path) {
-  loads[path] ??= fetch(`${BASE}/${path}`).then((r) => {
+  loads[path] ??= fetch(path.startsWith('/') ? path : `${BASE}/${path}`).then((r) => {
     if (!r.ok) throw new Error(`Matchup data ${r.status}`);
     return r.json();
   });
@@ -16,29 +16,32 @@ function load(path) {
   return loads[path];
 }
 
-function useJson(path) {
+function useJson(path, get = load) {
   const [state, set] = useState({ data: null, error: null });
   useEffect(() => {
     if (!path) return;
     let on = true;
-    load(path).then(
+    get(path).then(
       (data) => on && set({ data, error: null }),
       (e) => on && set({ data: null, error: e.message })
     );
     return () => {
       on = false;
     };
-  }, [path]);
+  }, [path, get]);
   return state;
 }
+
+// The record graded on request, so a gameweek shows as soon as it's over; the weekly copy if that fails.
+const record = (path) => load(path).catch(() => load('accuracy.json'));
 
 export const useMatchupIndex = () => useJson('index.json');
 /** Net xG inputs per FPL player: long-run, recent and per-opponent [minutes, xG, xA]. */
 export const useNetXgData = () => useJson('netxg.json');
 /** Learned Net xG weights and their test results (scripts/sport/fit-netxg.mjs). */
 export const useNetXgModel = () => useJson('netxg-model.json');
-/** Our graded record: projections saved before each deadline against what happened (scripts/sport/accuracy.mjs). */
-export const useAccuracy = () => useJson('accuracy.json');
+/** Our graded record: projections saved before each deadline against what happened (src/lib/sport/record.mjs). */
+export const useAccuracy = () => useJson('/api/sport/fpl/record', record);
 /** Every match row for one club's current players: { espnId: { n, rows } }. */
 export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam}.json` : null);
 /** Set pieces club by club, this season and last (src/lib/sport/setpieces.mjs). */
