@@ -1,7 +1,8 @@
 name: Matchday data
 
 # Adds newly finished Premier League matches to the matchup data (xG by role, team ratings,
-# player match logs) and the clubs' chances, refits the Net xG weights, saves and grades the weekly projections, and
+# player match logs) and the clubs' chances, refits the Net xG weights, relearns the projections from
+# every gameweek played (scripts/sport/fit-fpl.mjs), saves and grades the weekly projections, and
 # commits it, which redeploys the site. Mondays catch the weekend round, Thursdays the midweek one,
 # Fridays save the weekend's projections before the deadline. A run takes about a minute.
 on:
@@ -37,6 +38,13 @@ jobs:
       - run: node scripts/sport/build-chances.mjs || echo "FPL or the Premier League unavailable; chances not updated this run"
       # Relearn the Net xG weights with the new matches and re-test them (a few seconds).
       - run: node scripts/sport/fit-netxg.mjs
+      # This season's gameweeks so far, for the projections to learn from. FPL can turn cloud machines
+      # away; the fit then learns from the copy the last run saved.
+      - run: node scripts/sport/build-fpl-history.mjs || echo "FPL unavailable; this season's history not updated this run"
+      # Relearn who starts and how defensive contributions bunch from every gameweek so far, checked on
+      # this season's latest weeks before the projections use it (a few seconds). If it fails, last
+      # run's model stays and the snapshot below still runs.
+      - run: node scripts/sport/fit-fpl.mjs || echo "Fit failed; the projections keep last run's model"
       # Save this gameweek's projections before the deadline, and grade finished gameweeks.
       # FPL sometimes turns cloud machines away; the record then waits for the next run.
       - run: node scripts/sport/accuracy.mjs || echo "FPL unavailable; track record not updated this run"

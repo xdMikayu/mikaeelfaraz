@@ -4,6 +4,7 @@ import { projectAhead, returnOdds, suggestTransfers, fixtureRates } from '@/lib/
 import { ROLE_NAME } from '@/lib/sport/matchups.mjs';
 import { shirt, one, heat, Face } from './fplbits';
 import Record from './FantasyRecord';
+import Learning from './FantasyLearning';
 import Advice from './FantasyAdvice';
 import TransferChat from './FantasyChat';
 import { TransferPlan, Chips, Rotations } from './FantasyOptimiser';
@@ -96,6 +97,7 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
         <>
           <Advice entry={entry} gw={gws[0]} els={ctx.elements} teams={teams} league={leagueId} />
           <Record />
+          <Learning />
 
           <section className="sp-panel">
             <h2 className="sp-h2">Captain for gameweek {first}</h2>
@@ -291,8 +293,8 @@ export default function Planner({ st, ctx, teams, picks, bank, fixtures, kit, en
       )}
 
       <p className="sp-note sp-pad" style={{ margin: '12px 0 0' }}>
-        Our projections, not FPL’s. Goal rates come from {ctx.model.byFixture ? 'the bookmakers’ prices for matches they’ve priced (about a week ahead; see Gameweek), then from ' : ''}team ratings fitted on every Premier League match since 2023/24 (xG and goals, recent matches weighted more); each player’s share from his xG and xA per 90 and how often he starts;
-        {kit ? ' then tilted by how much of what each opponent concedes usually goes to his position.' : ' matchup data is still loading.'} Rotation, injuries after today and price changes aren’t modelled.
+        Our projections, not FPL’s. Goal rates come from {ctx.model.byFixture ? 'the bookmakers’ prices for matches they’ve priced (about a week ahead; see Gameweek), then from ' : ''}team ratings fitted on every Premier League match since 2023/24 (xG and goals, recent matches weighted more); each player’s share from his xG and xA per 90, and his minutes from how often he starts, this season and in his last three matches (learned every week; see How the projections learn);
+        {kit ? ' then tilted by how much of what each opponent concedes usually goes to his position.' : ' matchup data is still loading.'} Injuries after today and price changes aren’t modelled.
       </p>
     </div>
   );

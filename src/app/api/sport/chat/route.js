@@ -66,7 +66,7 @@ export async function POST(req) {
   else {
     try {
       const st = await getStatic();
-      const [fixtures, entry, ix, learned, odds, season, setpieces] = await Promise.all([
+      const [fixtures, entry, ix, learned, odds, season, setpieces, fpl, recent] = await Promise.all([
         getFixtures(),
         getEntry(id, st.current),
         data('index.json', req),
@@ -74,13 +74,15 @@ export async function POST(req) {
         cached('/api/sport/odds', req),
         cached('/api/sport/fpl/season', req),
         data('setpieces.json', req).catch(() => null),
+        data('fpl-model.json', req).catch(() => null),
+        cached('/api/sport/fpl/recent', req),
       ]);
       if (!entry?.gw) return json({ error: `FPL has no picks for team ${id} yet` }, 404);
       // Only a league the team is in, from the same cached route the League tab reads.
       const leagueId = leagueAsked && entry.leagues.some((l) => l.id === leagueAsked) ? leagueAsked : null;
       const [next, league] = await Promise.all([getNextSquad(id, entry, st.current), leagueId ? cached(`/api/sport/fpl/league/${leagueId}/${st.current}`, req) : null]);
-      const kit = makeKit(ix, learned);
-      const ctx = makeCtx(st, kit, undefined, odds?.fixtures ?? null);
+      const kit = makeKit(ix, learned, fpl);
+      const ctx = makeCtx(st, kit, undefined, odds?.fixtures ?? null, recent?.players ?? null);
       world = chatWorld({ st, fixtures, entry, next, ctx, ix, season, setpieces, league, horizon, free: ft, load: (path) => data(path, req) });
       worlds.set(key, { at: Date.now(), world });
       if (worlds.size > 30) worlds.delete(worlds.keys().next().value);

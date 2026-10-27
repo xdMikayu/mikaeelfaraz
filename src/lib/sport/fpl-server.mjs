@@ -176,8 +176,34 @@ export async function getSeason() {
   return { through: Math.max(0, ...gws.map((g) => g.id)), players: per, at: new Date().toISOString() };
 }
 
+/**
+ * Each player's last three matches, newest first, as the learned minutes model reads them (fpl.mjs
+ * learnedMinutes): [share of the match's starts he made, minutes]. From the gameweeks whose
+ * matches are all over; one his club didn't play is skipped (FPL lists a match for everyone in a club
+ * that played, minutes or not). { through, players }.
+ */
+export async function getRecent() {
+  const b = await fpl('/bootstrap-static/', 60e3);
+  const all = (await fpl('/fixtures/', 300e3)) ?? [];
+  const over = (gw) => {
+    const fx = all.filter((f) => f.event === gw);
+    return fx.length > 0 && fx.every((f) => f.finished || f.finished_provisional);
+  };
+  const done = b.events.filter((e) => e.finished || (e.is_current && over(e.id))).map((e) => e.id).slice(-6);
+  const lives = await Promise.all(done.map((gw) => fpl(`/event/${gw}/live/`, b.events.find((e) => e.id === gw)?.data_checked ? 6 * 3600e3 : 60e3)));
+  const players = {};
+  for (let i = done.length - 1; i >= 0; i--) {
+    for (const e of lives[i]?.elements ?? []) {
+      const list = (players[e.id] ??= []);
+      if (!e.explain.length || list.length >= 3) continue;
+      list.push([Math.round(((e.stats.starts ?? 0) / e.explain.length) * 100) / 100, e.stats.minutes]);
+    }
+  }
+  return { through: done.at(-1) ?? null, players, at: new Date().toISOString() };
+}
+
 const num10 = (v) => (/^\d{1,10}$/.test(v ?? '') ? Number(v) : null);
-const KINDS = { static: 0, fixtures: 0, top: 0, season: 0, live: 1, entry: 2, league: 2 };
+const KINDS = { static: 0, fixtures: 0, top: 0, season: 0, recent: 0, live: 1, entry: 2, league: 2 };
 
 /**
  * What /api/sport/fpl/... asks for: { kind, id, event, legacy } or { error, status }.

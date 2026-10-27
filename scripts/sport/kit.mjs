@@ -20,5 +20,7 @@ export async function loadKit() {
   const ix = await readJson(join(DATA, 'index.json'));
   const learned = await readJson(join(DATA, 'netxg-model.json'));
   const nx = await readJson(join(DATA, 'netxg.json'));
-  return { kit: makeKit(ix, learned), learned, nx };
+  // What the projections learned from past gameweeks (scripts/sport/fit-fpl.mjs), as the page uses it.
+  const fpl = await readJson(join(DATA, 'fpl-model.json'));
+  return { kit: makeKit(ix, learned, fpl), learned, nx };
 }

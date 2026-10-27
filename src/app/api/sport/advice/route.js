@@ -30,6 +30,16 @@ async function data(path, req) {
   return res.json();
 }
 
+/** Each player's last three matches, for the learned minutes (the CDN's copy the page reads too); none if it fails. */
+async function recentMatches(req) {
+  try {
+    const res = await fetch(new URL('/api/sport/fpl/recent', req.url), { signal: AbortSignal.timeout(8000) });
+    return res.ok ? ((await res.json()).players ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The bookmakers' expected goals the page is using (the CDN's copy of /api/sport/odds); none if it fails. */
 async function bookmakers(req) {
   try {
@@ -85,11 +95,11 @@ export async function GET(req) {
 
   try {
     const st = await getStatic();
-    const [fixtures, entry, ix, learned, nx, odds] = await Promise.all([getFixtures(), getEntry(id, st.current), data('index.json', req), data('netxg-model.json', req), data('netxg.json', req), bookmakers(req)]);
+    const [fixtures, entry, ix, learned, nx, odds, fpl, lastThree] = await Promise.all([getFixtures(), getEntry(id, st.current), data('index.json', req), data('netxg-model.json', req), data('netxg.json', req), bookmakers(req), data('fpl-model.json', req).catch(() => null), recentMatches(req)]);
     if (!entry?.gw) return json({ error: `FPL has no picks for team ${id} yet` }, 404);
     const next = await getNextSquad(id, entry, st.current);
-    const kit = makeKit(ix, learned);
-    const ctx = makeCtx(st, kit, undefined, odds);
+    const kit = makeKit(ix, learned, fpl);
+    const ctx = makeCtx(st, kit, undefined, odds, lastThree);
     const base = { st, fixtures, entry, next, kit, ctx, learned, nx, free: ft };
 
     if (prep) {

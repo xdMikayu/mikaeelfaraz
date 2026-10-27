@@ -11,7 +11,8 @@ import Gameweek from './FantasyGameweek';
 import Stats from './FantasyStats';
 import Players, { WatchStar } from './FantasyPlayers';
 import MatchupPanel from './FantasyMatchup';
-import { useMatchupIndex, useForecastKit, useNetXgModel } from './matchupData';
+import { useMatchupIndex, useForecastKit, useNetXgModel, useFplModel } from './matchupData';
+import { withRecent } from '@/lib/sport/kit.mjs';
 import { useParam, useTabInView } from './useParam';
 import { useEo, EoPanel, eoWords, OVERALL } from './FantasyEo';
 import { DefconTracker, DefconBar, defconNow, defconWords } from './FantasyDefcon';
@@ -45,6 +46,8 @@ export default function FantasyView() {
   const live = useLive((signal) => (gw ? api(`live/${gw}`, signal) : Promise.resolve(null)), [gw], { every: 30000, live: liveGw });
   const season = useLive((signal) => api('fixtures', signal), [], { every: 600000, live: () => false });
   const odds = useLive((signal) => oddsApi(signal), [], { every: 1800000, live: () => true });
+  // Each player's last three matches, for the learned minutes; the projections work without them.
+  const recent = useLive((signal) => api('recent', signal), [], { every: 1800000, live: () => false });
   const entry = useLive((signal) => (gw && entryId ? api(`entry/${entryId}/${gw}`, signal) : Promise.resolve(null)), [gw, entryId], {
     every: 60000,
     live: () => liveGw(live.data),
@@ -60,7 +63,8 @@ export default function FantasyView() {
     );
   }
   if (st.error && !st.data) return <p className="sp-empty">FPL isn’t answering ({st.error}). It’s often briefly down around deadlines; this page will retry.</p>;
-  if (!st.data || !live.data || (entryId && !entry.data && !entry.error)) return <FantasySkeleton />;
+  // The recent matches are waited for (or their failure), so projections don't shift once they arrive.
+  if (!st.data || !live.data || (entryId && !entry.data && !entry.error) || (!recent.data && !recent.error)) return <FantasySkeleton />;
   if (entryId && entry.error && !entry.data)
     return (
       <div className="sp-empty">
@@ -85,6 +89,7 @@ export default function FantasyView() {
       fixtures={season.data}
       odds={odds.data?.fixtures ?? null}
       oddsAt={odds.data?.at ?? null}
+      recent={recent.data?.players ?? null}
       liveAt={live.at}
       liveErr={live.error}
       example={prefs.fplEntry ? null : example}
@@ -95,18 +100,19 @@ export default function FantasyView() {
   );
 }
 
-function Live({ st, live, entry, fixtures, odds, oddsAt, liveAt, liveErr, example, onLeave, onSave, onExample }) {
+function Live({ st, live, entry, fixtures, odds, oddsAt, recent, liveAt, liveErr, example, onLeave, onSave, onExample }) {
   const { prefs, update } = usePrefs();
   const mx = useMatchupIndex();
   const learned = useNetXgModel();
-  const kit = useForecastKit(mx.data, learned.data);
+  const fpl = useFplModel();
+  const kit = useForecastKit(mx.data, learned.data, fpl.data);
   // FPL's season numbers first; the longer matchup history replaces them once its file has loaded.
   const base = useMemo(() => (kit ? withMatchups(buildModel(st.elements), kit) : buildModel(st.elements)), [st, kit]);
   // Where the bookmakers have priced a match, their expected goals stand in for the model's.
   const model = useMemo(() => (odds && Object.keys(odds).length ? { ...base, byFixture: odds } : base), [base, odds]);
   const ctx = useMemo(
-    () => ({ elements: Object.fromEntries(st.elements.map((e) => [e.id, e])), live: live.elements, fixtures: live.fixtures, bonus: projectedBonus(live.fixtures), model }),
-    [st, live, model]
+    () => ({ elements: withRecent(st.elements, recent), live: live.elements, fixtures: live.fixtures, bonus: projectedBonus(live.fixtures), model }),
+    [st, live, model, recent]
   );
   const teams = useMemo(() => Object.fromEntries(st.teams.map((t) => [t.id, t])), [st]);
   const gw = st.events.find((e) => e.id === live.event);

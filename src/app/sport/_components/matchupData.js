@@ -37,6 +37,8 @@ export const useMatchupIndex = () => useJson('index.json');
 export const useNetXgData = () => useJson('netxg.json');
 /** Learned Net xG weights and their test results (scripts/sport/fit-netxg.mjs). */
 export const useNetXgModel = () => useJson('netxg-model.json');
+/** What the FPL projections learned from past gameweeks, and how it tested (scripts/sport/fit-fpl.mjs). */
+export const useFplModel = () => useJson('fpl-model.json');
 /** Our graded record: projections saved before each deadline against what happened (scripts/sport/accuracy.mjs). */
 export const useAccuracy = () => useJson('accuracy.json');
 /** Every match row for one club's current players: { espnId: { n, rows } }. */
@@ -45,6 +47,6 @@ export const usePlayerLog = (espnTeam) => useJson(espnTeam ? `players-${espnTeam
 export const useSetPieces = () => useJson('setpieces.json');
 
 /** Team ratings and role factors from the index, ready for fpl.mjs withMatchups and match odds. */
-export function useForecastKit(ix, learned) {
-  return useMemo(() => (ix ? makeKit(ix, learned) : null), [ix, learned]);
+export function useForecastKit(ix, learned, fpl = null) {
+  return useMemo(() => (ix ? makeKit(ix, learned, fpl) : null), [ix, learned, fpl]);
 }
