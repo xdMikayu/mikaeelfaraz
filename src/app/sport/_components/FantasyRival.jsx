@@ -111,7 +111,7 @@ export default function Rival({ me, them, ctx, teams, onBack, live }) {
       {fixtures.length > 0 && <Matches list={fixtures} ctx={ctx} teams={teams} name={name} />}
 
       <p className="sp-note sp-pad" style={{ margin: '14px 0 0' }}>
-        Projections are our estimate, not FPL’s. Each side’s goals come from {ctx.model.byFixture ? 'the bookmakers’ prices where they’ve priced the match, otherwise from ' : ''}our team ratings (mostly xG, with home advantage); each player’s share from his own xG and xA per 90 minutes and how often he starts. Matches in play only add what the minutes left can bring. The chance of finishing ahead treats players as independent, so it is rougher when you both depend on the same match.
+        Projections are our estimate, not FPL’s. Each side’s goals come from {ctx.model.byFixture ? 'the bookmakers’ prices where they’ve priced the match, otherwise from ' : ''}our team ratings (mostly xG, with home advantage); each player’s share from his own xG and xA per 90 minutes, and his minutes from how often he starts, this season and lately. Matches in play only add what the minutes left can bring. The chance of finishing ahead treats players as independent, so it is rougher when you both depend on the same match.
       </p>
     </div>
   );

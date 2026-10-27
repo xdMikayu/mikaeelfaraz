@@ -218,7 +218,7 @@ export function pointChanges(prev, next, elementIds) {
 // Matches in play only add what the minutes left can still bring.
 
 export const GOAL_PTS = { 1: 10, 2: 6, 3: 5, 4: 4 };
-const CS_PTS = { 1: 4, 2: 4, 3: 1, 4: 0 };
+export const CS_PTS = { 1: 4, 2: 4, 3: 1, 4: 0 };
 export const DC_NEED = { 2: 10, 3: 12, 4: 12 }; // defensive contributions for 2 points
 const HOME = 1.1; // home sides create about 20% more xG than away sides in the Premier League
 const PRIOR_MATCHES = 4; // league-average matches mixed into each team's rating
@@ -233,6 +233,24 @@ const pmf = (l, max = 20) => {
 export const poissonTail = (l, t) => (t <= 0 ? 1 : 1 - pmf(l, t - 1).reduce((a, b) => a + b, 0));
 /** E[floor((X + offset) / d)] for X ~ Poisson(l). */
 export const poissonFloor = (l, d, offset = 0) => pmf(l, 25).reduce((t, p, k) => t + p * Math.floor((k + offset) / d), 0);
+/**
+ * P(X >= t) for a count with mean `mean` that bunches more than Poisson: negative binomial with
+ * `size` (smaller is more spread; Poisson as size grows). Without a size, Poisson.
+ */
+export function countTail(mean, t, size = null) {
+  if (!size) return poissonTail(mean, t);
+  if (t <= 0) return 1;
+  const q = mean / (size + mean);
+  let p = (size / (size + mean)) ** size;
+  let below = p;
+  for (let k = 1; k < t; k++) {
+    p *= ((k - 1 + size) / k) * q;
+    below += p;
+  }
+  return Math.max(0, 1 - below);
+}
+const sigmoid = (z) => 1 / (1 + Math.exp(-z));
+const dot = (b, x) => b.reduce((t, v, i) => t + v * x[i], 0);
 
 /**
  * Expected points from defensive contributions in a full match, for a player averaging `dc90` of them
@@ -276,12 +294,14 @@ export function buildModel(elements) {
  * Adds the longer view from the matchup data (public/sport/data/pl/index.json): team ratings fitted
  * on every match since 2023/24 (forecast.mjs rateTeams) replace this season's FPL numbers for goal
  * rates, and each player's xG and xA are scaled by how much his opponent usually allows his role.
- * m: { ratings, goalRates, fplTeams: { fplTeam: espnTeam }, roles: { fplPlayer: role }, roleFactor(espnOpp, role) }
+ * m: { ratings, goalRates, fplTeams: { fplTeam: espnTeam }, roles: { fplPlayer: role }, roleFactor(espnOpp, role),
+ * fpl (what the projections learned from past gameweeks, kit.mjs makeKit) }
  */
 export function withMatchups(model, m) {
   const memo = new Map();
   return {
     ...model,
+    learned: m.fpl ?? null,
     rates(home, away) {
       const h = m.fplTeams[home];
       const a = m.fplTeams[away];
@@ -363,9 +383,35 @@ export function fixtureRates(f, model) {
 const statOf = (live, fixtureId, key) => live?.explain?.find((x) => x.fixture === fixtureId)?.stats.find((s) => s.identifier === key) ?? null;
 
 /**
+ * His minutes before kick-off as the weekly fit learned them (scripts/sport/fit-fpl.mjs), from his
+ * season's share of his club's starts and his last few matches (el.recent: [share of the match's
+ * starts he made, minutes], newest first): the chance he starts, the chance he comes on otherwise,
+ * the minutes each brings and his chance of 60 minutes when he starts. Null without both.
+ */
+function learnedMinutes(el, n, m) {
+  const r = el.recent;
+  if (!m || !r?.length || n < 3) return null;
+  const share = Math.min(1, (el.starts ?? 0) / n);
+  const last = r.slice(0, 3);
+  const s1 = r[0][0];
+  const s3 = last.reduce((t, x) => t + x[0], 0) / last.length;
+  const a1 = r[0][1] > 0 ? 1 : 0;
+  const perStart = el.starts > 0 ? Math.min(90, (el.minutes ?? 0) / el.starts) : m.perStart;
+  const pStart = sigmoid(dot(m.start, [1, share, s1, s3, share * s1]));
+  return {
+    pStart,
+    pSub: (1 - pStart) * sigmoid(dot(m.sub, [1, share, a1, s3])),
+    minStart: Math.max(20, Math.min(90, dot(m.minStart, [1, perStart]))),
+    minSub: m.minSub,
+    p60Start: sigmoid(dot(m.p60, [1, perStart / 90])),
+  };
+}
+
+/**
  * His minutes in one fixture as the projections see them: { left (the share of the match still to play),
- * alreadyMins, mins (still to come), pApp (the chance he plays), p60 }. On the pitch in a live match he's
- * assumed to stay on; on its bench, a one-in-three chance he comes on; before kick-off, from his starts.
+ * alreadyMins, mins (still to come), pApp (the chance he plays), p60, and before kick-off pStart, pSub,
+ * minStart, minSub (each way he might play and its minutes) }. On the pitch in a live match he's assumed
+ * to stay on; on its bench, a one-in-three chance he comes on; before kick-off, from his starts.
  */
 function minutesOutlook(el, f, ctx) {
   const left = f.started ? Math.max(0.03, Math.min(1, (90 - (f.minutes ?? 0)) / 90)) : 1;
@@ -383,12 +429,22 @@ function minutesOutlook(el, f, ctx) {
   const min = el.minutes ?? 0;
   const n = Math.max(1, Math.round(ctx.model?.teams[el.team]?.n ?? 0));
   const avail = availability(el, f, ctx);
+  const learned = learnedMinutes(el, n, ctx.model?.learned?.minutes);
+  if (learned) {
+    const { pStart: ps, pSub: pb, minStart, minSub, p60Start } = learned;
+    const pStart = ps * avail;
+    const pSub = pb * avail;
+    return { left, alreadyMins: 0, pStart, pSub, minStart, minSub, mins: pStart * minStart + pSub * minSub, pApp: pStart + pSub, p60: pStart * p60Start };
+  }
   const starts = el.starts ?? 0;
   const pStart = Math.min(1, starts / n) * avail;
   const perStart = starts > 0 ? Math.min(90, min / starts) : 0;
   const pSub = min > 0 ? (1 - Math.min(1, starts / n)) * 0.3 * avail : 0;
-  return { left, alreadyMins: 0, mins: pStart * perStart + pSub * 20, pApp: pStart + pSub, p60: pStart * (perStart >= 75 ? 0.9 : perStart >= 60 ? 0.7 : 0.3) };
+  return { left, alreadyMins: 0, pStart, pSub, minStart: perStart, minSub: 20, mins: pStart * perStart + pSub * 20, pApp: pStart + pSub, p60: pStart * (perStart >= 75 ? 0.9 : perStart >= 60 ? 0.7 : 0.3) };
 }
+
+/** His minutes in a match not yet started, as the projections expect them (minutesOutlook's before-kick-off answer). */
+export const minutesBefore = (el, f, ctx) => minutesOutlook(el, { ...f, started: false }, ctx);
 
 /**
  * Where a player stands against FPL's defensive-contribution line in one fixture: { need, have, paid
@@ -418,9 +474,15 @@ export function defconFixture(id, f, ctx) {
   const reached = paid || have >= need;
   const done = Boolean(f.finished || f.finishedProvisional);
   const off = Boolean(f.started && !done && here > 0 && (live?.st?.starts ?? 0) > 0 && (f.minutes ?? 0) - here >= 10);
-  const mins = reached || done || off ? 0 : minutesOutlook(el, f, ctx).mins;
-  const chance = reached ? 1 : done || off ? 0 : poissonTail(((el.dc90 ?? 0) * mins) / 90, need - have);
-  return { need, have, paid, reached, done, on: here > 0, off, mins, chance };
+  // Counts bunch more than Poisson; the weekly fit learns by how much for each position.
+  const size = ctx.model?.learned?.dc?.[el.type] ?? null;
+  const tail = (m) => countTail(((el.dc90 ?? 0) * m) / 90, need - have, size);
+  if (reached || done || off) return { need, have, paid, reached, done, on: here > 0, off, mins: 0, chance: reached ? 1 : 0 };
+  const o = minutesOutlook(el, f, ctx);
+  // Before kick-off, each way he might play on its own: a starter's full match reaches the line far
+  // more often than the average of starting and not would suggest.
+  const chance = f.started ? tail(o.mins) : o.pStart * tail(o.minStart) + o.pSub * tail(o.minSub);
+  return { need, have, paid, reached, done, on: here > 0, off, mins: o.mins, chance };
 }
 
 /**
@@ -457,16 +519,19 @@ export function projectFixture(id, f, ctx) {
   const conceded = f.started ? (home ? f.as : f.hs) ?? 0 : 0;
   const lamRest = lamAgainst * left;
 
-  let xp = 0;
+  // Expected points part by part, the way FPL pays them, so each part can be checked against what
+  // FPL paid (src/lib/sport/fpl-learn.mjs).
+  const parts = { app: 0, goals: 0, assists: 0, cs: 0, gc: 0, saves: 0, dc: 0, bonus: 0, cards: 0 };
   let v = 1.2 * pApp; // bonus, cards and the rest that the parts below don't cover
   // Appearance: 1 point for playing, 2 for 60 minutes. In a live match only what's not yet earned.
   if (f.started) {
-    if (alreadyMins === 0) xp += pApp;
-    if (alreadyMins < 60) xp += p60;
+    if (alreadyMins === 0) parts.app += pApp;
+    if (alreadyMins < 60) parts.app += p60;
   } else {
-    xp += pApp + p60;
+    parts.app = pApp + p60;
   }
-  xp += GOAL_PTS[type] * xg + 3 * xa;
+  parts.goals = GOAL_PTS[type] * xg;
+  parts.assists = 3 * xa;
   v += GOAL_PTS[type] ** 2 * xg + 9 * xa;
 
   let cs = null;
@@ -475,30 +540,31 @@ export function projectFixture(id, f, ctx) {
     cs = p60 > 0 ? keep : 0;
     const hasCsNow = f.started && alreadyMins >= 60 && conceded === 0;
     // FPL already counts a live clean sheet once he's past 60 minutes; it can still be lost.
-    const gain = hasCsNow ? -CS_PTS[type] * (1 - keep) : CS_PTS[type] * p60 * keep;
-    xp += gain;
+    parts.cs = hasCsNow ? -CS_PTS[type] * (1 - keep) : CS_PTS[type] * p60 * keep;
     v += CS_PTS[type] ** 2 * keep * (1 - keep) * (hasCsNow ? 1 : p60);
   }
   if (type === 1 || type === 2) {
     // −1 per two goals conceded while he's on.
     const share = f.started ? (pApp === 1 ? 1 : 0) : mins / 90;
-    xp -= share * (poissonFloor(lamRest, 2, conceded) - Math.floor(conceded / 2));
+    parts.gc = -share * (poissonFloor(lamRest, 2, conceded) - Math.floor(conceded / 2));
   }
   if (type === 1) {
     const saves90 = per90(el.saves ?? 0) * (lamAgainst / model.avg);
     const before = f.started ? statOf(live, f.id, 'saves')?.value ?? 0 : 0;
-    xp += poissonFloor(saves90 * frac, 3, before) - Math.floor(before / 3);
+    parts.saves = poissonFloor(saves90 * frac, 3, before) - Math.floor(before / 3);
   }
   if (DC_NEED[type] && el.dc90) {
     const dc = defconFixture(id, f, ctx);
     if (!dc.paid) {
-      xp += 2 * dc.chance;
+      parts.dc = 2 * dc.chance;
       v += 4 * dc.chance * (1 - dc.chance);
     }
   }
-  if (!f.started) xp += per90(el.bonus ?? 0) * frac;
-  xp -= per90(el.yc ?? 0) * frac;
-  return { xp: Math.max(0, xp), v, xg, xa, cs, mins, pApp, lamFor, lamAgainst, roleF };
+  if (!f.started) parts.bonus = per90(el.bonus ?? 0) * frac;
+  parts.cards = -per90(el.yc ?? 0) * frac;
+  let xp = 0;
+  for (const k in parts) xp += parts[k];
+  return { xp: Math.max(0, xp), v, xg, xa, cs, mins, pApp, p60, lamFor, lamAgainst, roleF, parts };
 }
 
 /** Points so far plus what's still expected, across his fixtures this gameweek. */
