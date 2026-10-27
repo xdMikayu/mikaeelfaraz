@@ -1,26 +1,20 @@
 {
- "built": "2026-10-26T11:12:37.984Z",
+ "built": "2026-10-27T10:40:56.953Z",
  "firstWeek": 7,
  "pending": {
   "gw": 9,
   "deadline": "2026-10-31T11:00:00Z"
  },
- "awaiting": [
-  {
-   "gw": 8,
-   "deadline": "2026-10-23T17:30:00Z",
-   "savedAt": "2026-10-23T13:34:30.594Z"
-  }
- ],
+ "awaiting": [],
  "season": {
-  "weeks": 1,
-  "maeOurs": 2.2575688073394495,
-  "maeFpl": 3.0165137614678894,
-  "top10Ours": 4.8,
-  "top10Fpl": 2.7,
-  "captainOurs": 13,
-  "captainFpl": 6,
-  "beatFplWeeks": 1
+  "weeks": 2,
+  "maeOurs": 2.2580009935314758,
+  "maeFpl": 3.003187756309982,
+  "top10Ours": 4.75,
+  "top10Fpl": 2.85,
+  "captainOurs": 21,
+  "captainFpl": 8,
+  "beatFplWeeks": 2
  },
  "weeks": [
   {
@@ -48,6 +42,34 @@
     "n": 304,
     "corr": 0.5460106822058499,
     "top20": 0.406,
+    "top20Goals": null
+   }
+  },
+  {
+   "gw": 8,
+   "savedAt": "2026-10-23T13:34:30.594Z",
+   "n": 217,
+   "points": {
+    "maeOurs": 2.2584331797235024,
+    "maeFpl": 2.989861751152074,
+    "corrOurs": 0.2635839827604751,
+    "corrFpl": -0.0017912622887355353,
+    "top10Ours": 4.7,
+    "top10Fpl": 3,
+    "top10Best": 11.8,
+    "captainOurs": {
+     "name": "Haaland",
+     "pts": 8
+    },
+    "captainFpl": {
+     "name": "Henderson",
+     "pts": 2
+    }
+   },
+   "netXg": {
+    "n": 303,
+    "corr": 0.44171005254002305,
+    "top20": 0.2855,
     "top20Goals": null
    }
   }
