@@ -41,6 +41,16 @@ async function recentMatches(req) {
 }
 
 /** The bookmakers' expected goals the page is using (the CDN's copy of /api/sport/odds); none if it fails. */
+/** One of this site's own CDN-cached routes, or null if it fails or is slow. */
+async function own(path, req, ms = 6000) {
+  try {
+    const res = await fetch(new URL(path, req.url), { signal: AbortSignal.timeout(ms) });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 async function bookmakers(req) {
   try {
     const res = await fetch(new URL('/api/sport/odds', req.url), { signal: AbortSignal.timeout(5000) });
@@ -115,16 +125,19 @@ export async function GET(req) {
     const leagueId = leagueParam && entry.leagues.some((l) => l.id === leagueParam) ? leagueParam : null;
     const recent = [...new Set(next.transfers.map((t) => t.event).filter((e) => e >= st.current - 5 && e <= st.current))];
     const from = recent.length ? Math.min(...recent) : null;
-    const [news, league, points, record] = await Promise.all([
+    const [news, league, points, record, review, race] = await Promise.all([
       newsTeams.length && gw ? clubNews(newsTeams, gw, req) : { reports: [], error: null },
       leagueId ? getLeague(leagueId, st.current).catch(() => null) : null,
       from ? Promise.all(Array.from({ length: st.current - from + 1 }, (_, i) => from + i).map((g) => getPoints(g, st.events.find((e) => e.id === g)?.finished).then((m) => [g, m]).catch(() => null))) : [],
       data('accuracy.json', req).catch(() => null),
+      // The manager's season looked back on and why the rivals around them gained, as the page shows them.
+      own(`/api/sport/fpl/review/${id}`, req),
+      leagueId ? own(`/api/sport/fpl/rivals/${id}/${leagueId}`, req) : null,
     ]);
     const key = `${id}:${ft ?? ''}:${leagueId ?? ''}:${news.reports.map((r) => `${r.team}@${r.at}`).sort().join(',')}`;
     if (cached(key, 30)) return json(cached(key, 30), 200);
     if (used >= DAILY_LIMIT) return json({ error: 'Today’s AI advice limit is used up. The numbers in the Planner still work; try again tomorrow.' }, 429);
-    const packet = buildPacket({ ...base, news: news.reports, newsError: news.error, league, pointsByGw: Object.fromEntries(points.filter(Boolean)), record });
+    const packet = buildPacket({ ...base, news: news.reports, newsError: news.error, league, pointsByGw: Object.fromEntries(points.filter(Boolean)), record, review, race });
     used += 1;
     const started = Date.now();
     const { advice } = await askModel(packet);

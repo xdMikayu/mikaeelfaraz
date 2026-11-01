@@ -7,17 +7,23 @@ const BASE = 'https://fantasy.premierleague.com/api';
 const UA = 'Mozilla/5.0 (personal FPL viewer; mikaeelfaraz.com)';
 
 const memo = new Map(); // per function instance; picks for a past deadline never change
+const inFlight = new Map(); // the same path asked for twice at once is fetched once
 
 async function fpl(path, ttlMs = 0) {
   const hit = memo.get(path);
   if (hit && Date.now() - hit.at < ttlMs) return hit.data;
-  const res = await fetch(`${BASE}${path}`, { headers: { 'user-agent': UA, accept: 'application/json' }, cache: 'no-store' });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`FPL ${res.status} on ${path}`);
-  const data = await res.json();
-  if (ttlMs) memo.set(path, { at: Date.now(), data });
-  if (memo.size > 400) memo.delete(memo.keys().next().value);
-  return data;
+  if (inFlight.has(path)) return inFlight.get(path);
+  const p = (async () => {
+    const res = await fetch(`${BASE}${path}`, { headers: { 'user-agent': UA, accept: 'application/json' }, cache: 'no-store' });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`FPL ${res.status} on ${path}`);
+    const data = await res.json();
+    if (ttlMs) memo.set(path, { at: Date.now(), data });
+    if (memo.size > 400) memo.delete(memo.keys().next().value);
+    return data;
+  })().finally(() => inFlight.delete(path));
+  inFlight.set(path, p);
+  return p;
 }
 
 const num = (v) => (v == null || v === '' ? null : Number(v));
@@ -50,6 +56,8 @@ export async function getStatic() {
       highest: e.highest_score ?? null,
     })),
     teams: b.teams.map((t) => ({ id: t.id, name: t.name, short: t.short_name, code: t.code })),
+    // Each chip and the gameweeks it can be played in (one set before gameweek 20, another after).
+    chips: (b.chips ?? []).map((c) => ({ name: c.name, from: c.start_event, to: c.stop_event })),
     elements: b.elements.map((e) => ({
       id: e.id,
       name: e.web_name,
@@ -94,8 +102,9 @@ export async function getStatic() {
   };
 }
 
-export async function getLive(event) {
-  const [live, fixtures] = await Promise.all([fpl(`/event/${event}/live/`, 15e3), fpl(`/fixtures/?event=${event}`, 15e3)]);
+/** One gameweek's player data and fixtures. ttlMs: how long this function keeps it (a finished gameweek's for hours). */
+export async function getLive(event, ttlMs = 15e3) {
+  const [live, fixtures] = await Promise.all([fpl(`/event/${event}/live/`, ttlMs), fpl(`/fixtures/?event=${event}`, ttlMs)]);
   const pairs = (f, key) => {
     const s = f.stats?.find((x) => x.identifier === key);
     return Object.fromEntries([...(s?.h ?? []), ...(s?.a ?? [])].map((x) => [x.element, x.value]));
@@ -284,6 +293,23 @@ export async function getEntry(id, event) {
     history: (history?.current ?? []).map((h) => ({ event: h.event, points: h.points, total: h.total_points, overall: h.overall_rank, rank: h.rank, hit: h.event_transfers_cost, transfers: h.event_transfers, bench: h.points_on_bench })),
     chips: (history?.chips ?? []).map((c) => ({ name: c.name, event: c.event })),
   };
+}
+
+/** Every transfer a manager has made this season, as FPL lists them (a Wildcard's churn included). */
+export async function getTransfers(id) {
+  return ((await fpl(`/entry/${id}/transfers/`, 60e3)) ?? []).map((t) => ({ element_in: t.element_in, element_in_cost: t.element_in_cost, element_out: t.element_out, element_out_cost: t.element_out_cost, event: t.event, time: t.time }));
+}
+
+/** A classic league's first 50 by total: { name, rows: [{ entry, team, manager, rank, total }] }, without their picks. */
+export async function getStandings(id) {
+  const s = await fpl(`/leagues-classic/${id}/standings/?page_standings=1`, 60e3);
+  if (!s) return null;
+  return { id: s.league.id, name: s.league.name, rows: (s.standings?.results ?? []).map((r) => ({ entry: r.entry, team: r.entry_name, manager: r.player_name, rank: r.rank, total: r.total })) };
+}
+
+/** A manager's picks for any gameweek since the deadline (fixed from then on, so kept for hours). */
+export async function getPicks(id, event) {
+  return picksShape(await fpl(`/entry/${id}/event/${event}/picks/`, 6 * 3600e3));
 }
 
 /**

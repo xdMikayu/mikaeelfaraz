@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bestXI } from './optimise.mjs';
-import { findPlayers, playerReport, compareTransfer, bestReplacements, namedPlayers, chatTurns, chatTools } from './chat.mjs';
+import { findPlayers, playerReport, compareTransfer, bestReplacements, namedPlayers, chatTurns, chatTools, chatContext } from './chat.mjs';
 
 // A small world: a fifteen-player squad and a few players to buy, two gameweeks ahead.
 const TEAMS = { 1: 'Brighton BHA', 2: 'Bournemouth BOU', 3: 'Man City MCI', 4: 'Arsenal ARS', 5: 'Leeds LEE', 6: 'Everton EVE' };
@@ -132,7 +132,7 @@ test('chat: the tools are fixed in order, stream their input, and refuse unknown
   const w = world();
   const said = [];
   const tools = chatTools(w, (s) => said.push(s));
-  assert.deepEqual(tools.map((t) => t.name), ['best_replacements', 'compare_transfer', 'find_players', 'player_report']);
+  assert.deepEqual(tools.map((t) => t.name), ['best_replacements', 'chip_what_if', 'compare_transfer', 'compare_with_rival', 'find_players', 'player_report', 'season_so_far']);
   assert.ok(tools.every((t) => t.eager_input_streaming === true && typeof t.run === 'function'));
   const report = tools.find((t) => t.name === 'player_report');
   assert.match(await report.run({ id: 999 }), /Unknown player id/);
@@ -141,4 +141,70 @@ test('chat: the tools are fixed in order, stream their input, and refuse unknown
   const find = tools.find((t) => t.name === 'find_players');
   assert.equal(JSON.parse(await find.run({ query: 'Vuskovic', position: 'XX' }))[0].id, 20);
   assert.deepEqual(said, ['Checking Vuskovic', 'Looking up Vuskovic']);
+});
+
+test('chat: the season tools read earlier gameweeks, and say so plainly when they can’t', async () => {
+  const w = world();
+  const tools = chatTools(w);
+  const chip = tools.find((t) => t.name === 'chip_what_if');
+  const season = tools.find((t) => t.name === 'season_so_far');
+  assert.match(await chip.run({ chip: 'nope' }), /Unknown chip/);
+  // Without FPL's earlier gameweeks to hand.
+  assert.match(await chip.run({ chip: 'wildcard' }), /isn’t available/);
+  assert.match(await season.run({}), /isn’t available/);
+  // FPL failing midway.
+  w.past = { picks: async () => { throw new Error('FPL 503'); }, live: async () => null };
+  w.entry = { name: 'Test', chips: [{ name: 'wildcard', event: 3 }], history: [{ event: 3, points: 50, hit: 0 }], started: 1 };
+  w.done = [1, 2, 3];
+  w.playing = null;
+  assert.match(await chip.run({ chip: 'wildcard' }), /FPL didn’t answer/);
+});
+
+test('chat: any rival in the league, and a plain answer when no league is picked', async () => {
+  const w = world();
+  const said = [];
+  const rival = chatTools(w, (x) => said.push(x)).find((t) => t.name === 'compare_with_rival');
+  assert.match(await rival.run({ rival: 'Jels' }), /No mini-league is picked/);
+  const asked = [];
+  w.past = { rival: async (name, from) => (asked.push([name, from]), { team: 'Jels Vikings', gained: 12 }) };
+  assert.match(await rival.run({ rival: '  ' }), /Name the rival/);
+  assert.equal(JSON.parse(await rival.run({ rival: ' Jels ', from_gw: 5 })).gained, 12);
+  await rival.run({ rival: 'Evigt', from_gw: '3' });
+  assert.deepEqual(asked, [['Jels', 5], ['Evigt', null]]);
+  assert.deepEqual(said, ['Comparing you with Jels', 'Comparing you with Evigt']);
+  w.past.rival = async () => {
+    throw new Error('FPL 503');
+  };
+  assert.match(await rival.run({ rival: 'Jels' }), /FPL didn’t answer/);
+});
+
+test('chat: the context carries the chips left, the season’s lessons and the league race', () => {
+  const w = world();
+  Object.assign(w, {
+    entry: { name: 'Test XI', total: 500, overall: 1000, chips: [{ name: 'bboost', event: 1 }, { name: 'wildcard', event: 6 }] },
+    deadline: Date.parse('2026-11-07T11:00:00Z'),
+    guessed: [],
+    freeEstimated: false,
+    done: [1, 2, 3, 4, 5, 6, 7],
+    playing: null,
+    record: {
+      through: 7,
+      transfers: { made: 1, hitsTaken: 4, netAfterHits: -6, best: [], costliest: [{ gw: 5, weeksAgo: 3, out: 'Saka', in: 'Mitoma', inScored: 4, outScored: 6, gain: -2 }], hits: [{ gw: 5, weeksAgo: 3, cost: 4, moves: ['Saka → Mitoma'], gained: -2, net: -6 }] },
+      chips: [{ chip: 'Bench Boost', gw: 1, gain: 9 }],
+      captains: { leftWithHindsight: 12, costliest: [] },
+      benchPoints: 30,
+    },
+    race: { league: 'Office', you: { rank: 3, team: 'Test XI' }, through: 7, rivals: [{ entry: 2, team: 'Rival FC', manager: 'R', rank: 2, gapNow: 9, since: 4, gapBefore: 0, gained: 9, parts: { players: 9, captaincy: 0, hits: 0 }, forThem: [], forYou: [], captains: [], theirBestMoves: [], yourCostliestMoves: [], chips: { theirs: [], yours: [] } }] },
+  });
+  const c = chatContext(w);
+  assert.deepEqual(c.seasonSoFar.chipsLeft, ['Free Hit', 'Triple Captain']);
+  assert.equal(c.seasonSoFar.chipsLeftExpireAfter, 'GW19');
+  assert.deepEqual(c.yourSeasonLessons.hits, ['GW5: −4 for Saka → Mitoma; those moves -2 since, so 6 short of paying back']);
+  assert.equal(c.leagueRace.rivals[0].gainedOnYou, 9);
+  assert.equal(c.leagueRace.rivals[0].since, 'GW4');
+  // Without them, neither key is sent.
+  w.record = null;
+  w.race = null;
+  const bare = chatContext(w);
+  assert.ok(!('yourSeasonLessons' in bare) && !('leagueRace' in bare));
 });
