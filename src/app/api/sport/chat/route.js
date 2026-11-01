@@ -5,7 +5,7 @@
 // Never cached at the CDN: it's a POST, and every answer is one manager's. Each manager's numbers
 // are kept here for five minutes, so a conversation sees the same ones (and the model's prompt
 // cache holds); a daily ceiling stops runaway use.
-import { getStatic, getFixtures, getEntry, getNextSquad } from '@/lib/sport/fpl-server.mjs';
+import { getStatic, getFixtures, getEntry, getNextSquad, getPicks, getLive } from '@/lib/sport/fpl-server.mjs';
 import { makeKit, makeCtx } from '@/lib/sport/kit.mjs';
 import { chatEnabled, chatWorld, chatTurns, runChat, chatError } from '@/lib/sport/chat.mjs';
 
@@ -83,7 +83,10 @@ export async function POST(req) {
       const [next, league] = await Promise.all([getNextSquad(id, entry, st.current), leagueId ? cached(`/api/sport/fpl/league/${leagueId}/${st.current}`, req) : null]);
       const kit = makeKit(ix, learned, fpl);
       const ctx = makeCtx(st, kit, undefined, odds?.fixtures ?? null, recent?.players ?? null);
-      world = chatWorld({ st, fixtures, entry, next, ctx, ix, season, setpieces, league, horizon, free: ft, load: (path) => data(path, req) });
+      // Earlier gameweeks, fetched only when the manager asks about their season: their picks, and
+      // every player's points (a finished gameweek's kept for hours).
+      const past = { picks: (gw) => getPicks(id, gw), live: (gw) => getLive(gw, gw < st.current ? 6 * 3600e3 : 30e3) };
+      world = chatWorld({ st, fixtures, entry, next, ctx, ix, season, setpieces, league, horizon, free: ft, load: (path) => data(path, req), past });
       worlds.set(key, { at: Date.now(), world });
       if (worlds.size > 30) worlds.delete(worlds.keys().next().value);
     } catch (e) {

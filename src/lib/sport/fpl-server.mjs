@@ -94,8 +94,9 @@ export async function getStatic() {
   };
 }
 
-export async function getLive(event) {
-  const [live, fixtures] = await Promise.all([fpl(`/event/${event}/live/`, 15e3), fpl(`/fixtures/?event=${event}`, 15e3)]);
+/** One gameweek's player data and fixtures. ttlMs: how long this function keeps it (a finished gameweek's for hours). */
+export async function getLive(event, ttlMs = 15e3) {
+  const [live, fixtures] = await Promise.all([fpl(`/event/${event}/live/`, ttlMs), fpl(`/fixtures/?event=${event}`, ttlMs)]);
   const pairs = (f, key) => {
     const s = f.stats?.find((x) => x.identifier === key);
     return Object.fromEntries([...(s?.h ?? []), ...(s?.a ?? [])].map((x) => [x.element, x.value]));
@@ -284,6 +285,11 @@ export async function getEntry(id, event) {
     history: (history?.current ?? []).map((h) => ({ event: h.event, points: h.points, total: h.total_points, overall: h.overall_rank, rank: h.rank, hit: h.event_transfers_cost, transfers: h.event_transfers, bench: h.points_on_bench })),
     chips: (history?.chips ?? []).map((c) => ({ name: c.name, event: c.event })),
   };
+}
+
+/** A manager's picks for any gameweek since the deadline (fixed from then on, so kept for hours). */
+export async function getPicks(id, event) {
+  return picksShape(await fpl(`/entry/${id}/event/${event}/picks/`, 6 * 3600e3));
 }
 
 /**

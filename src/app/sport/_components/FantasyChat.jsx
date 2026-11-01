@@ -171,7 +171,7 @@ export default function TransferChat({ entry, horizon, league, suggestions = [] 
       </div>
       <p className="sp-small sp-ink2" style={{ margin: '4px 0 10px' }}>
         Ask about any player or move, like “Why not Vuskovic instead of Tavernier?”: why we suggest one player and not the one you want, whether yours is fine anyway, who else fits your
-        budget. It answers from the same numbers as the planner, over the next {horizon} gameweeks.
+        budget. It answers from the same numbers as the planner, over the next {horizon} gameweeks. Or ask how your season’s gone: “Would I have more points without my wildcard?”, “Which transfer worked best?”.
       </p>
       {messages.length > 0 && (
         <div className="sp-chat-log" ref={list} aria-live="polite">
@@ -217,7 +217,7 @@ export default function TransferChat({ entry, horizon, league, suggestions = [] 
           rows={1}
           value={draft}
           maxLength={800}
-          placeholder="Ask about any player or transfer"
+          placeholder="Ask about a player, a transfer or your season"
           aria-label="Ask Matchday AI about a transfer"
           onChange={(e) => {
             setDraft(e.target.value);

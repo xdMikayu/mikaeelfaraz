@@ -132,7 +132,7 @@ test('chat: the tools are fixed in order, stream their input, and refuse unknown
   const w = world();
   const said = [];
   const tools = chatTools(w, (s) => said.push(s));
-  assert.deepEqual(tools.map((t) => t.name), ['best_replacements', 'compare_transfer', 'find_players', 'player_report']);
+  assert.deepEqual(tools.map((t) => t.name), ['best_replacements', 'chip_what_if', 'compare_transfer', 'find_players', 'player_report', 'season_so_far']);
   assert.ok(tools.every((t) => t.eager_input_streaming === true && typeof t.run === 'function'));
   const report = tools.find((t) => t.name === 'player_report');
   assert.match(await report.run({ id: 999 }), /Unknown player id/);
@@ -141,4 +141,21 @@ test('chat: the tools are fixed in order, stream their input, and refuse unknown
   const find = tools.find((t) => t.name === 'find_players');
   assert.equal(JSON.parse(await find.run({ query: 'Vuskovic', position: 'XX' }))[0].id, 20);
   assert.deepEqual(said, ['Checking Vuskovic', 'Looking up Vuskovic']);
+});
+
+test('chat: the season tools read earlier gameweeks, and say so plainly when they can’t', async () => {
+  const w = world();
+  const tools = chatTools(w);
+  const chip = tools.find((t) => t.name === 'chip_what_if');
+  const season = tools.find((t) => t.name === 'season_so_far');
+  assert.match(await chip.run({ chip: 'nope' }), /Unknown chip/);
+  // Without FPL's earlier gameweeks to hand.
+  assert.match(await chip.run({ chip: 'wildcard' }), /isn’t available/);
+  assert.match(await season.run({}), /isn’t available/);
+  // FPL failing midway.
+  w.past = { picks: async () => { throw new Error('FPL 503'); }, live: async () => null };
+  w.entry = { name: 'Test', chips: [{ name: 'wildcard', event: 3 }], history: [{ event: 3, points: 50, hit: 0 }], started: 1 };
+  w.done = [1, 2, 3];
+  w.playing = null;
+  assert.match(await chip.run({ chip: 'wildcard' }), /FPL didn’t answer/);
 });
