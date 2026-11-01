@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { squadScore, chipWhatIf, seasonSoFar } from './fpl-history.mjs';
+import { squadScore, chipWhatIf, seasonSoFar, rivalGap, chipsLeft, chipsUntil, recordLessons, raceLessons } from './fpl-history.mjs';
 
 // Fifteen players and a few to buy: 1-2 keepers, 3-7 defenders, 8-12 midfielders, 13-15 forwards.
 const TYPE = (id) => (id <= 2 ? 1 : id <= 7 ? 2 : id <= 12 ? 3 : id <= 15 ? 4 : { 16: 4, 17: 3, 18: 4, 19: 3 }[id]);
@@ -97,7 +97,7 @@ test('the other chips, and chips not played', async () => {
   assert.match((await chipWhatIf({ ...base, chip: 'wildcard', gw: 5 })).error, /played in gameweek 3/);
 });
 
-test("the season so far: each week's points and captain, and the transfers outside chip weeks", async () => {
+test("the season so far: each week's points and captain, the captain points left, and the moves outside chip weeks", async () => {
   const transfers = [
     { event: 2, element_out: 14, element_in: 18, time: '2026-08-29T10:00:00Z' },
     { event: 3, element_out: 13, element_in: 16, time: '2026-09-12T10:00:00Z' },
@@ -119,11 +119,114 @@ test("the season so far: each week's points and captain, and the transfers outsi
   assert.equal(s.weeks[2].chip, 'Wildcard');
   assert.equal(s.weeks[2].captain, 'P16 8×2');
   assert.equal(s.weeks[5].stillBeingPlayed, true);
-  // The wildcard's and Free Hit's transfers are left out; 18 stayed for 2, 3 and 5 (the Free Hit
-  // week doesn't count either way): 9 + 2 + 2 against 14's 1 + 2 + 2.
-  assert.deepEqual(s.transfers.list.map((t) => [t.gw, t.out, t.in, t.keptFor, t.inScored, t.outScored, t.gain]), [[2, 'P14', 'P18', 3, 13, 5, 8], [5, 'P9', 'P19', 1, 5, 3, 2]]);
+  // The wildcard's and Free Hit's transfers are left out. 18 against 14 over gameweeks 2-5, while
+  // he stayed: 9 + 2 + 2 + 2 against 1 + 2 + 2 + 2. Weeks ago, from gameweek 6.
+  assert.deepEqual(
+    s.transfers.list.map((t) => [t.gw, t.weeksAgo, t.out, t.in, t.inScored, t.outScored, t.gain]),
+    [[2, 4, 'P14', 'P18', 15, 7, 8], [5, 1, 'P9', 'P19', 5, 3, 2]],
+  );
   assert.equal(s.transfers.hitsTaken, 4);
   assert.equal(s.transfers.netAfterHits, 6);
-  assert.equal(s.transfers.best.in, 'P18');
+  assert.deepEqual(s.transfers.best.map((t) => t.in), ['P18', 'P19']);
+  assert.deepEqual(s.transfers.costliest, []);
+  // Captain hindsight: gameweek 2's armband on 13 (2) when 18 scored 9.
+  assert.equal(s.captains.leftWithHindsight, 7);
+  assert.deepEqual(s.captains.costliest, [{ gw: 2, chose: 'P13 2', best: 'P18 9', lost: 7, armband: 2 }]);
+  assert.equal(s.captains.armbandPoints, 2 + 2 + 8 + 2 + 6);
+  assert.equal(s.benchPoints, 40);
   assert.deepEqual(s.chipsPlayed, [{ chip: 'Wildcard', gw: 3 }, { chip: 'Free Hit', gw: 4 }]);
+  // The hit in gameweek 5 against what that week's move has gained since: 19's 5 against 9's 3.
+  assert.deepEqual(s.transfers.hits, [{ gw: 5, weeksAgo: 1, cost: 4, moves: ['P9 → P19'], gained: 2, net: -2 }]);
+  // And the same season in a few lines for Matchday AI.
+  const lessons = recordLessons({ ...s, chips: [{ chip: 'Wildcard', gw: 3, gain: 22, over: 'gameweeks 3–5' }], through: 5 });
+  assert.deepEqual(lessons, {
+    throughGameweek: 5,
+    transfers: '2 moves with free transfers or hits: +6 points after 4 points of hits',
+    bestMoves: ['GW2 P14 → P18: P18 15, P14 7 over the same weeks (+8)', 'GW5 P9 → P19: P19 5, P9 3 over the same weeks (+2)'],
+    costliestMoves: [],
+    hits: ['GW5: −4 for P9 → P19; those moves +2 since, so 2 short of paying back (recent: still paying out)'],
+    chips: ['Wildcard GW3: +22, gameweeks 3–5, against the team from before it kept as it was'],
+    captains: 'the armband left 7 points with hindsight: GW2 P13 2 when P18 9',
+    benchPoints: 40,
+  });
+  assert.equal(recordLessons(null), null);
+  // A hit in the gameweek still being played waits until its moves have a finished week to judge.
+  const live = await seasonSoFar({ ...base, entry: { ...entry, history: entry.history.map((h) => (h.event === 6 ? { ...h, hit: 8 } : h)) }, transfers, loaders: { picks: async (gw) => own[gw], live: async (gw) => scored[gw] } });
+  assert.equal(live.weeks[5].hit, 8);
+  assert.equal(live.transfers.hitsTaken, 4);
+  assert.equal(live.transfers.hits.length, 1);
+});
+
+test('a rival gaining ground, split into players, captaincy and hits, with the players behind it', async () => {
+  // The rival has forward 18 in place of 14 and captains him in gameweek 2 (a hit of 4 that week).
+  const rivalPicks = { 2: { chip: null, picks: squad({ 14: 18 }, 18, 8) }, 3: { chip: null, picks: squad({ 14: 18 }) } };
+  const minePicks = { 2: { chip: null, picks: squad() }, 3: { chip: null, picks: squad() } };
+  const scored = { 2: week({ 18: [9, 90], 14: [1, 90] }), 3: week() };
+  const history = (hit2) => [{ event: 2, points: 0, hit: hit2 }, { event: 3, points: 0, hit: 0 }];
+  const r = await rivalGap({
+    me: { entry: { chips: [], history: history(0) }, transfers: [], picks: async (g) => minePicks[g] },
+    rival: { entry: { chips: [], history: history(4) }, transfers: [{ event: 2, element_out: 14, element_in: 18, time: '2026-08-29T10:00:00Z' }], picks: async (g) => rivalPicks[g] },
+    weeks: [2, 3],
+    live: async (g) => scored[g],
+    els,
+  });
+  // Gameweek 2: 18's 9 against 14's 1 (+8), the armband on 18's 9 against 13's 2 (+7), their hit (-4).
+  // Gameweek 3: 18's 2 against 14's 2.
+  assert.deepEqual(r.parts, { players: 8, captaincy: 7, hits: -4 });
+  assert.equal(r.gained, 11);
+  assert.deepEqual(r.forThem, [{ name: 'P18', points: 11, how: 'they had him, you didn’t' }]);
+  assert.deepEqual(r.forYou, [{ name: 'P14', points: 3, how: 'you had him, they didn’t' }]);
+  assert.deepEqual(r.captains, [{ gw: 2, theirs: 'P18 9×2', yours: 'P13 2×2', swing: 7 }]);
+  assert.deepEqual(r.theirBestMoves.map((m) => [m.out, m.in, m.gain]), [['P14', 'P18', 8]]);
+  assert.equal(r.weeks, 'gameweeks 2–3');
+  // The race in a few lines for Matchday AI, as getRivals frames each rival.
+  const race = raceLessons({
+    league: 'Office',
+    you: { rank: 3, team: 'Test XI', chipsLeft: ['Free Hit'] },
+    through: 3,
+    chipsUntil: 19,
+    rivals: [{ entry: 9, team: 'Rival FC', manager: 'Riva L', rank: 2, gapNow: 5, since: 2, gapBefore: -6, sinceYouLed: true, ...r, chipsLeft: ['Bench Boost', 'Free Hit'], thisGameweekSoFar: { gw: 4, gained: -3 } }],
+  });
+  assert.equal(race.yourRank, 3);
+  assert.deepEqual(race.yourChipsLeft, ['Free Hit']);
+  assert.equal(race.chipsLeftExpireAfter, 'GW19');
+  assert.deepEqual(race.rivals[0], {
+    team: 'Rival FC',
+    manager: 'Riva L',
+    rank: 2,
+    gapAfterGameweek: '5 ahead of you',
+    since: 'GW2, when you led by 6',
+    gainedOnYou: 11,
+    from: { players: 8, captaincy: 7, hits: -4 },
+    playersForThem: ['P18 11 (they had him, you didn’t)'],
+    playersForYou: ['P14 3 (you had him, they didn’t)'],
+    captains: ['GW2: theirs P18 9×2, yours P13 2×2 (+7 to them)'],
+    theirBestMoves: ['GW2 P14 → P18: P18 11, P14 3 over the same weeks (+8)'],
+    yourCostliestMoves: [],
+    chipsPlayedSince: 'theirs none; yours none',
+    theirChipsLeft: ['Bench Boost', 'Free Hit'],
+    thisGameweekSoFar: 'GW4: -3 to them so far',
+  });
+  assert.deepEqual(raceLessons({ league: 'Big', rivals: [], note: 'Outside the first 50' }), { league: 'Big', note: 'Outside the first 50' });
+  assert.equal(raceLessons(null), null);
+});
+
+test('chips left: one of each before gameweek 20 and one after, or FPL’s own windows', () => {
+  const used = [{ name: 'bboost', event: 1 }, { name: '3xc', event: 3 }, { name: 'wildcard', event: 6 }];
+  assert.deepEqual(chipsLeft(used, 10), ['freehit']);
+  assert.deepEqual(chipsLeft(used, 20), ['wildcard', 'freehit', 'bboost', '3xc']);
+  // FPL's windows (bootstrap-static chips): the Wildcard and Free Hit open from gameweek 2.
+  const fpl = [
+    { name: 'wildcard', from: 2, to: 19 },
+    { name: 'wildcard', from: 20, to: 38 },
+    { name: 'freehit', from: 2, to: 19 },
+    { name: 'bboost', from: 1, to: 19 },
+    { name: '3xc', from: 1, to: 19 },
+    { name: 'freehit', from: 20, to: 38 },
+    { name: 'bboost', from: 20, to: 38 },
+    { name: '3xc', from: 20, to: 38 },
+  ];
+  assert.deepEqual(chipsLeft([], 1, fpl), ['bboost', '3xc']);
+  assert.deepEqual(chipsLeft(used, 10, fpl), ['freehit']);
+  assert.deepEqual([chipsUntil(10), chipsUntil(20), chipsUntil(10, fpl), chipsUntil(38, fpl)], [19, 38, 19, 38]);
 });

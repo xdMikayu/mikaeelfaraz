@@ -16,6 +16,8 @@ import { withRecent } from '@/lib/sport/kit.mjs';
 import { useParam, useTabInView } from './useParam';
 import { useEo, EoPanel, eoWords, OVERALL } from './FantasyEo';
 import { DefconTracker, DefconBar, defconNow, defconWords } from './FantasyDefcon';
+import SeasonReview from './FantasySeason';
+import LeagueGaps from './FantasyGap';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
@@ -249,6 +251,7 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, recent, liveAt, liveErr
           {teamView === 'pitch' ? <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} eo={eo} /> : <TeamList team={team} ctx={ctx} teams={teams} eo={eo} />}
           <DefconTracker team={team} ctx={ctx} teams={teams} />
           <EoPanel team={team} ctx={ctx} teams={teams} league={eoLeague} top={eoTop} />
+          <SeasonReview entry={entry} />
         </>
       )}
       {tab === 'plan' && picks && (fixtures ? <Planner st={st} ctx={ctx} teams={teams} picks={picks.picks} bank={picks.bank ?? 0} fixtures={fixtures} kit={kit} entry={entry} leagueId={leagueId} /> : <div className="sp-skel" style={{ height: 460, margin: '14px 0 0' }} />)}
@@ -579,6 +582,8 @@ function League({ id, event, entry, ctx, myTeam, teams, live, onPick }) {
           {lg.data.more ? ' Only the top 50 managers are included.' : ''}
         </p>
       </section>
+
+      <LeagueGaps entry={entry} league={id} />
 
       {swings.length > 0 && (
         <section className="sp-panel">

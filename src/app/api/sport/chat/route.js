@@ -8,6 +8,7 @@
 import { getStatic, getFixtures, getEntry, getNextSquad, getPicks, getLive } from '@/lib/sport/fpl-server.mjs';
 import { makeKit, makeCtx } from '@/lib/sport/kit.mjs';
 import { chatEnabled, chatWorld, chatTurns, runChat, chatError } from '@/lib/sport/chat.mjs';
+import { getRivalGap } from '@/lib/sport/fpl-review-server.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,7 +67,7 @@ export async function POST(req) {
   else {
     try {
       const st = await getStatic();
-      const [fixtures, entry, ix, learned, odds, season, setpieces, fpl, recent] = await Promise.all([
+      const [fixtures, entry, ix, learned, odds, season, setpieces, fpl, recent, record] = await Promise.all([
         getFixtures(),
         getEntry(id, st.current),
         data('index.json', req),
@@ -76,17 +77,28 @@ export async function POST(req) {
         data('setpieces.json', req).catch(() => null),
         data('fpl-model.json', req).catch(() => null),
         cached('/api/sport/fpl/recent', req),
+        // The manager's season looked back on, the same as the Team tab's: what paid and what cost.
+        cached(`/api/sport/fpl/review/${id}`, req),
       ]);
       if (!entry?.gw) return json({ error: `FPL has no picks for team ${id} yet` }, 404);
-      // Only a league the team is in, from the same cached route the League tab reads.
+      // Only a league the team is in, from the same cached routes the League tab reads: its table,
+      // and why the gaps to the managers around them moved.
       const leagueId = leagueAsked && entry.leagues.some((l) => l.id === leagueAsked) ? leagueAsked : null;
-      const [next, league] = await Promise.all([getNextSquad(id, entry, st.current), leagueId ? cached(`/api/sport/fpl/league/${leagueId}/${st.current}`, req) : null]);
+      const [next, league, race] = await Promise.all([
+        getNextSquad(id, entry, st.current),
+        leagueId ? cached(`/api/sport/fpl/league/${leagueId}/${st.current}`, req) : null,
+        leagueId ? cached(`/api/sport/fpl/rivals/${id}/${leagueId}`, req) : null,
+      ]);
       const kit = makeKit(ix, learned, fpl);
       const ctx = makeCtx(st, kit, undefined, odds?.fixtures ?? null, recent?.players ?? null);
       // Earlier gameweeks, fetched only when the manager asks about their season: their picks, and
-      // every player's points (a finished gameweek's kept for hours).
-      const past = { picks: (gw) => getPicks(id, gw), live: (gw) => getLive(gw, gw < st.current ? 6 * 3600e3 : 30e3) };
-      world = chatWorld({ st, fixtures, entry, next, ctx, ix, season, setpieces, league, horizon, free: ft, load: (path) => data(path, req), past });
+      // every player's points (a finished gameweek's kept for hours); and any rival in their league.
+      const past = {
+        picks: (gw) => getPicks(id, gw),
+        live: (gw) => getLive(gw, gw < st.current ? 6 * 3600e3 : 30e3),
+        ...(leagueId ? { rival: (name, from) => getRivalGap(id, leagueId, name, { from }) } : null),
+      };
+      world = chatWorld({ st, fixtures, entry, next, ctx, ix, season, setpieces, league, horizon, free: ft, load: (path) => data(path, req), past, record, race });
       worlds.set(key, { at: Date.now(), world });
       if (worlds.size > 30) worlds.delete(worlds.keys().next().value);
     } catch (e) {
