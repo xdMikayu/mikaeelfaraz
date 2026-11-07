@@ -693,6 +693,7 @@ test('FPL routes: everything that changes the answer is in the path; the old que
   const q = (s) => new URLSearchParams(s);
   assert.deepEqual(fplRequest(['entry', '123', '6']), { kind: 'entry', id: 123, event: 6, legacy: false });
   assert.deepEqual(fplRequest(['league', '5508', '6']), { kind: 'league', id: 5508, event: 6, legacy: false });
+  assert.deepEqual(fplRequest(['near', '3937', '10']), { kind: 'near', id: 3937, event: 10, legacy: false });
   assert.deepEqual(fplRequest(['live', '6']), { kind: 'live', event: 6, legacy: false });
   assert.deepEqual(fplRequest(['static']), { kind: 'static', legacy: false });
   assert.deepEqual(fplRequest(['entry'], q('id=123&event=6')), { kind: 'entry', id: 123, event: 6, legacy: true });

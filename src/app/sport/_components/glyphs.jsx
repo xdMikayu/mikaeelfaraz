@@ -169,6 +169,21 @@ export const Boot = ({ size = 14 }) => (
   </svg>
 );
 
+/** A clean sheet: a shield. */
+export const Shield = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+    <path d="M8 1.5 2.5 3.6v4c0 3.2 2.3 5.8 5.5 6.9 3.2-1.1 5.5-3.7 5.5-6.9v-4Z" />
+  </svg>
+);
+
+/** Defensive contributions: a wall. */
+export const Wall = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round">
+    <rect x="1.5" y="3" width="13" height="10" rx="1" />
+    <path d="M1.5 6.3h13M1.5 9.7h13M6 3v3.3M10.5 6.3v3.4M6 9.7V13" />
+  </svg>
+);
+
 export const SubArrows = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 13V3M2 6l3-3 3 3" stroke="var(--sp-win)" />

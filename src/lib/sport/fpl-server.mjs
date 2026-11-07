@@ -212,7 +212,7 @@ export async function getRecent() {
 }
 
 const num10 = (v) => (/^\d{1,10}$/.test(v ?? '') ? Number(v) : null);
-const KINDS = { static: 0, fixtures: 0, top: 0, season: 0, recent: 0, live: 1, entry: 2, league: 2 };
+const KINDS = { static: 0, fixtures: 0, top: 0, season: 0, recent: 0, live: 1, entry: 2, league: 2, near: 2 };
 
 /**
  * What /api/sport/fpl/... asks for: { kind, id, event, legacy } or { error, status }.
@@ -231,6 +231,39 @@ export function fplRequest(parts = [], q = new URLSearchParams()) {
   const id = num10(legacy ? q.get('id') : rest[0]);
   if (!id) return { error: 'Need an id', status: 400 };
   return { kind, id, event, legacy };
+}
+
+/**
+ * Managers ranked near a place in FPL's overall table this gameweek, in getLeague's shape (their picks,
+ * for effective ownership around a manager's rank): page `page` of the table and the one after it, a
+ * hundred managers. With how many places a point is worth around there, from the table's totals about
+ * a tenth of the way above and below (at least 250 places each way).
+ */
+export async function getNear(page, event) {
+  const table = (p) => fpl(`/leagues-classic/314/standings/?page_standings=${Math.max(1, p)}`, 600e3);
+  const results = (await Promise.all([table(page), table(page + 1)])).flatMap((s) => s?.standings?.results ?? []);
+  if (!results.length) return null;
+  const rank = results[0].rank;
+  const span = Math.max(250, Math.round(rank * 0.1));
+  const [picks, above, below] = await Promise.all([
+    Promise.allSettled(results.map((r) => fpl(`/entry/${r.entry}/event/${event}/picks/`, 6 * 3600e3))),
+    table(Math.ceil(Math.max(1, rank - span) / 50)),
+    table(Math.ceil((rank + span) / 50)),
+  ]);
+  const at = (s) => s?.standings?.results?.[0] ?? null;
+  const hi = at(above);
+  const lo = at(below);
+  return {
+    id: 314,
+    name: 'Managers ranked near you',
+    from: rank,
+    to: results.at(-1).rank,
+    placesPerPoint: hi && lo && hi.total > lo.total ? Math.round((lo.rank - hi.rank) / (hi.total - lo.total)) : null,
+    rows: results.map((r, i) => {
+      const p = picks[i].status === 'fulfilled' ? picksShape(picks[i].value) : null;
+      return { entry: r.entry, team: r.entry_name, manager: r.player_name, rank: r.rank, lastRank: r.last_rank, total: r.total, eventTotal: r.event_total, picks: p?.picks ?? null, chip: p?.chip ?? null, hit: p?.hit ?? 0 };
+    }),
+  };
 }
 
 /** The overall leader: the team the fantasy page offers as an example to look around with. */
