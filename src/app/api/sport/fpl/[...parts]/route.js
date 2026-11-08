@@ -1,15 +1,16 @@
 // GET /api/sport/fpl/static | fixtures | top | season | recent | live/<gw> | entry/<team>/<gw> | league/<league>/<gw>
+//   | near/<page of the overall table>/<gw>
 // Everything that changes the answer is in the path. The CDN's cache key ignores query strings on
 // this site (Netlify's Next.js runtime narrows it to Next's own parameters), so ?id= would hand one
 // manager's team to the next. The old ?id=&event= form still answers, for pages loaded before this
 // change, but uncached.
-import { getStatic, getLive, getEntry, getLeague, getFixtures, getTop, getSeason, getRecent, fplRequest } from '@/lib/sport/fpl-server.mjs';
+import { getStatic, getLive, getEntry, getLeague, getNear, getFixtures, getTop, getSeason, getRecent, fplRequest } from '@/lib/sport/fpl-server.mjs';
 
 export const dynamic = 'force-dynamic';
 
 // Seconds the CDN may serve a response before asking us again, and how long it may keep
 // serving the old one while it refreshes. Every viewer of the same URL shares the cached copy.
-const CACHE = { static: [300, 3600], fixtures: [600, 3600], top: [3600, 86400], season: [600, 3600], recent: [600, 3600], live: [20, 60], entry: [60, 300], league: [90, 600] };
+const CACHE = { static: [300, 3600], fixtures: [600, 3600], top: [3600, 86400], season: [600, 3600], recent: [600, 3600], live: [20, 60], entry: [60, 300], league: [90, 600], near: [600, 3600] };
 
 export async function GET(req, { params }) {
   const r = fplRequest(params.parts, new URL(req.url).searchParams);
@@ -23,6 +24,7 @@ export async function GET(req, { params }) {
     else if (r.kind === 'season') data = await getSeason();
     else if (r.kind === 'recent') data = await getRecent();
     else if (r.kind === 'live') data = await getLive(r.event);
+    else if (r.kind === 'near') data = await getNear(r.id, r.event);
     else data = r.kind === 'entry' ? await getEntry(r.id, r.event) : await getLeague(r.id, r.event);
     if (!data) return Response.json({ error: 'Not found on FPL' }, { status: 404, headers: headers(60, 300) });
     return Response.json(data, { headers: headers(...CACHE[r.kind]) });

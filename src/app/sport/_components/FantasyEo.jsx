@@ -20,16 +20,32 @@ async function api(path, signal) {
   return json;
 }
 
-/** EO among a league's first 50 managers this gameweek: { name, managers, eo: { element: { eo, owners, captains, multSum } } }. */
-export function useEo(id, event, ctx) {
-  const lg = useLive((signal) => (id ? api(`league/${id}/${event}`, signal) : Promise.resolve(null)), [id, event], { every: 90000, live: () => true });
+/**
+ * EO among a set of managers this gameweek, from a route in getLeague's shape (league/<id>/<gw>, or
+ * near/<page>/<gw> for the managers ranked around a place overall): { name, managers, eo: { element:
+ * { eo, owners, captains, multSum } }, table: [{ entry, total, mult }] (each manager's live total and
+ * multipliers), placesPerPoint (near only), from, to }.
+ */
+export function useEoAt(path, ctx) {
+  const lg = useLive((signal) => (path ? api(path, signal) : Promise.resolve(null)), [path], { every: 90000, live: () => true });
   return useMemo(() => {
-    if (!id) return null;
+    if (!path) return null;
     if (!lg.data) return { loading: !lg.error, error: lg.error };
     const r = leagueLive(lg.data.rows, ctx);
-    return { name: lg.data.name, managers: r.managers, eo: Object.fromEntries(r.ownership.map((o) => [o.element, o])) };
-  }, [id, lg.data, lg.error, ctx]);
+    return {
+      name: lg.data.name,
+      managers: r.managers,
+      eo: Object.fromEntries(r.ownership.map((o) => [o.element, o])),
+      table: r.table.map((t) => ({ entry: t.entry, team: t.team, total: t.liveTotal, mult: Object.fromEntries((t.live?.lines ?? []).map((l) => [l.element, l.mult])) })),
+      placesPerPoint: lg.data.placesPerPoint ?? null,
+      from: lg.data.from ?? null,
+      to: lg.data.to ?? null,
+    };
+  }, [path, lg.data, lg.error, ctx]);
 }
+
+/** EO among a league's first 50 managers this gameweek (useEoAt). */
+export const useEo = (id, event, ctx) => useEoAt(id ? `league/${id}/${event}` : null, ctx);
 
 const pct = (v) => `${Math.round(v)}%`;
 const per = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(2)}`;

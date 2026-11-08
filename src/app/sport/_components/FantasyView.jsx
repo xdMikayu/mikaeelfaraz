@@ -18,6 +18,7 @@ import { useEo, EoPanel, eoWords, OVERALL } from './FantasyEo';
 import { DefconTracker, DefconBar, defconNow, defconWords } from './FantasyDefcon';
 import SeasonReview from './FantasySeason';
 import LeagueGaps from './FantasyGap';
+import RootFor from './FantasyRoot';
 
 const CHIP = { bboost: 'Bench Boost', '3xc': 'Triple Captain', freehit: 'Free Hit', wildcard: 'Wildcard' };
 
@@ -249,6 +250,7 @@ function Live({ st, live, entry, fixtures, odds, oddsAt, recent, liveAt, liveErr
             </div>
           </div>
           {teamView === 'pitch' ? <Pitch team={team} ctx={ctx} teams={teams} forecast={kit} fixtures={fixtures} eo={eo} /> : <TeamList team={team} ctx={ctx} teams={teams} eo={eo} />}
+          <RootFor team={team} ctx={ctx} teams={teams} league={eoLeague} top={eoTop} rank={rankNow ?? entry.overall} me={entry.id} event={live.event} />
           <DefconTracker team={team} ctx={ctx} teams={teams} />
           <EoPanel team={team} ctx={ctx} teams={teams} league={eoLeague} top={eoTop} />
           <SeasonReview entry={entry} />
