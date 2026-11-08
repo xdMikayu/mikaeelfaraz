@@ -1,6 +1,8 @@
 # mikaeelfaraz.com
 
-Personal site (Next.js 14) plus **Matchday**, a football and fantasy tracker at `/sport`.
+Personal site (Next.js 14). Two apps that started here have their own sites and repositories now:
+**Mifolio**, the card-spending tracker that was at `/finance`, and **Matchday**, live sport and fantasy
+football, that was at `/sport`.
 
 ## Portfolio
 
@@ -32,36 +34,21 @@ Mifolio, the card-spending tracker that used to live at `/finance`, is now its o
 
 ## Matchday
 
-Football scores, match detail and live Fantasy Premier League points at `/sport`, with its own design
-system (rules in `src/app/sport/DESIGN.md`). Cricket, F1 and wrestling can reuse the shell, preferences and
-polling; only the adapters in `src/lib/sport/` are football-specific.
-
-```
-Browser ─ ESPN public site API (CORS *) ─► scores, events, lineups, stats, commentary, shots
-   │        └─ on failure ─► /api/sport/espn (allow-listed relay, CDN cached)
-   └─────── /api/sport/fpl/{static,live,entry,league} ─► FPL API (no CORS), trimmed, CDN cached
-```
-
-Costs nothing to run: every page is static, nothing is stored server-side, and the two API routes
-send CDN cache headers so all viewers share one upstream call per window (FPL live: 20 s).
-Preferences (followed teams, competition order, spoilers, FPL team ID) live in the viewer's
-`localStorage`. Polling runs only while a match is live and the tab is visible.
+Live football, cricket and F1, and Fantasy Premier League, at
+[matchday.mikaeelfaraz.com](https://matchday.mikaeelfaraz.com), from its own repository,
+[xdMikayu/matchday](https://github.com/xdMikayu/matchday), which took its history along. What's left here:
 
 | Path | What |
 |---|---|
-| `src/lib/sport/espn.mjs` | ESPN adapter: day boundaries, matches, events, shots, lineups, standings, teams |
-| `src/lib/sport/xg.mjs` | xG model (logistic, fitted on StatsBomb open data; metrics in the header) |
-| `src/lib/sport/fpl.mjs` | FPL maths: bonus from BPS, autosubs, captaincy, live league, league EO |
-| `src/lib/sport/fpl-server.mjs` | FPL fetching and trimming, used by the API route |
-| `src/lib/sport/fplmap.mjs` | ESPN to FPL club mapping, Opta xG from FPL live data |
-| `src/app/sport/*` | Scores, match, table, team, fantasy and following pages |
-
-`npm test` covers bonus tie rules, autosubs, chips, the live league, the xG model, ESPN day
-boundaries and formation layout.
+| `src/app/sport/[[...path]]` | Old `/sport` links: on to the same page at the new address |
+| `src/lib/matchday/link.mjs` | Links to Matchday that carry the viewer's saved settings (a browser keeps them per address) |
+| `src/app/(site)/_components/MatchdayMini.jsx` | The home page's showcase: three of its screens on made-up numbers |
+| `src/lib/matchday/*` | Copies of the sums and circuit maps those screens use, with their tests |
 
 ## Development
 
 ```bash
 npm install
 npm run dev   # http://localhost:3000
+npm test      # the showcase's copies of Matchday's sums
 ```

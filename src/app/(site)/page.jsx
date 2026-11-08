@@ -5,6 +5,7 @@ import ThemeToggle from './_components/ThemeToggle';
 import Alphabet from './_components/Alphabet';
 import MifolioMini from './_components/MifolioMini';
 import MatchdayMini from './_components/MatchdayMini';
+import MatchdayLink from './_components/MatchdayLink';
 import TaskLab from './_components/TaskLab';
 import OnboardingFlow from './_components/OnboardingFlow';
 import MeasureLab from './_components/MeasureLab';
@@ -198,8 +199,8 @@ export default function Home() {
                 before the goal’s details, so the page trusts the score and says the scorer is to follow.
               </p>
               <p className="links">
-                <a className="btn" href="/sport" target="_blank" rel="noopener">Open Matchday ↗</a>
-                <a href="/sport/settings#xg">How the xG model works</a>
+                <MatchdayLink className="btn" target="_blank" rel="noopener">Open Matchday ↗</MatchdayLink>
+                <MatchdayLink path="/settings#xg">How the xG model works</MatchdayLink>
               </p>
             </div>
             <dl>
