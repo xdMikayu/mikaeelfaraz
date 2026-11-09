@@ -1,21 +1,21 @@
 {
- "built": "2026-11-06T15:59:38.435Z",
+ "built": "2026-11-09T13:58:59.243Z",
  "firstWeek": 7,
  "pending": {
-  "gw": 10,
-  "deadline": "2026-11-06T18:30:00Z",
-  "savedAt": "2026-11-06T15:59:38.834Z"
+  "gw": 11,
+  "deadline": "2026-11-21T11:00:00Z",
+  "savedAt": "2026-11-09T13:58:59.568Z"
  },
  "awaiting": [],
  "season": {
-  "weeks": 3,
-  "maeOurs": 2.1709633179559766,
-  "maeFpl": 2.7220421833214536,
-  "top10Ours": 5.1000000000000005,
-  "top10Fpl": 3.6,
-  "captainOurs": 23,
-  "captainFpl": 14,
-  "beatFplWeeks": 3
+  "weeks": 4,
+  "maeOurs": 2.1557741413595446,
+  "maeFpl": 2.642977918482826,
+  "top10Ours": 5.5,
+  "top10Fpl": 4.2,
+  "captainOurs": 31,
+  "captainFpl": 22,
+  "beatFplWeeks": 4
  },
  "weeks": [
   {
@@ -97,6 +97,34 @@
     "n": 310,
     "corr": 0.4463718154924549,
     "top20": 0.2945
+   }
+  },
+  {
+   "gw": 10,
+   "savedAt": "2026-11-06T15:59:38.834Z",
+   "provisional": true,
+   "n": 242,
+   "points": {
+    "maeOurs": 2.1102066115702494,
+    "maeFpl": 2.4057851239669423,
+    "corrOurs": 0.36651954039990486,
+    "corrFpl": 0.2016631167044514,
+    "top10Ours": 6.7,
+    "top10Fpl": 6,
+    "top10Best": 12.4,
+    "captainOurs": {
+     "name": "Gabriel",
+     "pts": 8
+    },
+    "captainFpl": {
+     "name": "Konsa",
+     "pts": 8
+    }
+   },
+   "netXg": {
+    "n": 313,
+    "corr": 0.4413762193943141,
+    "top20": 0.38149999999999995
    }
   }
  ]
