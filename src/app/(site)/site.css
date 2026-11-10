@@ -513,7 +513,7 @@ body:has(.site) { background: var(--paper, #fafaf8); }
 .product .links { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; margin-top: 22px; }
 #mifolio > .try { margin-top: 28px; }
 
-/* Matchday: three of its screens, phone-sized, drawn as the app draws them (src/app/sport/sport.css:
+/* Matchday: three of its screens, phone-sized, drawn as the app draws them (Matchday's sport.css:
    its type, colours, crests, bands and cards) and worked by tapping them. */
 .mdp {
   --a-page: #ffffff; --a-sunk: #efefef; --a-ink: #111111; --a-ink-2: #555555; --a-muted: #8a8a8a; --a-rule: #ececec; --a-rule-2: #d9d9d9;
